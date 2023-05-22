@@ -3,9 +3,16 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.4.33403.182
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "kparser2", "kparser2\kparser2.csproj", "{9E6F8821-BB92-40A3-A09B-4DB48BFF3089}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "kparser2", "kparser2\kparser2.csproj", "{9E6F8821-BB92-40A3-A09B-4DB48BFF3089}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "kparser2.core", "kparser2.core\kparser2.core.fsproj", "{1F137D7F-2676-44D0-9C28-6C091FA89336}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "kparser2.UI", "kparser2.core\kparser2.UI.fsproj", "{1F137D7F-2676-44D0-9C28-6C091FA89336}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "kparser2.Parser", "kparser2.parser\kparser2.Parser.fsproj", "{444DE890-14C2-4A21-B61D-C5516731902D}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "kparser2.Tests", "kparser2.Tests\kparser2.Tests.fsproj", "{7BD1B733-93E9-46CB-884E-CE2279B605BB}"
+	ProjectSection(ProjectDependencies) = postProject
+		{444DE890-14C2-4A21-B61D-C5516731902D} = {444DE890-14C2-4A21-B61D-C5516731902D}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +28,14 @@ Global
 		{1F137D7F-2676-44D0-9C28-6C091FA89336}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1F137D7F-2676-44D0-9C28-6C091FA89336}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1F137D7F-2676-44D0-9C28-6C091FA89336}.Release|Any CPU.Build.0 = Release|Any CPU
+		{444DE890-14C2-4A21-B61D-C5516731902D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{444DE890-14C2-4A21-B61D-C5516731902D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{444DE890-14C2-4A21-B61D-C5516731902D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{444DE890-14C2-4A21-B61D-C5516731902D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7BD1B733-93E9-46CB-884E-CE2279B605BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7BD1B733-93E9-46CB-884E-CE2279B605BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7BD1B733-93E9-46CB-884E-CE2279B605BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7BD1B733-93E9-46CB-884E-CE2279B605BB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

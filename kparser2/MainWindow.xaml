@@ -3,19 +3,46 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:vm="clr-namespace:kparser2;assembly=kparser2.Core"
-        Title="Single counter"
+        xmlns:vm="clr-namespace:kparser2.UI;assembly=kparser2.UI"
+        Title="KParser 2"
         Height="120"
         Width="500"
         WindowStartupLocation="CenterScreen"
         mc:Ignorable="d"
         d:DataContext="{x:Static vm:Program.designVm}">
-    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,25,0,0">
-        <TextBlock Text="{Binding CounterValue, StringFormat='Counter value: {0}'}" Width="110" Margin="0,5,10,5" />
-        <Button Command="{Binding Decrement}" Content="-" Margin="0,5,10,5" Width="30" />
-        <Button Command="{Binding Increment}" Content="+" Margin="0,5,10,5" Width="30" />
-        <TextBlock Text="{Binding StepSize, StringFormat='Step size: {0}'}" Width="70" Margin="0,5,10,5" />
-        <Slider Value="{Binding StepSize}" TickFrequency="1" Maximum="10" Minimum="1" IsSnapToTickEnabled="True" Width="100" Margin="0,5,10,5" />
-        <Button Command="{Binding Reset}" Content="Reset" Margin="0,5,10,5" Width="50" />
-    </StackPanel>
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="File">
+                <MenuItem Header="New" />
+                <MenuItem Header="Open" />
+                <MenuItem Header="Save" />
+                <Separator />
+                <MenuItem Header="Exit" />
+            </MenuItem>
+            <MenuItem Header="Edit">
+                <MenuItem Header="Cut" />
+                <MenuItem Header="Copy" />
+                <MenuItem Header="Paste" />
+            </MenuItem>
+            <MenuItem Header="Tools">
+                <MenuItem Header="Options" />
+            </MenuItem>
+            <MenuItem Header="Windows">
+                <MenuItem Header="Minimize" />
+                <MenuItem Header="Maximize" />
+                <MenuItem Header="Close" />
+            </MenuItem>
+        </Menu>
+        <TabControl DockPanel.Dock="Top">
+            <TabItem Header="View 1">
+                <TextBox Text="View 1 content goes here." />
+            </TabItem>
+            <TabItem Header="View 2">
+                <TextBox Text="View 2 content goes here." />
+            </TabItem>
+            <TabItem Header="View 3">
+                <TextBox Text="View 3 content goes here." />
+            </TabItem>
+        </TabControl>
+    </DockPanel>
 </Window>

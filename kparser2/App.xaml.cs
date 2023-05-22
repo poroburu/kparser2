@@ -1,8 +1,8 @@
-﻿using System;
-using System.Windows;
-
-namespace kparser2
+﻿namespace kparser2
 {
+    using System;
+    using System.Windows;
+    using kparser2.UI;
     /// <summary>
     /// Interaction logic for App.xaml
     /// </summary>
