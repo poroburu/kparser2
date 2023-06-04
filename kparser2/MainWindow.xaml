@@ -5,8 +5,10 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:kparser2.UI;assembly=kparser2.UI"
         Title="KParser 2"
-        Height="120"
-        Width="500"
+        Height="800"
+        Width="1200"
+        MinHeight="400"
+        MinWidth="600"
         WindowStartupLocation="CenterScreen"
         mc:Ignorable="d"
         d:DataContext="{x:Static vm:Program.designVm}">
@@ -34,14 +36,22 @@
             </MenuItem>
         </Menu>
         <TabControl DockPanel.Dock="Top">
-            <TabItem Header="View 1">
-                <TextBox Text="View 1 content goes here." />
+            <TabItem Header="Packet View">
+                <TextBox Text="{Binding PacketPrint, StringFormat='\{0}'}" FontFamily="Courier New" TextWrapping="Wrap" />
             </TabItem>
-            <TabItem Header="View 2">
-                <TextBox Text="View 2 content goes here." />
-            </TabItem>
-            <TabItem Header="View 3">
-                <TextBox Text="View 3 content goes here." />
+            <TabItem Header="Packet Log">
+                <ListView ItemsSource="{Binding PacketLog}">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <TextBox
+                                IsReadOnly="True"
+                                FontFamily="Courier New"
+                                TextWrapping="Wrap"
+                                ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                Text="{Binding Mode=OneWay}" />
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
             </TabItem>
         </TabControl>
     </DockPanel>

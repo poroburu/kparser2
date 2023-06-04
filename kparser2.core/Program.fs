@@ -6,15 +6,17 @@ open Serilog
 open Serilog.Extensions.Logging
 open Elmish
 open Elmish.WPF
+open kparser2.Parser.Formatters
 open kparser2.Parser.Network
 
 type Model =
-    { Packet: PacketFrame //seq<byte array>
-      PacketLog: seq<seq<byte array>> }
+    { Packet: PacketFrame
+      PacketPrint: string
+      PacketLog: string list }
 
 type Msg =
     | Reset
-    | SocketMsg of PacketFrame//seq<byte array>
+    | SocketMsg of PacketFrame
 
 let subscriptions (model: Model) : Sub<Msg> =
     let socketSubscription: Subscribe<Msg> =
@@ -28,17 +30,13 @@ let subscriptions (model: Model) : Sub<Msg> =
     [ [ nameof socketSubscription ], socketSubscription ]
 
 let initPacket =
-    
-    {
-        id= 0.0 
-        size= 0.0 
-        data= ""
 
-    }
+    { id = 0; size = 0; data = "" }
 
 let init =
     { Packet = initPacket
-      PacketLog = [| [||] |] }
+      PacketPrint = ""
+      PacketLog = List.empty}
 
 let canReset = (<>) init
 
@@ -49,14 +47,17 @@ let update msg m =
     | SocketMsg bytes ->
         // Handle the socket message here
         // For example, you could update ethe model with the new data
-
+        let packetString = Utils.hexformatFile (bytes.data, bytes.size)
         { m with
             Packet = bytes
-            //PacketLog = m.PacketLog |> Seq.append (seq { bytes })
-            }
+            PacketPrint = packetString
+            PacketLog = [packetString] |> List.append m.PacketLog  }
 
 let bindings () : Binding<Model, Msg> list =
-    [ "Reset" |> Binding.cmdIf (Reset, canReset) ]
+    [ "Reset" |> Binding.cmdIf (Reset, canReset)
+      "PacketPrint" |> Binding.oneWay (fun m -> m.PacketPrint)
+      "PacketLog" |> Binding.oneWay (fun m -> m.PacketLog)
+       ]
 
 let designVm = ViewModel.designInstance init (bindings ())
 

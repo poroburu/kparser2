@@ -12,8 +12,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="Formatters.fs" />
     <Compile Include="Network.fs" />
-    <None Include="mp.fsx" />
   </ItemGroup>
 
 </Project>
