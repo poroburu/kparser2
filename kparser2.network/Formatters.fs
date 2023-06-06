@@ -1,4 +1,4 @@
-﻿module kparser2.Parser.Formatters
+﻿module kparser2.Network.Formatters
 
 open System
 open MessagePack

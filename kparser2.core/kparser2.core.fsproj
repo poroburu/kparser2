@@ -6,6 +6,7 @@
   
   <PropertyGroup>
     <TargetFramework>net6.0-windows</TargetFramework>
+    <RootNamespace>kparser2.Core</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\kparser2.parser\kparser2.Parser.fsproj" />
+    <ProjectReference Include="..\kparser2.Network\kparser2.Network.fsproj" />
   </ItemGroup>
 
 </Project>

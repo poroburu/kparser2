@@ -1,4 +1,4 @@
-﻿module kparser2.UI.Program
+﻿module kparser2.Core.Program
 
 
 
@@ -6,8 +6,8 @@ open Serilog
 open Serilog.Extensions.Logging
 open Elmish
 open Elmish.WPF
-open kparser2.Parser.Formatters
-open kparser2.Parser.Network
+open kparser2.Network.Formatters
+open kparser2.Network.Network
 
 type Model =
     { Packet: PacketFrame

@@ -2,7 +2,7 @@
 {
     using System;
     using System.Windows;
-    using kparser2.UI;
+    using kparser2.Core;
     /// <summary>
     /// Interaction logic for App.xaml
     /// </summary>

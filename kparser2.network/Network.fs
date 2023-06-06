@@ -1,4 +1,4 @@
-﻿module kparser2.Parser.Network
+﻿module kparser2.Network.Network
 
 open System
 open Microsoft.FSharp.Core
@@ -6,7 +6,7 @@ open FsNetMQ
 open MessagePack
 open MessagePack.FSharp
 open MessagePack.Resolvers
-open kparser2.Parser.Formatters
+open kparser2.Network.Formatters
 
 type SocketManager() =
 

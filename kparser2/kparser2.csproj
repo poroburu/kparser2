@@ -10,7 +10,7 @@
 
 
   <ItemGroup>
-    <ProjectReference Include="..\kparser2.core\kparser2.UI.fsproj" />
+    <ProjectReference Include="..\kparser2.Core\kparser2.Core.fsproj" />
   </ItemGroup>
 
 </Project>

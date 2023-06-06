@@ -1,4 +1,4 @@
-﻿module kparser2.UI.Utils
+﻿module kparser2.Core.Utils
 
 let hexPairToChar hexPair =
     System.Convert.ToChar(System.Convert.ToInt32(hexPair, 16))
