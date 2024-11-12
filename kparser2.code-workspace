@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"name": "AirSkyBoat",
+			"path": "../AirSkyBoat"
+		},
+		{
+			"name": "kparser2",
+			"path": "."
+		},
+		{
+			"name": "kpacket",
+			"path": "../kpacket"
+		}
+	],
+	"settings": {}
+}
