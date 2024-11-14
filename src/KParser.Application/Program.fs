@@ -1,19 +1,24 @@
 ﻿module KParser.Application.Program
 
 open KParser.Infrastructure
+open System.Threading
+open System
 
 [<EntryPoint>]
 let main argv =
-    let logger = new RawPacketLogger()
+    printfn "KParser starting..."
+    use logger = new RawPacketLogger()
 
-    // Default FFXI packet forwarder endpoint
-    let endpoint = "tcp://127.0.0.1:5555"
+    // Simple packet handler for testing
+    let handlePacket (packet: RawPacket) =
+        printfn "Received packet of %d bytes at %O"
+            packet.Data.Length
+            packet.Timestamp
+
+    // Use 127.0.0.1 to match RawPacketLogger's defaultEndpoint
+    let endpoint = "tcp://host.docker.internal:4567"
 
     printfn "Starting packet logger..."
-    logger.Start(endpoint)
-
-    // Keep the program running until user input
-    printfn "Press any key to exit..."
-    System.Console.ReadKey() |> ignore
+    logger.Start(endpoint, handlePacket)
 
     0

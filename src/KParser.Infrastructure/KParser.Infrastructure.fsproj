@@ -11,5 +11,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NetMQ" Version="4.0.1.13" />
+    <PackageReference Include="MessagePack" Version="2.5.140" />
+    <PackageReference Include="MessagePack.FSharpExtensions" Version="4.0.0" />
   </ItemGroup>
 </Project>
