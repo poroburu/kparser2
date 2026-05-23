@@ -6,8 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="DtoMapping.fs" />
     <Compile Include="Transforms.fs" />
+    <Compile Include="DtoMapping.fs" />
     <Compile Include="PacketStore.fs" />
     <Compile Include="ConnectionProbe.fs" />
     <Compile Include="PacketSession.fs" />
@@ -19,7 +19,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="..\data\items.json" Link="data\items.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\kparser2.Abstractions\kparser2.Abstractions.csproj" />
+    <ProjectReference Include="..\kparser2.Decoders\kparser2.Decoders.fsproj" />
     <ProjectReference Include="..\kparser2.Ingest\kparser2.Ingest.fsproj" />
     <ProjectReference Include="..\kparser2.Protocol\kparser2.Protocol.fsproj" />
   </ItemGroup>

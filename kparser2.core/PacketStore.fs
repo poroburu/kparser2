@@ -9,6 +9,7 @@ type PacketStore(maxEntries: int) =
     let packets = Queue<PacketRowDto>()
     let chatEvents = Queue<ChatEventDto>()
     let lootEvents = Queue<LootEventDto>()
+    let combatEvents = Queue<CombatEventDto>()
     let mutable totalPackets = 0L
     let mutable selected: PacketRowDto option = None
 
@@ -26,16 +27,22 @@ type PacketStore(maxEntries: int) =
                 packets.Dequeue() |> ignore
 
             for chat in result.ChatEvents do
-                chatEvents.Enqueue(DtoMapping.toChatEvent evt chat.Speaker chat.Message)
+                chatEvents.Enqueue(DtoMapping.toChatEvent evt chat)
 
                 while chatEvents.Count > maxEntries do
                     chatEvents.Dequeue() |> ignore
 
             for loot in result.LootEvents do
-                lootEvents.Enqueue(DtoMapping.toLootEvent evt loot.ItemName loot.Source loot.Detail)
+                lootEvents.Enqueue(DtoMapping.toLootEvent evt loot)
 
                 while lootEvents.Count > maxEntries do
                     lootEvents.Dequeue() |> ignore
+
+            for combat in result.CombatEvents do
+                combatEvents.Enqueue(DtoMapping.toCombatEvent evt combat)
+
+                while combatEvents.Count > maxEntries do
+                    combatEvents.Dequeue() |> ignore
 
             selected <- Some row)
 
@@ -62,6 +69,13 @@ type PacketStore(maxEntries: int) =
             |> Seq.truncate count
             |> Seq.toList)
 
+    member _.GetCombatEvents(count: int) =
+        lock lockObj (fun () ->
+            combatEvents
+            |> Seq.rev
+            |> Seq.truncate count
+            |> Seq.toList)
+
     member _.TotalPackets =
         lock lockObj (fun () -> totalPackets)
 
@@ -74,3 +88,6 @@ type PacketStore(maxEntries: int) =
 
     member _.LootCount =
         lock lockObj (fun () -> int64 lootEvents.Count)
+
+    member _.CombatCount =
+        lock lockObj (fun () -> int64 combatEvents.Count)

@@ -1,7 +1,6 @@
 namespace kparser2.Core
 
 open System
-open System.Linq
 open System.Reactive.Subjects
 open System.Threading
 open System.Threading.Tasks
@@ -15,6 +14,7 @@ type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int) 
     let packetSubject = Subject<PacketRowDto>()
     let chatSubject = Subject<ChatEventDto>()
     let lootSubject = Subject<LootEventDto>()
+    let combatSubject = Subject<CombatEventDto>()
     let cts = new CancellationTokenSource()
     let mutable disposed = false
     let liveSource =
@@ -57,10 +57,13 @@ type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int) 
                             packetSubject.OnNext(row)
 
                             for chat in result.ChatEvents do
-                                chatSubject.OnNext(DtoMapping.toChatEvent evt chat.Speaker chat.Message)
+                                chatSubject.OnNext(DtoMapping.toChatEvent evt chat)
 
                             for loot in result.LootEvents do
-                                lootSubject.OnNext(DtoMapping.toLootEvent evt loot.ItemName loot.Source loot.Detail)
+                                lootSubject.OnNext(DtoMapping.toLootEvent evt loot)
+
+                            for combat in result.CombatEvents do
+                                combatSubject.OnNext(DtoMapping.toCombatEvent evt combat)
             with
             | :? OperationCanceledException -> ()
             | ex -> printfn "PacketSession ingest error: %s" ex.Message
@@ -78,6 +81,8 @@ type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int) 
         member _.ChatEvents = chatSubject :> IObservable<_>
 
         member _.LootEvents = lootSubject :> IObservable<_>
+
+        member _.CombatEvents = combatSubject :> IObservable<_>
 
         member _.GetStatsAsync() =
             task {
@@ -107,6 +112,7 @@ type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int) 
                         TotalPackets = store.TotalPackets,
                         ChatEvents = store.ChatCount,
                         LootEvents = store.LootCount,
+                        CombatEvents = store.CombatCount,
                         IsConnected = not disposed,
                         Source = sourceName,
                         SubscriberPackets = subPackets,
@@ -123,6 +129,8 @@ type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int) 
 
         member _.GetRecentLootEvents(count) = store.GetLootEvents(count)
 
+        member _.GetRecentCombatEvents(count) = store.GetCombatEvents(count)
+
         member _.GetSelectedPacket() =
             store.Selected |> Option.toObj
 
@@ -136,6 +144,7 @@ type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int) 
                 packetSubject.OnCompleted()
                 chatSubject.OnCompleted()
                 lootSubject.OnCompleted()
+                combatSubject.OnCompleted()
 
                 try
                     (source :> IDisposable).Dispose()
