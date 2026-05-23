@@ -1,29 +1,27 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup Condition="'$(Configuration)' != 'Debug'">
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-  </PropertyGroup>
-  
   <PropertyGroup>
-    <TargetFramework>net6.0-windows</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <RootNamespace>kparser2.Core</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Utils.fs" />
-    <Compile Include="Program.fs" />
+    <Compile Include="DtoMapping.fs" />
+    <Compile Include="Transforms.fs" />
+    <Compile Include="PacketStore.fs" />
+    <Compile Include="ConnectionProbe.fs" />
+    <Compile Include="PacketSession.fs" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Elmish.WPF" Version="4.0.0-beta-50" />
-    <PackageReference Include="Serilog.Extensions.Logging" Version="3.1.0" />
-    <PackageReference Include="Serilog.Sinks.Console" Version="4.1.0" />
-    <PackageReference Update="FSharp.Core" Version="7.0.300" />
-    <PackageReference Include="Serilog.Sinks.Seq" Version="5.2.2" />
+    <PackageReference Include="System.Reactive" Version="6.0.1" />
+    <PackageReference Update="FSharp.Core" Version="8.0.400" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\kparser2.Network\kparser2.Network.fsproj" />
+    <ProjectReference Include="..\kparser2.Abstractions\kparser2.Abstractions.csproj" />
+    <ProjectReference Include="..\kparser2.Ingest\kparser2.Ingest.fsproj" />
+    <ProjectReference Include="..\kparser2.Protocol\kparser2.Protocol.fsproj" />
   </ItemGroup>
 
 </Project>
