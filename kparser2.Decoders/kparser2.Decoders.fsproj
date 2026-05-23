@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>kparser2.Decoders</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Binary.fs" />
+    <Compile Include="Bitstream.fs" />
+    <Compile Include="DecoderResult.fs" />
+    <Compile Include="ItemLookup.fs" />
+    <Compile Include="EntityRegistry.fs" />
+    <Compile Include="ChatCommon.fs" />
+    <Compile Include="Chat0x17.fs" />
+    <Compile Include="Chat0xB5.fs" />
+    <Compile Include="Trophy0xD2.fs" />
+    <Compile Include="Trophy0xD3.fs" />
+    <Compile Include="Battle0x29.fs" />
+    <Compile Include="Battle0x28.fs" />
+    <Compile Include="DecoderRegistry.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Update="FSharp.Core" Version="8.0.400" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\kparser2.Protocol\kparser2.Protocol.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\data\items.json" Link="data\items.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
