@@ -1,0 +1,14 @@
+<UserControl x:Class="kparser2.Views.ChatViewControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ListView ItemsSource="{Binding Events}">
+        <ListView.View>
+            <GridView>
+                <GridViewColumn Header="Time" DisplayMemberBinding="{Binding Timestamp}" Width="120" />
+                <GridViewColumn Header="Dir" DisplayMemberBinding="{Binding Direction}" Width="70" />
+                <GridViewColumn Header="Speaker" DisplayMemberBinding="{Binding Speaker}" Width="120" />
+                <GridViewColumn Header="Message" DisplayMemberBinding="{Binding Message}" Width="400" />
+            </GridView>
+        </ListView.View>
+    </ListView>
+</UserControl>

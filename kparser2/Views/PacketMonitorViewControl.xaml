@@ -1,0 +1,26 @@
+<UserControl x:Class="kparser2.Views.PacketMonitorViewControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <DockPanel>
+        <TextBlock DockPanel.Dock="Top"
+                   Margin="0,0,0,8"
+                   Text="{Binding StatusText}"
+                   FontFamily="Consolas" />
+        <DataGrid ItemsSource="{Binding Rows}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  VirtualizingPanel.IsVirtualizing="True"
+                  VirtualizingPanel.VirtualizationMode="Recycling">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="ID" Binding="{Binding PacketId, StringFormat=0x{0:X4}}" Width="80" />
+                <DataGridTextColumn Header="Name" Binding="{Binding PacketName}" Width="*" />
+                <DataGridTextColumn Header="Dir" Binding="{Binding Direction}" Width="70" />
+                <DataGridTextColumn Header="Type" Binding="{Binding PacketType}" Width="100" />
+                <DataGridTextColumn Header="Size" Binding="{Binding Size}" Width="60" />
+                <DataGridTextColumn Header="Topic" Binding="{Binding Topic}" Width="2*" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</UserControl>
