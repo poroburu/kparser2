@@ -111,7 +111,7 @@ public partial class MainWindow : Window
             else
             {
                 StatusText.Text =
-                    $"Live feed | packets: {stats.TotalPackets} | chat: {stats.ChatEvents} | loot: {stats.LootEvents} | " +
+                    $"Live feed | packets: {stats.TotalPackets} | chat: {stats.ChatEvents} | loot: {stats.LootEvents} | combat: {stats.CombatEvents} | " +
                     $"zmq: {stats.SubscriberPackets ?? 0} | reconnects: {stats.SubscriberReconnects ?? 0}";
             }
         };

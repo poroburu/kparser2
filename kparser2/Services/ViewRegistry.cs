@@ -21,6 +21,7 @@ public static class ViewRegistryFactory
             .Register(new Views.DebugView())
             .Register(new Views.PacketMonitorView())
             .Register(new Views.ChatView())
-            .Register(new Views.ItemDropsView());
+            .Register(new Views.ItemDropsView())
+            .Register(new Views.CombatView());
     }
 }

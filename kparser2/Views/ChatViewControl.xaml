@@ -6,6 +6,8 @@
             <GridView>
                 <GridViewColumn Header="Time" DisplayMemberBinding="{Binding Timestamp}" Width="120" />
                 <GridViewColumn Header="Dir" DisplayMemberBinding="{Binding Direction}" Width="70" />
+                <GridViewColumn Header="Mode" DisplayMemberBinding="{Binding Mode}" Width="90" />
+                <GridViewColumn Header="GM" DisplayMemberBinding="{Binding IsGm}" Width="40" />
                 <GridViewColumn Header="Speaker" DisplayMemberBinding="{Binding Speaker}" Width="120" />
                 <GridViewColumn Header="Message" DisplayMemberBinding="{Binding Message}" Width="400" />
             </GridView>

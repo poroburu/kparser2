@@ -1,0 +1,19 @@
+<UserControl x:Class="kparser2.Views.CombatViewControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ListView ItemsSource="{Binding Events}">
+        <ListView.View>
+            <GridView>
+                <GridViewColumn Header="Time" DisplayMemberBinding="{Binding Timestamp}" Width="120" />
+                <GridViewColumn Header="Kind" DisplayMemberBinding="{Binding EventKind}" Width="70" />
+                <GridViewColumn Header="Actor" DisplayMemberBinding="{Binding ActorId}" Width="90" />
+                <GridViewColumn Header="Target" DisplayMemberBinding="{Binding TargetId}" Width="90" />
+                <GridViewColumn Header="Cmd" DisplayMemberBinding="{Binding CommandNo}" Width="50" />
+                <GridViewColumn Header="Miss" DisplayMemberBinding="{Binding Miss}" Width="50" />
+                <GridViewColumn Header="Dmg" DisplayMemberBinding="{Binding Damage}" Width="60" />
+                <GridViewColumn Header="Msg" DisplayMemberBinding="{Binding MessageId}" Width="60" />
+                <GridViewColumn Header="Summary" DisplayMemberBinding="{Binding Summary}" Width="360" />
+            </GridView>
+        </ListView.View>
+    </ListView>
+</UserControl>

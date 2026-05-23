@@ -34,3 +34,11 @@ public sealed class ItemDropsView : IPacketView
 
     public UserControl CreateView(IPacketSession session) => new ItemDropsViewControl(session);
 }
+
+public sealed class CombatView : IPacketView
+{
+    public string Id => "combat";
+    public string Title => "Combat";
+
+    public UserControl CreateView(IPacketSession session) => new CombatViewControl(session);
+}

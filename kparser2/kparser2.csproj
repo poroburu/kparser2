@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <None Include="..\fixtures\sessions\**\*" Link="fixtures\sessions\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\data\items.json" Link="data\items.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
