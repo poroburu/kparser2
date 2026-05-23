@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>kparser2.Ingest</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="IPacketSource.fs" />
+    <Compile Include="Ndjson.fs" />
+    <Compile Include="CommandClient.fs" />
+    <Compile Include="ZmqSubscriber.fs" />
+    <Compile Include="NdjsonReplayer.fs" />
+    <Compile Include="PacketSource.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NetMQ" Version="4.0.1.13" />
+    <PackageReference Update="FSharp.Core" Version="8.0.400" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\kparser2.Protocol\kparser2.Protocol.fsproj" />
+  </ItemGroup>
+
+</Project>
