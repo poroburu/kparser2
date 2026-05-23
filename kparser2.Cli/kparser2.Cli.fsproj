@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>kparser2.Cli</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+    <PackageReference Update="FSharp.Core" Version="8.0.400" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\kparser2.Core\kparser2.Core.fsproj" />
+    <ProjectReference Include="..\kparser2.Ingest\kparser2.Ingest.fsproj" />
+    <ProjectReference Include="..\kparser2.Protocol\kparser2.Protocol.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\fixtures\sessions\**\*" Link="fixtures\sessions\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
