@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\kparser2.Core\kparser2.Core.fsproj" />
+    <ProjectReference Include="..\kparser2.Decoders\kparser2.Decoders.fsproj" />
     <ProjectReference Include="..\kparser2.Ingest\kparser2.Ingest.fsproj" />
     <ProjectReference Include="..\kparser2.Protocol\kparser2.Protocol.fsproj" />
   </ItemGroup>

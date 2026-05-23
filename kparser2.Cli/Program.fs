@@ -1,14 +1,97 @@
 open System
+open System.Diagnostics
 open System.IO
 open System.Text.Json
 open System.Threading
 open System.Threading.Tasks
 open kparser2.Core
+open kparser2.Decoders
 open kparser2.Ingest
 open kparser2.Protocol
 
 let private printJson value =
     printfn "%s" (JsonSerializer.Serialize(value, JsonSerializerOptions(WriteIndented = true)))
+
+let private eventToJson (event: DecoderEvent) =
+    match event with
+    | DecoderEvent.Chat chat ->
+        box
+            {| kind = "chat"
+               mode = chat.Mode
+               speaker = chat.Speaker
+               message = chat.Message
+               isGm = chat.IsGm |}
+    | DecoderEvent.Loot loot ->
+        box
+            {| kind = "loot"
+               eventType = string loot.EventType
+               itemId = loot.ItemId
+               itemName = loot.ItemName
+               quantity = loot.Quantity
+               gil = loot.Gil
+               poolSlot = loot.PoolSlot
+               actorName = loot.ActorName
+               detail = loot.Detail |}
+    | DecoderEvent.CombatMessage message ->
+        box
+            {| kind = "combat_message"
+               casterId = message.CasterId
+               targetId = message.TargetId
+               messageNum = message.MessageNum
+               messageType = message.MessageType
+               param1 = message.Param1
+               param2 = message.Param2 |}
+    | DecoderEvent.CombatAction action ->
+        box
+            {| kind = "combat_action"
+               actorId = action.ActorId
+               commandNo = action.CommandNo
+               commandArg = action.CommandArg
+               info = action.Info
+               targets = action.Targets |}
+
+let private runDecode (path: string) (opcodeFilter: int option) (asJson: bool) =
+    let mutable count = 0
+
+    for topic, metaJson, data in Ndjson.readAll path do
+        let meta = PacketMeta.parseString metaJson
+        let evt = PacketMeta.toEvent topic meta data
+
+        let matches =
+            opcodeFilter
+            |> Option.map (fun op -> int evt.PacketId = op)
+            |> Option.defaultValue true
+
+        if matches then
+            let decoded = DecoderRegistry.decode evt
+
+            if not (List.isEmpty decoded.Events) then
+                count <- count + 1
+
+                if asJson then
+                    printJson
+                        {| packetId = evt.PacketId
+                           packetName = evt.PacketName
+                           timestamp = evt.Timestamp
+                           events = decoded.Events |> List.map eventToJson |}
+                else
+                    printfn "0x%04X %s" evt.PacketId evt.PacketName
+
+                    for event in decoded.Events do
+                        match event with
+                        | DecoderEvent.Chat chat ->
+                            printfn "  chat [%s] %s: %s" chat.Mode chat.Speaker chat.Message
+                        | DecoderEvent.Loot loot ->
+                            printfn "  loot %A item=%s (%d) actor=%s" loot.EventType loot.ItemName loot.ItemId loot.ActorName
+                        | DecoderEvent.CombatMessage message ->
+                            printfn "  combat msg caster=%d target=%d num=0x%X" message.CasterId message.TargetId message.MessageNum
+                        | DecoderEvent.CombatAction action ->
+                            printfn "  combat action actor=%d cmd=%d targets=%d" action.ActorId action.CommandNo action.Targets.Length
+
+    if not asJson then
+        printfn "Decoded %d packets with structured events from %s" count path
+
+    count
 
 let private runReplay (path: string) (opcodeFilter: int option) (asJson: bool) =
     use session = PacketSessionFactory.fromReplayDefault(path) :> kparser2.Abstractions.IPacketSession
@@ -187,6 +270,8 @@ let main argv =
         printfn "  kparser2.cli probe"
         printfn "  kparser2.cli watch [--duration-ms 30000] [--interval-ms 2000]"
         printfn "  kparser2.cli record <file.ndjson> [--duration-ms 5000]"
+        printfn "  kparser2.cli decode <file.ndjson> [--filter 0x17] [--json]"
+        printfn "  kparser2.cli export-items [--sql <path>] [--output <path>]"
         1
     else
         try
@@ -259,6 +344,67 @@ let main argv =
 
                 runRecord output duration
                 0
+            | "decode" when argv.Length >= 2 ->
+                let path = argv.[1]
+                let mutable filter = None
+                let mutable asJson = false
+                let mutable i = 2
+
+                while i < argv.Length do
+                    match argv.[i] with
+                    | "--filter" when i + 1 < argv.Length ->
+                        let token = argv.[i + 1].Replace("0x", "").Replace("0X", "")
+                        filter <- Some(Convert.ToInt32(token, 16))
+                        i <- i + 2
+                    | "--json" ->
+                        asJson <- true
+                        i <- i + 1
+                    | _ -> i <- i + 1
+
+                runDecode path filter asJson |> ignore
+                0
+            | "export-items" ->
+                let mutable sqlPath =
+                    Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "server", "sql", "item_basic.sql"))
+
+                let mutable outputPath =
+                    Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "items.json"))
+
+                let mutable i = 1
+
+                while i < argv.Length do
+                    match argv.[i] with
+                    | "--sql" when i + 1 < argv.Length ->
+                        sqlPath <- argv.[i + 1]
+                        i <- i + 2
+                    | "--output" when i + 1 < argv.Length ->
+                        outputPath <- argv.[i + 1]
+                        i <- i + 2
+                    | _ -> i <- i + 1
+
+                let scriptPath =
+                    Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "scripts", "export-items.ps1"))
+
+                if not (File.Exists scriptPath) then
+                    eprintfn "export-items script not found: %s" scriptPath
+                    1
+                else
+                    let psi =
+                        ProcessStartInfo(
+                            FileName = "powershell",
+                            Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{scriptPath}\" -SqlPath \"{sqlPath}\" -OutputPath \"{outputPath}\"",
+                            UseShellExecute = false
+                        )
+
+                    use proc = Process.Start(psi)
+                    proc.WaitForExit()
+
+                    if proc.ExitCode = 0 then
+                        printfn "Exported items to %s" outputPath
+                        0
+                    else
+                        eprintfn "export-items failed with exit code %d" proc.ExitCode
+                        1
             | _ ->
                 printfn "Unknown command: %s" argv.[0]
                 1
