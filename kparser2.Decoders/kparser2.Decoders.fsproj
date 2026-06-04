@@ -10,8 +10,9 @@
     <Compile Include="Bitstream.fs" />
     <Compile Include="DecoderResult.fs" />
     <Compile Include="ItemLookup.fs" />
-    <Compile Include="EntityRegistry.fs" />
+    <Compile Include="ZoneLookup.fs" />
     <Compile Include="ChatCommon.fs" />
+    <Compile Include="EntityRegistry.fs" />
     <Compile Include="Chat0x17.fs" />
     <Compile Include="Chat0xB5.fs" />
     <Compile Include="Trophy0xD2.fs" />
@@ -31,6 +32,7 @@
 
   <ItemGroup>
     <None Include="..\data\items.json" Link="data\items.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\data\zones.json" Link="data\zones.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

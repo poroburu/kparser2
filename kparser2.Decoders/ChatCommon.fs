@@ -37,3 +37,22 @@ module ChatCommon =
 
     let modeLabel kind =
         modeNames |> Map.tryFind kind |> Option.defaultValue $"Mode 0x{kind:X2}"
+
+    /// s2c kinds displayed without a sender name (self echo) — XiPackets 0x0017.
+    let namelessSelfKinds =
+        Set.ofList [ 0x0D; 0x0E; 0x0F; 0x10; 0x1C; 0x1F ]
+
+    /// s2c Say copy kinds that may carry the local player name.
+    let sayCopyKinds = Set.ofList [ 0x18; 0x19 ]
+
+    let isNamelessSelfKind kind = namelessSelfKinds.Contains kind
+
+    let isSayCopyKind kind = sayCopyKinds.Contains kind
+
+    let tryParseTellTarget (message: string) =
+        let m = System.Text.RegularExpressions.Regex("^>>(?<name>[A-Za-z0-9_]{3,16})\\b").Match(message)
+
+        if m.Success then
+            Some m.Groups.["name"].Value
+        else
+            None
