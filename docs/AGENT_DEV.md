@@ -39,7 +39,7 @@ If they diverge, the bug is in ingest — not views.
 ## Recording new fixtures
 
 ```powershell
-dotnet run --project kparser2.Cli/kparser2.Cli.fsproj -- record fixtures/sessions/my_session.ndjson --duration-ms 15000
+dotnet run --project kparser2.Cli/kparser2.Cli.fsproj -- record C:\Users\porob\git\ffxi-captures\ndjson\my_session.ndjson --duration-ms 15000
 ```
 
 Commit small, focused fixtures (login, chat, drop) rather than long captures.
@@ -52,3 +52,27 @@ dotnet run --project kparser2.Cli/kparser2.Cli.fsproj -- stats
 ```
 
 Both require kpacket2 running with REP bound on 5556.
+
+## PacketViewer retail captures
+
+When Ashita is unavailable, validate against PV logs under `ffxi-captures/retail/_extract/`:
+
+```powershell
+dotnet run --project kparser2.Cli/kparser2.Cli.fsproj -- import packetviewer `
+  --full C:\Users\porob\git\ffxi-captures\retail\_extract\PetrifyingPair\packetviewer\full.log `
+  -o C:\Users\porob\git\ffxi-captures\ndjson\petrifying_pair.ndjson
+
+dotnet run --project kparser2.Cli/kparser2.Cli.fsproj -- import packetviewer --validate `
+  C:\Users\porob\git\ffxi-captures\ndjson\petrifying_pair.ndjson
+
+dotnet run --project kparser2.Cli/kparser2.Cli.fsproj -- analytics snapshot `
+  C:\Users\porob\git\ffxi-captures\ndjson\petrifying_pair.ndjson
+```
+
+WPF: **Session → Import PacketViewer…** — select `full.log` or `incoming.log` + `outgoing.log`; converts to temp NDJSON and replays.
+
+Oracle chain: PV import → `--validate` → `analytics snapshot` → VieweD field dump for ambiguous opcodes.
+
+Mid-capture logs often lack **0x00A**; local player is inferred from **0x00DF UniqueNo@4**. Zone id may be zero in instanced battles until **0x00DF ZoneNo@26** or **0x00A@0x30** carries a non-zero value.
+
+Golden regression fixture: `fixtures/sessions/bcmn30_petrifying_pair.ndjson` (retail BCMN30 slice with mob names, combat, defeat).

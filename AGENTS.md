@@ -23,6 +23,21 @@ dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fspro
 # Regenerate item name lookup from LandSandBoat SQL
 dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- export-items
 
+# Regenerate ability name lookup from LandSandBoat SQL
+dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- export-actions
+
+# Regenerate zone name lookup from LandSandBoat SQL
+dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- export-zones
+
+# Import PacketViewer .log → NDJSON (fixed s2c/c2s topics)
+dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- import packetviewer --full C:\path\to\full.log -o capture.ndjson
+
+# Validate imported capture (entity/opcode/analytics summary)
+dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- import packetviewer --validate capture.ndjson
+
+# Analytics snapshot (waits for replay completion; no 500 ms race)
+dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- analytics snapshot capture.ndjson
+
 # Regenerate synthetic fixtures with valid packet bytes
 powershell -File C:\Users\porob\git\kparser2\scripts\generate-fixtures.ps1
 
@@ -37,6 +52,15 @@ dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fspro
 3. **kpacket2 packet_monitor.exe** — live byte oracle on `:5555`.
 4. **VieweD** — open the same NDJSON capture for independent field-level dumps when decoder output is ambiguous.
 
+## PacketViewer import oracle chain
+
+1. **Convert** — `scripts/convert-packetviewer-to-ndjson.ps1` or `kparser2.cli import packetviewer` (topics must be `kpacket.v1.world.s2c` / `c2s`, not `i2c` / `o2s`).
+2. **Validate** — `import packetviewer --validate capture.ndjson` (opcode histogram, entities, local player, zone, battles).
+3. **Analytics** — `analytics snapshot capture.ndjson` (uses `WaitForReplayComplete`; no fixed delay).
+4. **VieweD** — cross-check ambiguous fields (0x00E name@0x34, 0x00DF vitals) against `VieweD/data/ffxi/rules/ffxi.xml`.
+
+Mid-capture PV logs often lack **0x00A** (login); local player falls back to **0x00DF UniqueNo@4**. Zone id from **0x00A@0x30** or **0x00DF ZoneNo@26** may be zero during instanced battles — zone name can stay empty until a packet carries a non-zero zone id.
+
 Packet payloads include the **4-byte world header**; decoder field offsets start at **byte 4**.
 
 ## Fixture paths
@@ -47,6 +71,13 @@ Packet payloads include the **4-byte world header**; decoder field offsets start
 | `fixtures/sessions/login.ndjson` | enter zone + system chat |
 | `fixtures/sessions/item_drop.ndjson` | trophy list + solution |
 | `fixtures/sessions/combat_basic.ndjson` | battle message (0x29) |
+| `fixtures/sessions/combat_action.ndjson` | combat action (0x28) melee + spell |
+| `fixtures/sessions/combat_death.ndjson` | MsgBasic defeat + falls to ground |
+| `fixtures/sessions/combat_recovery.ndjson` | cure via 0x29 + 0x28 |
+| `fixtures/sessions/chat_xp.ndjson` | MsgBasic XP + EXP chain + system chat |
+| `fixtures/sessions/bcmn30_petrifying_pair.ndjson` | retail BCMN30 slice: mob spawns (0x00E), combat, defeat |
+
+Reference captures (local, not committed): `C:\Users\porob\git\ffxi-captures\` — NDJSON recordings and retail unpacks for VieweD + CLI decode oracles. Promote small slices into `fixtures/sessions/` for golden tests.
 
 Expected `decode sample.ndjson` output (non-JSON mode):
 
@@ -69,6 +100,7 @@ kparser2.Core/           F#  PacketStore, transforms, PacketSession
 kparser2.Cli/            F#  headless entry (replay, decode, record, probe)
 kparser2/                C#  WPF host + views
 data/items.json          item id → name (from server/sql/item_basic.sql)
+data/zones.json          zone id → name (from server/sql/zone_settings.sql)
 ```
 
 ## Common tasks
