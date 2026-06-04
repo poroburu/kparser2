@@ -111,19 +111,18 @@ module Transforms =
                   Summary =
                       $"cmd {action.CommandNo} {actor} -> {targetName} {missLabel effect.Miss} value={effect.Value}" }))
 
-    let run (evt: PacketEvent) =
-        EntityRegistry.observe evt
-        let decoded = DecoderRegistry.decode evt
-
+    let runFromDecoded (evt: PacketEvent) (decoded: DecoderResult) =
         let chatEvents =
             decoded.Events
             |> List.choose (
                 function
                 | DecoderEvent.Chat chat ->
+                    EntityRegistry.observeChatBootstrap chat evt.PacketId
+
                     Some
                         { Mode = chat.Mode
                           IsGm = chat.IsGm
-                          Speaker = EntityRegistry.resolveChatSpeaker chat.Speaker evt.PacketId
+                          Speaker = EntityRegistry.resolveChatSpeaker chat.Speaker evt.PacketId chat.ModeId
                           Message = chat.Message }
                 | _ -> None
             )
@@ -158,3 +157,8 @@ module Transforms =
         { ChatEvents = chatEvents
           LootEvents = lootEvents
           CombatEvents = combatEvents }
+
+    let run (evt: PacketEvent) =
+        EntityRegistry.observe evt
+        let decoded = DecoderRegistry.decode evt
+        runFromDecoded evt decoded

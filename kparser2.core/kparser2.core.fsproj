@@ -8,6 +8,8 @@
   <ItemGroup>
     <Compile Include="Transforms.fs" />
     <Compile Include="DtoMapping.fs" />
+    <Compile Include="AnalyticsDtoMapping.fs" />
+    <Compile Include="ReportServices.fs" />
     <Compile Include="PacketStore.fs" />
     <Compile Include="ConnectionProbe.fs" />
     <Compile Include="PacketSession.fs" />
@@ -24,6 +26,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\kparser2.Abstractions\kparser2.Abstractions.csproj" />
+    <ProjectReference Include="..\kparser2.Analytics\kparser2.Analytics.fsproj" />
     <ProjectReference Include="..\kparser2.Decoders\kparser2.Decoders.fsproj" />
     <ProjectReference Include="..\kparser2.Ingest\kparser2.Ingest.fsproj" />
     <ProjectReference Include="..\kparser2.Protocol\kparser2.Protocol.fsproj" />

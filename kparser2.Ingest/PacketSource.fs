@@ -9,6 +9,7 @@ type LivePacketSource(subEndpoint: string) =
 
     interface IPacketSource with
         member _.Packets = subscriber.Packets
+        member _.WaitForCompletion() = ()
 
         member _.Dispose() =
             subscriber.Stop()
@@ -22,6 +23,9 @@ type ReplayPacketSource(path: string, ?speed: float) =
 
     interface IPacketSource with
         member _.Packets = replayer.Packets
+        member _.WaitForCompletion() = replayer.WaitForCompletion()
 
         member _.Dispose() =
             (replayer :> IDisposable).Dispose()
+
+    member _.WaitForCompletion() = replayer.WaitForCompletion()

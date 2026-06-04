@@ -5,16 +5,19 @@ open System.Reactive.Subjects
 open System.Threading
 open System.Threading.Tasks
 open kparser2.Abstractions
+open kparser2.Analytics
+open kparser2.Decoders
 open kparser2.Ingest
 open kparser2.Protocol
 
 type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int) =
     let maxEntries = defaultArg maxEntries 5000
     let store = PacketStore(maxEntries)
-    let packetSubject = Subject<PacketRowDto>()
-    let chatSubject = Subject<ChatEventDto>()
-    let lootSubject = Subject<LootEventDto>()
-    let combatSubject = Subject<CombatEventDto>()
+    let packetSubject = new Subject<PacketRowDto>()
+    let chatSubject = new Subject<ChatEventDto>()
+    let lootSubject = new Subject<LootEventDto>()
+    let combatSubject = new Subject<CombatEventDto>()
+    let analyticsSubject = new Subject<AnalyticsSnapshotDto>()
     let cts = new CancellationTokenSource()
     let mutable disposed = false
     let liveSource =
@@ -22,6 +25,38 @@ type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int) 
         | :? LivePacketSource as live -> Some live
         | _ -> None
     let mutable knownPluginSession: string option = None
+
+    do
+        match liveSource with
+        | Some _ -> ConnectionProbe.tryBootstrapLocalPlayerName ()
+        | None -> ()
+
+    let analyticsGate = obj ()
+    let mutable analyticsDirty = false
+    let analyticsFlushIntervalMs = 300
+
+    let publishAnalyticsSnapshot () =
+        analyticsSubject.OnNext(store.GetAnalyticsSnapshot())
+
+    let markAnalyticsDirty () =
+        lock analyticsGate (fun () -> analyticsDirty <- true)
+
+    let flushAnalytics (force: bool) =
+        lock analyticsGate (fun () ->
+            if analyticsDirty || force then
+                analyticsDirty <- false
+                publishAnalyticsSnapshot ())
+
+    let analyticsFlushLoop () =
+        task {
+            try
+                while not cts.Token.IsCancellationRequested do
+                    do! Task.Delay(analyticsFlushIntervalMs, cts.Token)
+                    flushAnalytics false
+            with
+            | :? OperationCanceledException -> ()
+            | ex -> printfn "PacketSession analytics flush error: %s" ex.Message
+        }
 
     let monitorPluginSession () =
         task {
@@ -33,6 +68,7 @@ type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int) 
                     | Some live, Some uuid when knownPluginSession <> Some uuid ->
                         live.Reconnect()
                         knownPluginSession <- Some uuid
+                        ConnectionProbe.tryBootstrapLocalPlayerName ()
                     | _ -> ()
             with
             | :? OperationCanceledException -> ()
@@ -55,6 +91,7 @@ type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int) 
                         while source.Packets.TryRead(&evt) do
                             let row, result = store.Add(evt)
                             packetSubject.OnNext(row)
+                            markAnalyticsDirty ()
 
                             for chat in result.ChatEvents do
                                 chatSubject.OnNext(DtoMapping.toChatEvent evt chat)
@@ -64,16 +101,33 @@ type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int) 
 
                             for combat in result.CombatEvents do
                                 combatSubject.OnNext(DtoMapping.toCombatEvent evt combat)
+
+                flushAnalytics true
             with
             | :? OperationCanceledException -> ()
             | ex -> printfn "PacketSession ingest error: %s" ex.Message
         }
 
     let _ingestTask = ingestLoop()
+    let _analyticsFlushTask = analyticsFlushLoop()
     let _monitorTask =
         match liveSource with
         | Some _ -> monitorPluginSession() :> Task
         | None -> Task.CompletedTask
+
+    member _.WaitForReplayComplete() =
+        source.WaitForCompletion()
+        _ingestTask.GetAwaiter().GetResult()
+        flushAnalytics true
+
+    interface IAnalyticsSession with
+        member _.Analytics = analyticsSubject :> IObservable<_>
+
+        member _.GetSnapshot() = store.GetAnalyticsSnapshot()
+
+        member _.LoadSnapshot snapshot =
+            store.LoadAnalyticsSnapshot snapshot
+            publishAnalyticsSnapshot ()
 
     interface IPacketSession with
         member _.Packets = packetSubject :> IObservable<_>
@@ -121,7 +175,6 @@ type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int) 
                         SubscriberLastError = subLastError
                     )
             }
-            :> Task<SessionStatsDto>
 
         member _.GetRecentPackets(count) = store.GetRecent(count)
 
@@ -142,6 +195,7 @@ type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int) 
                 disposed <- true
                 cts.Cancel()
                 packetSubject.OnCompleted()
+                analyticsSubject.OnCompleted()
                 chatSubject.OnCompleted()
                 lootSubject.OnCompleted()
                 combatSubject.OnCompleted()
@@ -155,13 +209,13 @@ type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int) 
 
 module PacketSessionFactory =
     let fromLive(subEndpoint: string) =
-        PacketSession(LivePacketSource(subEndpoint) :> IPacketSource, $"live:{subEndpoint}")
+        new PacketSession(LivePacketSource(subEndpoint) :> IPacketSource, $"live:{subEndpoint}")
 
     let fromLiveDefault() =
         fromLive "tcp://localhost:5555"
 
     let fromReplay(path: string, speed: float) =
-        PacketSession(ReplayPacketSource(path, speed = speed) :> IPacketSource, $"replay:{path}")
+        new PacketSession(ReplayPacketSource(path, speed = speed) :> IPacketSource, $"replay:{path}")
 
     let fromReplayDefault(path: string) =
         fromReplay (path, 0.0)

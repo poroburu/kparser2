@@ -1,6 +1,8 @@
 namespace kparser2.Core
 
+open System
 open System.Text.Json
+open kparser2.Decoders
 open kparser2.Ingest
 
 type PluginHello =
@@ -60,3 +62,26 @@ module ConnectionProbe =
 
     let publishedCount () =
         pluginStats() |> Option.map (fun s -> s.packets_published) |> Option.defaultValue 0L
+
+    let tryPlayerNameFromRaw (response: string) =
+        try
+            let doc = JsonDocument.Parse(response)
+            let mutable prop = Unchecked.defaultof<JsonElement>
+
+            if doc.RootElement.TryGetProperty("player_name", &prop) then
+                let name = prop.GetString()
+
+                if String.IsNullOrWhiteSpace name then
+                    None
+                else
+                    Some name
+            else
+                None
+        with _ ->
+            None
+
+    let playerName () =
+        hello() |> Option.bind tryPlayerNameFromRaw
+
+    let tryBootstrapLocalPlayerName () =
+        playerName() |> Option.iter EntityRegistry.registerLocalPlayerName

@@ -2,6 +2,8 @@ namespace kparser2.Core
 
 open System.Collections.Generic
 open kparser2.Abstractions
+open kparser2.Analytics
+open kparser2.Decoders
 open kparser2.Protocol
 
 type PacketStore(maxEntries: int) =
@@ -10,6 +12,9 @@ type PacketStore(maxEntries: int) =
     let chatEvents = Queue<ChatEventDto>()
     let lootEvents = Queue<LootEventDto>()
     let combatEvents = Queue<CombatEventDto>()
+    let analyticsStore =
+        EntityRegistry.reset ()
+        SessionStore.create ()
     let mutable totalPackets = 0L
     let mutable selected: PacketRowDto option = None
 
@@ -17,7 +22,9 @@ type PacketStore(maxEntries: int) =
 
     member _.Add(evt: PacketEvent) =
         let row = DtoMapping.toPacketRow evt
-        let result = Transforms.run evt
+        EntityRegistry.observe evt
+        let decoded = DecoderRegistry.decode evt
+        let result = Transforms.runFromDecoded evt decoded
 
         lock lockObj (fun () ->
             totalPackets <- totalPackets + 1L
@@ -25,6 +32,8 @@ type PacketStore(maxEntries: int) =
 
             while packets.Count > maxEntries do
                 packets.Dequeue() |> ignore
+
+            SessionStore.ingest analyticsStore evt decoded
 
             for chat in result.ChatEvents do
                 chatEvents.Enqueue(DtoMapping.toChatEvent evt chat)
@@ -91,3 +100,10 @@ type PacketStore(maxEntries: int) =
 
     member _.CombatCount =
         lock lockObj (fun () -> int64 combatEvents.Count)
+
+    member _.GetAnalyticsSnapshot() =
+        lock lockObj (fun () -> SessionStore.snapshot analyticsStore |> AnalyticsDtoMapping.toSnapshotDto)
+
+    member _.LoadAnalyticsSnapshot(snapshot: AnalyticsSnapshotDto) =
+        lock lockObj (fun () ->
+            SessionStore.loadSnapshot analyticsStore (AnalyticsDtoMapping.fromSnapshotDto snapshot))

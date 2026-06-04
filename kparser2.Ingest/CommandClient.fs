@@ -36,4 +36,4 @@ type CommandClient(reqEndpoint: string) =
 
 type CommandClientFactory() =
     static member Create(?reqEndpoint: string) =
-        CommandClient(defaultArg reqEndpoint "tcp://localhost:5556")
+        new CommandClient(defaultArg reqEndpoint "tcp://localhost:5556")
