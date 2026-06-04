@@ -49,7 +49,7 @@ module DecoderTests =
 
         EntityRegistry.observe evt
         Assert.Equal(Some "Mychar", EntityRegistry.localPlayerName())
-        Assert.Equal("Mychar", EntityRegistry.resolveChatSpeaker "" 0x00B5us)
+        Assert.Equal("Mychar", EntityRegistry.resolveChatSpeaker "" 0x00B5us 0x00)
 
     [<Fact>]
     let ``EntityRegistry tracks player names from char update`` () =
@@ -72,6 +72,77 @@ module DecoderTests =
 
         EntityRegistry.observe evt
         Assert.Equal("Bob", EntityRegistry.formatEntity 0x54321u)
+
+    [<Fact>]
+    let ``EntityRegistry tracks mob names from npc update`` () =
+        EntityRegistry.reset()
+
+        let evt =
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x000Eus
+              PacketName = "GP_SERV_COMMAND_CHAR_NPC"
+              Size = 68u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = Fixtures.npcUpdatePacket "Kalamainu" 0x108A5A5u }
+
+        EntityRegistry.observe evt
+        Assert.Equal("Kalamainu", EntityRegistry.formatEntity 0x108A5A5u)
+        Assert.Equal(Some EntityRegistry.EntityKind.Mob, EntityRegistry.tryGetEntityKind 0x108A5A5u)
+
+    [<Fact>]
+    let ``EntityRegistry sets local player from group attr`` () =
+        EntityRegistry.reset()
+
+        let evt =
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x00DFus
+              PacketName = "GP_SERV_COMMAND_GROUP_ATTR"
+              Size = 40u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = Fixtures.groupAttrPacket 0x950F5u 140us }
+
+        EntityRegistry.observe evt
+        Assert.Equal(Some 0x950F5u, EntityRegistry.tryLocalPlayerId())
+        Assert.Equal(Some 140, EntityRegistry.tryGetZoneId())
+
+    [<Fact>]
+    let ``EntityRegistry ignores npc update without name flag`` () =
+        EntityRegistry.reset()
+
+        let data = Fixtures.npcUpdatePacket "HiddenMob" 0x99999u
+        data.[10] <- 0x01uy
+
+        let evt =
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x000Eus
+              PacketName = "GP_SERV_COMMAND_CHAR_NPC"
+              Size = uint32 data.Length
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = data }
+
+        EntityRegistry.observe evt
+        Assert.Equal("Entity 629145", EntityRegistry.formatEntity 0x99999u)
 
     [<Fact>]
     let ``DecoderRegistry routes outgoing chat opcode`` () =
@@ -156,3 +227,187 @@ module DecoderTests =
 
         let result = DecoderRegistry.decode evt
         Assert.Contains(result.Events, function DecoderEvent.Chat c -> c.Speaker = "Bob" | _ -> false)
+
+    [<Fact>]
+    let ``resolveChatSpeaker uses local player for outgoing say`` () =
+        EntityRegistry.reset()
+
+        let dfEvt =
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x00DFus
+              PacketName = "GP_SERV_COMMAND_GROUP_ATTR"
+              Size = 40u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = Fixtures.groupAttrPacket 0x950F5u 140us }
+
+        EntityRegistry.observe dfEvt
+        Assert.Equal("Unknown", EntityRegistry.resolveChatSpeaker "" 0x00B5us 0x00)
+
+        let tellChat =
+            { Mode = "Tell"
+              ModeId = 0x03
+              IsGm = false
+              Speaker = "Poroburu"
+              Message = ">>Poroburu hello"
+              ZoneId = None }
+
+        EntityRegistry.observeChatBootstrap tellChat 0x0017us
+        Assert.Equal(Some "Poroburu", EntityRegistry.localPlayerName())
+        Assert.Equal("Poroburu", EntityRegistry.resolveChatSpeaker "" 0x00B5us 0x00)
+
+    [<Fact>]
+    let ``resolveChatSpeaker uses local player for nameless say echo`` () =
+        EntityRegistry.reset()
+
+        let loginEvt =
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x000Aus
+              PacketName = "GP_SERV_COMMAND_LOGIN"
+              Size = 148u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = Fixtures.loginPacket "Poroburu" 0x950F5u }
+
+        EntityRegistry.observe loginEvt
+        Assert.Equal("Poroburu", EntityRegistry.resolveChatSpeaker "" 0x0017us 0x0D)
+
+    [<Fact>]
+    let ``char pc update registers local player name after group attr`` () =
+        EntityRegistry.reset()
+        EntityRegistry.observe
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x00DFus
+              PacketName = "GP_SERV_COMMAND_GROUP_ATTR"
+              Size = 40u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = Fixtures.groupAttrPacket 0x950F5u 140us }
+
+        EntityRegistry.observe
+            { Topic = "test"
+              Timestamp = 2UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x000Dus
+              PacketName = "GP_SERV_COMMAND_CHAR_PC"
+              Size = 106u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 2UL
+              Data = Fixtures.charPcPacket "Poroburu" 0x950F5u }
+
+        Assert.Equal(Some "Poroburu", EntityRegistry.localPlayerName())
+        Assert.Equal("Poroburu", EntityRegistry.resolveChatSpeaker "" 0x00B5us 0x00)
+
+    [<Fact>]
+    let ``char pc update without name flag still registers local player name`` () =
+        EntityRegistry.reset()
+        EntityRegistry.observe
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x00DFus
+              PacketName = "GP_SERV_COMMAND_GROUP_ATTR"
+              Size = 40u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = Fixtures.groupAttrPacket 0x950F5u 140us }
+
+        EntityRegistry.observe
+            { Topic = "test"
+              Timestamp = 2UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x000Dus
+              PacketName = "GP_SERV_COMMAND_CHAR_PC"
+              Size = 106u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 2UL
+              Data = Fixtures.charPcPacketNoNameFlag "Poroburu" 0x950F5u }
+
+        Assert.Equal(Some "Poroburu", EntityRegistry.localPlayerName())
+
+    [<Fact>]
+    let ``packetviewer sized char pc registers local player name`` () =
+        EntityRegistry.reset()
+        EntityRegistry.observe
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x00DFus
+              PacketName = "GP_SERV_COMMAND_GROUP_ATTR"
+              Size = 40u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = Fixtures.groupAttrPacket 0x950F5u 140us }
+
+        EntityRegistry.observe
+            { Topic = "test"
+              Timestamp = 2UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x000Dus
+              PacketName = "GP_SERV_COMMAND_CHAR_PC"
+              Size = 100u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 2UL
+              Data = Fixtures.charPcPacketPvSized "Nowakii" 0x950F5u }
+
+        Assert.Equal(Some "Nowakii", EntityRegistry.localPlayerName())
+
+    [<Fact>]
+    let ``registerLocalPlayerName applies after group attr when id was unknown`` () =
+        EntityRegistry.reset()
+        EntityRegistry.registerLocalPlayerName "Poroburu"
+
+        EntityRegistry.observe
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x00DFus
+              PacketName = "GP_SERV_COMMAND_GROUP_ATTR"
+              Size = 40u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = Fixtures.groupAttrPacket 0x950F5u 140us }
+
+        Assert.Equal(Some "Poroburu", EntityRegistry.localPlayerName())

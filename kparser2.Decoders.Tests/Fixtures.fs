@@ -48,6 +48,44 @@ module Fixtures =
         Array.Copy(nameBytes, 0, data, 90, min 16 nameBytes.Length)
         data
 
+    let charPcPacketNoNameFlag (name: string) (entityId: uint32) =
+        let data = Array.create 106 0uy
+        data.[2] <- 0x0Duy
+        data.[10] <- 0x01uy
+        BitConverter.GetBytes(entityId).CopyTo(data, 4)
+
+        let nameBytes = Encoding.UTF8.GetBytes(name)
+        Array.Copy(nameBytes, 0, data, 90, min 16 nameBytes.Length)
+        data
+
+    /// PacketViewer captures often truncate 0x000D to ~100 bytes while still carrying the name @90.
+    let charPcPacketPvSized (name: string) (entityId: uint32) =
+        let data = Array.create 100 0uy
+        data.[2] <- 0x0Duy
+        data.[10] <- 0x08uy
+        BitConverter.GetBytes(entityId).CopyTo(data, 4)
+
+        let nameBytes = Encoding.UTF8.GetBytes(name)
+        Array.Copy(nameBytes, 0, data, 90, min 10 nameBytes.Length)
+        data
+
+    let npcUpdatePacket (name: string) (entityId: uint32) =
+        let data = Array.create 68 0uy
+        data.[2] <- 0x0Euy
+        data.[10] <- 0x08uy
+        BitConverter.GetBytes(entityId).CopyTo(data, 4)
+
+        let nameBytes = Encoding.UTF8.GetBytes(name)
+        Array.Copy(nameBytes, 0, data, 52, min 16 nameBytes.Length)
+        data
+
+    let groupAttrPacket (entityId: uint32) (zoneId: uint16) =
+        let data = Array.create 40 0uy
+        data.[2] <- 0xDFuy
+        BitConverter.GetBytes(entityId).CopyTo(data, 4)
+        BitConverter.GetBytes(zoneId).CopyTo(data, 26)
+        data
+
     let trophyListPacket (itemId: int) (quantity: int) (dropperId: uint32) =
         let data = Array.create 60 0uy
         data.[2] <- 0xD2uy
