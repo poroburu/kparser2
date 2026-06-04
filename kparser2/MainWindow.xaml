@@ -8,12 +8,15 @@
         MinWidth="600"
         WindowStartupLocation="CenterScreen">
     <DockPanel>
-        <Menu DockPanel.Dock="Top">
+        <Menu DockPanel.Dock="Top" x:Name="MainMenu">
             <MenuItem Header="Session">
                 <MenuItem Header="Use Live Feed (5555)" Click="OnUseLiveFeed" />
                 <MenuItem Header="Replay sample.ndjson" Click="OnReplaySample" />
                 <MenuItem Header="Replay login.ndjson" Click="OnReplayLogin" />
                 <MenuItem Header="Replay item_drop.ndjson" Click="OnReplayItemDrop" />
+                <MenuItem Header="Replay combat_basic.ndjson" Click="OnReplayCombat" />
+                <Separator />
+                <MenuItem Header="Import PacketViewer…" Click="OnImportPacketViewer" />
             </MenuItem>
         </Menu>
         <StatusBar DockPanel.Dock="Bottom">

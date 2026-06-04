@@ -2,26 +2,40 @@ namespace kparser2.Services;
 
 public sealed class ViewRegistry
 {
-    private readonly List<IPacketView> _views = [];
+    private readonly List<IPacketView> _packetViews = [];
+    private readonly List<IAnalyticsView> _analyticsViews = [];
 
     public ViewRegistry Register(IPacketView view)
     {
-        _views.Add(view);
+        _packetViews.Add(view);
         return this;
     }
 
-    public IReadOnlyList<IPacketView> Views => _views;
+    public ViewRegistry Register(IAnalyticsView view)
+    {
+        _analyticsViews.Add(view);
+        return this;
+    }
+
+    public IReadOnlyList<IPacketView> PacketViews => _packetViews;
+    public IReadOnlyList<IAnalyticsView> AnalyticsViews => _analyticsViews;
+
+    public IReadOnlyList<IAnalyticsView> AllAnalyticsViews => _analyticsViews;
 }
 
 public static class ViewRegistryFactory
 {
     public static ViewRegistry CreateDefault()
     {
-        return new ViewRegistry()
+        var registry = new ViewRegistry()
             .Register(new Views.DebugView())
-            .Register(new Views.PacketMonitorView())
-            .Register(new Views.ChatView())
-            .Register(new Views.ItemDropsView())
-            .Register(new Views.CombatView());
+            .Register(new Views.PacketMonitorView());
+
+        foreach (var view in Views.AnalyticsViewCatalog.All)
+        {
+            registry.Register(view);
+        }
+
+        return registry;
     }
 }

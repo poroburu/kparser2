@@ -5,24 +5,91 @@ using System.Windows.Threading;
 using kparser2.Abstractions;
 using kparser2.Core;
 using kparser2.Services;
+using Microsoft.Win32;
 
 namespace kparser2;
 
 public partial class MainWindow : Window
 {
     private readonly ViewRegistry _viewRegistry = ViewRegistryFactory.CreateDefault();
-    private IPacketSession? _session;
+    private readonly ViewSettingsService _viewSettings = new();
+    private readonly Dictionary<string, IAnalyticsView> _analyticsViewMap;
+    private IAnalyticsSession? _session;
     private DispatcherTimer? _liveDiagnosticsTimer;
+    private readonly HashSet<string> _activeViewIds = [];
 
     public MainWindow()
     {
         InitializeComponent();
+        _analyticsViewMap = _viewRegistry.AnalyticsViews.ToDictionary(v => v.Id, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var id in _viewSettings.LoadActiveViewIds(_viewRegistry.AnalyticsViews.Select(v => v.Id).ToList()))
+        {
+            _activeViewIds.Add(id);
+        }
+
+        const int maxDefaultTabs = 8;
+        if (_activeViewIds.Count > maxDefaultTabs)
+        {
+            _activeViewIds.Clear();
+        }
+
+        if (_activeViewIds.Count == 0)
+        {
+            foreach (var id in new[] { "chat", "fights", "offense", "loot", "experience" })
+            {
+                if (_analyticsViewMap.ContainsKey(id))
+                {
+                    _activeViewIds.Add(id);
+                }
+            }
+
+            if (_activeViewIds.Count == 0 && _analyticsViewMap.Count > 0)
+            {
+                _activeViewIds.Add(_analyticsViewMap.Keys.First());
+            }
+
+            _viewSettings.SaveActiveViewIds(_activeViewIds);
+        }
+
+        BuildViewMenu();
+
         Loaded += (_, _) => Dispatcher.BeginInvoke(() => StartReplay(FindFixture("sample.ndjson")));
         Closed += (_, _) =>
         {
             _liveDiagnosticsTimer?.Stop();
             _session?.Dispose();
         };
+    }
+
+    private void BuildViewMenu()
+    {
+        var viewMenu = new MenuItem { Header = "Views" };
+
+        foreach (var view in _viewRegistry.AnalyticsViews.OrderBy(v => v.Title))
+        {
+            var item = new MenuItem
+            {
+                Header = view.Title,
+                IsCheckable = true,
+                IsChecked = _activeViewIds.Contains(view.Id),
+                Tag = view.Id
+            };
+
+            item.Click += OnToggleView;
+            viewMenu.Items.Add(item);
+        }
+
+        MainMenu.Items.Add(viewMenu);
+        MainMenu.Items.Add(new Separator());
+
+        var exportItem = new MenuItem { Header = "Export Report..." };
+        exportItem.Click += OnExportReport;
+        MainMenu.Items.Add(exportItem);
+
+        var importItem = new MenuItem { Header = "Open Report..." };
+        importItem.Click += OnOpenReport;
+        MainMenu.Items.Add(importItem);
     }
 
     private static string FindFixture(string fileName)
@@ -37,6 +104,30 @@ public partial class MainWindow : Window
             ?? Path.Combine(AppContext.BaseDirectory, "fixtures", "sessions", fileName);
     }
 
+    private void OnToggleView(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem item || item.Tag is not string id)
+        {
+            return;
+        }
+
+        if (item.IsChecked)
+        {
+            _activeViewIds.Add(id);
+        }
+        else
+        {
+            _activeViewIds.Remove(id);
+        }
+
+        _viewSettings.SaveActiveViewIds(_activeViewIds);
+
+        if (_session is not null)
+        {
+            RebuildTabs(_session);
+        }
+    }
+
     private void StartLive()
     {
         var pluginOk = ConnectionProbe.isPluginReachable();
@@ -44,12 +135,7 @@ public partial class MainWindow : Window
         if (!pluginOk)
         {
             var result = MessageBox.Show(
-                "Cannot reach the kpacket command socket on tcp://localhost:5556.\n\n" +
-                "Common causes:\n" +
-                "• The Lua kpacket addon is loaded instead of the C++ kpacket2 plugin (Lua uses port 6666).\n" +
-                "• kpacket2.dll is not in Ashita's plugins folder.\n" +
-                "• Plugin failed to initialize (check Ashita logs).\n\n" +
-                "Continue anyway and wait for packets?",
+                "Cannot reach the kpacket command socket on tcp://localhost:5556.\n\nContinue anyway and wait for packets?",
                 "Plugin not detected",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
@@ -62,10 +148,10 @@ public partial class MainWindow : Window
         }
 
         StartSession(
-            (IPacketSession)PacketSessionFactory.fromLiveDefault(),
+            (IAnalyticsSession)PacketSessionFactory.fromLiveDefault(),
             pluginOk
                 ? "Live feed on tcp://localhost:5555 (plugin OK on :5556)"
-                : "Live feed on tcp://localhost:5555 (plugin NOT detected on :5556 — zone in-game to generate packets)");
+                : "Live feed on tcp://localhost:5555 (plugin NOT detected on :5556)");
 
         StartLiveDiagnostics();
     }
@@ -83,37 +169,10 @@ public partial class MainWindow : Window
             }
 
             var stats = _session.GetStatsAsync().GetAwaiter().GetResult();
-            var pluginPublished = ConnectionProbe.publishedCount();
+            var snap = _session.GetSnapshot();
 
-            if (stats.TotalPackets == 0)
-            {
-                var zmqReceived = stats.SubscriberPackets ?? 0;
-                var parseErrors = stats.SubscriberParseErrors ?? 0;
-
-                if (pluginPublished > 0 && zmqReceived == 0)
-                {
-                    StatusText.Text =
-                        "Plugin is publishing but kparser2 receives nothing on :5555 — " +
-                        "use Session → Use Live Feed again after /load kpacket.";
-                }
-                else if (zmqReceived > 0 && stats.TotalPackets == 0 && parseErrors > 0)
-                {
-                    StatusText.Text =
-                        $"Live feed parse errors ({parseErrors}) — last: {stats.SubscriberLastError ?? "unknown"}";
-                }
-                else
-                {
-                    StatusText.Text =
-                        "Live feed waiting for packets — zone or take an action in-game. " +
-                        $"Plugin published: {pluginPublished}, ZMQ received: {zmqReceived}.";
-                }
-            }
-            else
-            {
-                StatusText.Text =
-                    $"Live feed | packets: {stats.TotalPackets} | chat: {stats.ChatEvents} | loot: {stats.LootEvents} | combat: {stats.CombatEvents} | " +
-                    $"zmq: {stats.SubscriberPackets ?? 0} | reconnects: {stats.SubscriberReconnects ?? 0}";
-            }
+            StatusText.Text =
+                $"Live | packets: {stats.TotalPackets} | fights: {snap.Battles.Count} | interactions: {snap.Interactions.Count}";
         };
 
         _liveDiagnosticsTimer.Start();
@@ -129,16 +188,22 @@ public partial class MainWindow : Window
             return;
         }
 
-        StartSession((IPacketSession)PacketSessionFactory.fromReplayDefault(path), $"Replay {Path.GetFileName(path)}");
+        StartSession((IAnalyticsSession)PacketSessionFactory.fromReplayDefault(path), $"Replay {Path.GetFileName(path)}");
     }
 
-    private void StartSession(IPacketSession session, string status)
+    private void StartSession(IAnalyticsSession session, string status)
     {
         _session?.Dispose();
         _session = session;
+        RebuildTabs(session);
+        StatusText.Text = status;
+    }
+
+    private void RebuildTabs(IAnalyticsSession session)
+    {
         ViewTabs.Items.Clear();
 
-        foreach (var view in _viewRegistry.Views)
+        foreach (var view in _viewRegistry.PacketViews)
         {
             ViewTabs.Items.Add(new TabItem
             {
@@ -147,7 +212,61 @@ public partial class MainWindow : Window
             });
         }
 
-        StatusText.Text = status;
+        foreach (var view in _viewRegistry.AnalyticsViews.Where(v => _activeViewIds.Contains(v.Id)))
+        {
+            ViewTabs.Items.Add(new TabItem
+            {
+                Header = view.Title,
+                Content = view.CreateView(session)
+            });
+        }
+    }
+
+    private async void OnExportReport(object sender, RoutedEventArgs e)
+    {
+        if (_session is null)
+        {
+            return;
+        }
+
+        var dialog = new SaveFileDialog
+        {
+            Filter = "KParser2 report (*.kparse2.json)|*.kparse2.json",
+            FileName = "session.kparse2.json"
+        };
+
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        IReportExporter exporter = new FileReportExporter();
+        await exporter.ExportAsync(dialog.FileName, _session.GetSnapshot(), "kparser2 session");
+        StatusText.Text = $"Exported report to {dialog.FileName}";
+    }
+
+    private async void OnOpenReport(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Filter = "KParser2 report (*.kparse2.json)|*.kparse2.json"
+        };
+
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        IReportImporter importer = new FileReportImporter();
+        var snapshot = await importer.ImportAsync(dialog.FileName);
+
+        if (_session is null)
+        {
+            StartSession((IAnalyticsSession)PacketSessionFactory.fromReplayDefault(FindFixture("sample.ndjson")), "Imported report");
+        }
+
+        _session?.LoadSnapshot(snapshot);
+        StatusText.Text = $"Imported report from {dialog.FileName}";
     }
 
     private void OnUseLiveFeed(object sender, RoutedEventArgs e) => StartLive();
@@ -160,4 +279,73 @@ public partial class MainWindow : Window
 
     private void OnReplayItemDrop(object sender, RoutedEventArgs e) =>
         StartReplay(FindFixture("item_drop.ndjson"));
+
+    private void OnReplayCombat(object sender, RoutedEventArgs e) =>
+        StartReplay(FindFixture("combat_basic.ndjson"));
+
+    private void OnImportPacketViewer(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Filter = "PacketViewer logs (*.log)|*.log",
+            Multiselect = true,
+            Title = "Import PacketViewer capture"
+        };
+
+        if (dialog.ShowDialog() != true || dialog.FileNames.Length == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var importService = new PacketViewerImportService();
+            var outputPath = Path.Combine(
+                Path.GetTempPath(),
+                $"kparser2-pv-{DateTime.UtcNow:yyyyMMddHHmmss}.ndjson");
+
+            string? fullLog = null;
+            string? incomingLog = null;
+            string? outgoingLog = null;
+
+            foreach (var file in dialog.FileNames)
+            {
+                var name = Path.GetFileName(file).ToLowerInvariant();
+
+                if (name == "full.log")
+                {
+                    fullLog = file;
+                }
+                else if (name == "incoming.log" || file.Contains($"{Path.DirectorySeparatorChar}incoming{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                {
+                    incomingLog = file;
+                }
+                else if (name == "outgoing.log" || file.Contains($"{Path.DirectorySeparatorChar}outgoing{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                {
+                    outgoingLog = file;
+                }
+                else if (fullLog is null && incomingLog is null && outgoingLog is null)
+                {
+                    fullLog = file;
+                }
+            }
+
+            importService.ConvertToNdjson(
+                outputPath,
+                fullLog: fullLog,
+                incomingLog: incomingLog,
+                outgoingLog: outgoingLog,
+                sessionId: Path.GetFileNameWithoutExtension(fullLog ?? incomingLog ?? dialog.FileNames[0]));
+
+            StartReplay(outputPath);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                ex.Message,
+                "PacketViewer import failed",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
 }
