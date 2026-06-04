@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>kparser2.Analytics</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Models.fs" />
+    <Compile Include="ActionLookup.fs" />
+    <Compile Include="MobXpLookup.fs" />
+    <Compile Include="ParseCodesTables.fs" />
+    <Compile Include="ExperienceParser.fs" />
+    <Compile Include="BattleMessageCatalog.fs" />
+    <Compile Include="InteractionClassification.fs" />
+    <Compile Include="InteractionBuilder.fs" />
+    <Compile Include="FightSegmenter.fs" />
+    <Compile Include="ChatIngest.fs" />
+    <Compile Include="AnalyticsQueries.fs" />
+    <Compile Include="ReportInterchange.fs" />
+    <Compile Include="SessionStore.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FSharp.SystemTextJson" Version="1.2.42" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+    <PackageReference Update="FSharp.Core" Version="8.0.400" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\data\actions.json" Link="data\actions.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\data\mob_xp.json" Link="data\mob_xp.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\kparser2.Decoders\kparser2.Decoders.fsproj" />
+    <ProjectReference Include="..\kparser2.Protocol\kparser2.Protocol.fsproj" />
+  </ItemGroup>
+
+</Project>
