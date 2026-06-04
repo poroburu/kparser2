@@ -8,6 +8,8 @@ open kparser2.Core
 open kparser2.Decoders
 open kparser2.Ingest
 open kparser2.Protocol
+open kparser2.Abstractions
+open kparser2.Analytics
 
 let private printJson value =
     printfn "%s" (JsonSerializer.Serialize(value, JsonSerializerOptions(WriteIndented = true)))
@@ -94,11 +96,12 @@ let private runDecode (path: string) (opcodeFilter: int option) (asJson: bool) =
     count
 
 let private runReplay (path: string) (opcodeFilter: int option) (asJson: bool) =
-    use session = PacketSessionFactory.fromReplayDefault(path) :> kparser2.Abstractions.IPacketSession
+    use session = PacketSessionFactory.fromReplayDefault path
+    let packetSession = session :> IPacketSession
 
     let mutable count = 0
     let subscription =
-        session.Packets.Subscribe(
+        packetSession.Packets.Subscribe(
             fun row ->
                 let matches =
                     opcodeFilter
@@ -120,10 +123,10 @@ let private runReplay (path: string) (opcodeFilter: int option) (asJson: bool) =
                             row.Size
         )
 
-    Task.Delay(500).Wait()
+    session.WaitForReplayComplete()
     subscription.Dispose()
 
-    let stats = session.GetStatsAsync().GetAwaiter().GetResult()
+    let stats = packetSession.GetStatsAsync().GetAwaiter().GetResult()
 
     if not asJson then
         printfn "Processed %d matching packets (total %d)" count (int stats.TotalPackets)
@@ -260,6 +263,178 @@ let private runRecord (output: string) (durationMs: int) =
 
     printfn "Recorded %d packets to %s" count output
 
+    printfn "Recorded %d packets to %s" count output
+
+let private runAnalyticsSnapshot (path: string) (asJson: bool) =
+    use session = PacketSessionFactory.fromReplayDefault path
+    session.WaitForReplayComplete()
+    let snap = (session :> IAnalyticsSession).GetSnapshot()
+
+    if asJson then
+        printJson snap
+    else
+        let fSnap = AnalyticsDtoMapping.fromSnapshotDto snap
+        let offense = AnalyticsQueries.offenseSummary fSnap MobFilter.defaultFilter
+
+        printfn
+            "interactions=%d battles=%d combatants=%d chat=%d loot=%d items=%d experience=%d"
+            snap.Interactions.Count
+            snap.Battles.Count
+            snap.Combatants.Count
+            snap.ChatMessages.Count
+            snap.LootRecords.Count
+            snap.ItemUses.Count
+            snap.ExperienceRecords.Count
+
+        if snap.ChatMessages.Count > 0 then
+            printfn "chat speakers:"
+
+            for msg in snap.ChatMessages |> Seq.truncate 8 do
+                printfn "  [%s] %s: %s" msg.Mode msg.Speaker msg.Message
+
+        if offense.Length > 0 then
+            printfn "offense by category:"
+
+            for row in offense do
+                printfn "  %s: %d (%d hits)" row.Label row.Total row.Count
+
+    snap
+
+let private runExportReport (path: string) (output: string) =
+    use session = PacketSessionFactory.fromReplayDefault path
+    session.WaitForReplayComplete()
+    let exporter = FileReportExporter() :> IReportExporter
+
+    exporter.ExportAsync(output, (session :> IAnalyticsSession).GetSnapshot(), Path.GetFileNameWithoutExtension path)
+        .GetAwaiter()
+        .GetResult()
+
+    printfn "Exported report to %s" output
+
+let private runImportReport (path: string) (validateOnly: bool) =
+    let importer = FileReportImporter() :> IReportImporter
+
+    if validateOnly then
+        let ok = importer.ValidateAsync(path).GetAwaiter().GetResult()
+        printfn "validate=%b" ok
+    else
+        let snap = importer.ImportAsync(path).GetAwaiter().GetResult()
+
+        printfn
+            "imported interactions=%d battles=%d zone=%s"
+            snap.Interactions.Count
+            snap.Battles.Count
+            snap.ZoneName
+
+let private resolveConverterScript () =
+    let candidates =
+        [ Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "scripts", "convert-packetviewer-to-ndjson.ps1"))
+          Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "scripts", "convert-packetviewer-to-ndjson.ps1")) ]
+
+    candidates |> List.tryFind File.Exists
+
+let private runImportPacketViewer (fullLog: string option) (incomingLog: string option) (outgoingLog: string option) (output: string) (sessionId: string option) =
+    match resolveConverterScript () with
+    | None ->
+        eprintfn "convert-packetviewer-to-ndjson.ps1 not found"
+        1
+    | Some scriptPath ->
+        let argParts = ResizeArray<string>()
+        argParts.Add("-NoProfile")
+        argParts.Add("-ExecutionPolicy")
+        argParts.Add("Bypass")
+        argParts.Add("-File")
+        argParts.Add($"\"{scriptPath}\"")
+        argParts.Add("-OutputNdjson")
+        argParts.Add($"\"{output}\"")
+
+        match fullLog with
+        | Some path ->
+            argParts.Add("-FullLog")
+            argParts.Add($"\"{path}\"")
+        | None -> ()
+
+        match incomingLog with
+        | Some path ->
+            argParts.Add("-IncomingLog")
+            argParts.Add($"\"{path}\"")
+        | None -> ()
+
+        match outgoingLog with
+        | Some path ->
+            argParts.Add("-OutgoingLog")
+            argParts.Add($"\"{path}\"")
+        | None -> ()
+
+        match sessionId with
+        | Some id ->
+            argParts.Add("-SessionId")
+            argParts.Add($"\"{id}\"")
+        | None -> ()
+
+        let psi =
+            ProcessStartInfo(
+                FileName = "powershell",
+                Arguments = String.concat " " (argParts |> Seq.toList),
+                UseShellExecute = false
+            )
+
+        use proc = Process.Start(psi)
+        proc.WaitForExit()
+
+        if proc.ExitCode = 0 then
+            printfn "Imported PacketViewer logs to %s" output
+            0
+        else
+            eprintfn "PacketViewer import failed with exit code %d" proc.ExitCode
+            1
+
+let private runImportValidate (path: string) =
+    EntityRegistry.reset()
+    InteractionBuilder.reset()
+    let store = SessionStore.create()
+    let opCounts = System.Collections.Generic.Dictionary<int, int>()
+    let mutable total = 0
+
+    for topic, metaJson, data in Ndjson.readAll path do
+        total <- total + 1
+        let meta = PacketMeta.parseString metaJson
+        let evt = PacketMeta.toEvent topic meta data
+        let op = int evt.PacketId
+
+        if opCounts.ContainsKey op then
+            opCounts.[op] <- opCounts.[op] + 1
+        else
+            opCounts.[op] <- 1
+
+        let decoded = DecoderRegistry.decode evt
+        SessionStore.ingest store evt decoded
+
+    let snap = SessionStore.snapshot store
+
+    printfn "capture=%s" (Path.GetFileName path)
+    printfn "total_packets=%d" total
+    printfn "entities=%d" (EntityRegistry.allEntityIds().Length)
+    printfn "local_player=%A" (EntityRegistry.tryLocalPlayerId())
+    printfn "local_player_name=%A" (EntityRegistry.localPlayerName())
+    printfn "zone_id=%A" (EntityRegistry.tryGetZoneId())
+    printfn "zone_name=%s" snap.ZoneName
+    printfn "interactions=%d battles=%d combatants=%d chat=%d loot=%d xp=%d" snap.Interactions.Length snap.Battles.Length snap.Combatants.Length snap.ChatMessages.Length snap.LootRecords.Length snap.ExperienceRecords.Length
+
+    printfn "opcode_top:"
+    opCounts
+    |> Seq.sortByDescending (fun kv -> kv.Value)
+    |> Seq.truncate 10
+    |> Seq.iter (fun kv -> printfn "  0x%04X=%d" kv.Key kv.Value)
+
+    printfn "combatants:"
+    snap.Combatants
+    |> List.sortBy (fun c -> c.Name)
+    |> List.truncate 12
+    |> List.iter (fun c -> printfn "  %s (%A) id=%d" c.Name c.Kind c.Id)
+
+    0
+
 [<EntryPoint>]
 let main argv =
     if argv.Length = 0 then
@@ -272,6 +447,13 @@ let main argv =
         printfn "  kparser2.cli record <file.ndjson> [--duration-ms 5000]"
         printfn "  kparser2.cli decode <file.ndjson> [--filter 0x17] [--json]"
         printfn "  kparser2.cli export-items [--sql <path>] [--output <path>]"
+        printfn "  kparser2.cli export-actions [--sql <path>] [--output <path>]"
+        printfn "  kparser2.cli analytics snapshot <file.ndjson> [--json]"
+        printfn "  kparser2.cli export report <file.ndjson> -o <file.kparse2.json>"
+        printfn "  kparser2.cli import report <file.kparse2.json> [--validate]"
+        printfn "  kparser2.cli import packetviewer [--full path.log | --incoming in.log [--outgoing out.log]] -o capture.ndjson [--session-id name]"
+        printfn "  kparser2.cli import packetviewer --validate capture.ndjson"
+        printfn "  kparser2.cli export-zones [--sql <path>] [--output <path>]"
         1
     else
         try
@@ -363,6 +545,84 @@ let main argv =
 
                 runDecode path filter asJson |> ignore
                 0
+            | "analytics" when argv.Length >= 3 && argv.[1].ToLowerInvariant() = "snapshot" ->
+                let path = argv.[2]
+                let mutable asJson = false
+                let mutable i = 3
+
+                while i < argv.Length do
+                    match argv.[i] with
+                    | "--json" ->
+                        asJson <- true
+                        i <- i + 1
+                    | _ -> i <- i + 1
+
+                runAnalyticsSnapshot path asJson |> ignore
+                0
+            | "export" when argv.Length >= 4 && argv.[1].ToLowerInvariant() = "report" ->
+                let path = argv.[2]
+                let mutable output = "report.kparse2.json"
+                let mutable i = 3
+
+                while i < argv.Length do
+                    match argv.[i] with
+                    | "-o" when i + 1 < argv.Length ->
+                        output <- argv.[i + 1]
+                        i <- i + 2
+                    | _ -> i <- i + 1
+
+                runExportReport path output
+                0
+            | "import" when argv.Length >= 3 && argv.[1].ToLowerInvariant() = "report" ->
+                let path = argv.[2]
+                let mutable validateOnly = false
+                let mutable i = 3
+
+                while i < argv.Length do
+                    match argv.[i] with
+                    | "--validate" ->
+                        validateOnly <- true
+                        i <- i + 1
+                    | _ -> i <- i + 1
+
+                runImportReport path validateOnly
+                0
+            | "import" when argv.Length >= 3 && argv.[1].ToLowerInvariant() = "packetviewer" ->
+                let mutable validateOnly = false
+                let mutable fullLog = None
+                let mutable incomingLog = None
+                let mutable outgoingLog = None
+                let mutable output = "capture.ndjson"
+                let mutable sessionId = None
+                let mutable i = 2
+
+                while i < argv.Length do
+                    match argv.[i] with
+                    | "--validate" when i + 1 < argv.Length ->
+                        validateOnly <- true
+                        output <- argv.[i + 1]
+                        i <- i + 2
+                    | "--full" when i + 1 < argv.Length ->
+                        fullLog <- Some argv.[i + 1]
+                        i <- i + 2
+                    | "--incoming" when i + 1 < argv.Length ->
+                        incomingLog <- Some argv.[i + 1]
+                        i <- i + 2
+                    | "--outgoing" when i + 1 < argv.Length ->
+                        outgoingLog <- Some argv.[i + 1]
+                        i <- i + 2
+                    | "-o" when i + 1 < argv.Length ->
+                        output <- argv.[i + 1]
+                        i <- i + 2
+                    | "--session-id" when i + 1 < argv.Length ->
+                        sessionId <- Some argv.[i + 1]
+                        i <- i + 2
+                    | _ -> i <- i + 1
+
+                if validateOnly then
+                    runImportValidate output
+                else
+                    runImportPacketViewer fullLog incomingLog outgoingLog output sessionId
             | "export-items" ->
                 let mutable sqlPath =
                     Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "server", "sql", "item_basic.sql"))
@@ -404,6 +664,90 @@ let main argv =
                         0
                     else
                         eprintfn "export-items failed with exit code %d" proc.ExitCode
+                        1
+            | "export-actions" ->
+                let mutable sqlPath =
+                    Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "server", "sql", "abilities.sql"))
+
+                let mutable outputPath =
+                    Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "actions.json"))
+
+                let mutable i = 1
+
+                while i < argv.Length do
+                    match argv.[i] with
+                    | "--sql" when i + 1 < argv.Length ->
+                        sqlPath <- argv.[i + 1]
+                        i <- i + 2
+                    | "--output" when i + 1 < argv.Length ->
+                        outputPath <- argv.[i + 1]
+                        i <- i + 2
+                    | _ -> i <- i + 1
+
+                let scriptPath =
+                    Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "scripts", "export-actions.ps1"))
+
+                if not (File.Exists scriptPath) then
+                    eprintfn "export-actions script not found: %s" scriptPath
+                    1
+                else
+                    let psi =
+                        ProcessStartInfo(
+                            FileName = "powershell",
+                            Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{scriptPath}\" -SqlPath \"{sqlPath}\" -OutputPath \"{outputPath}\"",
+                            UseShellExecute = false
+                        )
+
+                    use proc = Process.Start(psi)
+                    proc.WaitForExit()
+
+                    if proc.ExitCode = 0 then
+                        printfn "Exported actions to %s" outputPath
+                        0
+                    else
+                        eprintfn "export-actions failed with exit code %d" proc.ExitCode
+                        1
+            | "export-zones" ->
+                let mutable sqlPath =
+                    Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "server", "sql", "zone_settings.sql"))
+
+                let mutable outputPath =
+                    Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "zones.json"))
+
+                let mutable i = 1
+
+                while i < argv.Length do
+                    match argv.[i] with
+                    | "--sql" when i + 1 < argv.Length ->
+                        sqlPath <- argv.[i + 1]
+                        i <- i + 2
+                    | "--output" when i + 1 < argv.Length ->
+                        outputPath <- argv.[i + 1]
+                        i <- i + 2
+                    | _ -> i <- i + 1
+
+                let scriptPath =
+                    Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "scripts", "export-zones.ps1"))
+
+                if not (File.Exists scriptPath) then
+                    eprintfn "export-zones script not found: %s" scriptPath
+                    1
+                else
+                    let psi =
+                        ProcessStartInfo(
+                            FileName = "powershell",
+                            Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{scriptPath}\" -SqlPath \"{sqlPath}\" -OutputPath \"{outputPath}\"",
+                            UseShellExecute = false
+                        )
+
+                    use proc = Process.Start(psi)
+                    proc.WaitForExit()
+
+                    if proc.ExitCode = 0 then
+                        printfn "Exported zones to %s" outputPath
+                        0
+                    else
+                        eprintfn "export-zones failed with exit code %d" proc.ExitCode
                         1
             | _ ->
                 printfn "Unknown command: %s" argv.[0]
