@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>kparser2.Analytics.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Update="FSharp.Core" Version="8.0.400" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\kparser2.Decoders.Tests\Fixtures.fs" Link="Fixtures.fs" />
+    <Compile Include="AnalyticsTests.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\kparser2.Abstractions\kparser2.Abstractions.csproj" />
+    <ProjectReference Include="..\kparser2.Analytics\kparser2.Analytics.fsproj" />
+    <ProjectReference Include="..\kparser2.Core\kparser2.Core.fsproj" />
+    <ProjectReference Include="..\kparser2.Decoders\kparser2.Decoders.fsproj" />
+    <ProjectReference Include="..\kparser2.Protocol\kparser2.Protocol.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\fixtures\sessions\**\*" Link="fixtures\sessions\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\data\actions.json" Link="data\actions.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\data\mob_xp.json" Link="data\mob_xp.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
