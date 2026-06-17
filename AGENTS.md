@@ -8,8 +8,11 @@ This document helps Cursor agents iterate on kparser2 **without Ashita running**
 # Build everything
 dotnet build C:\Users\porob\git\kparser2\kparser2.sln
 
-# Run decoder unit tests
+# Run all unit tests (sync ingest path; ~2 min)
 dotnet test C:\Users\porob\git\kparser2\kparser2.sln
+
+# CI / agent fast path — skip retail NDJSON slices (~3100 lines each)
+dotnet test C:\Users\porob\git\kparser2\kparser2.sln --filter "Category!=Integration"
 
 # Replay golden fixture (preferred verification)
 dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- replay C:\Users\porob\git\kparser2\fixtures\sessions\sample.ndjson
@@ -82,7 +85,49 @@ Packet payloads include the **4-byte world header**; decoder field offsets start
 | `fixtures/sessions/combat_death.ndjson` | MsgBasic defeat + falls to ground |
 | `fixtures/sessions/combat_recovery.ndjson` | cure via 0x29 + 0x28 |
 | `fixtures/sessions/chat_xp.ndjson` | MsgBasic XP + EXP chain + system chat |
+| `fixtures/sessions/combat_kill_xp.ndjson` | kill + XP + chain attribution |
+| `fixtures/sessions/chat_self_say.ndjson` | outgoing say + tell bootstrap |
+| `fixtures/sessions/combat_melee_hits.ndjson` | 0x28 melee hits (0x14/0x19/0x1C) |
+| `fixtures/sessions/combat_misses.ndjson` | melee misses (0x15/0x1D) |
+| `fixtures/sessions/combat_ranged.ndjson` | ranged hit + miss |
+| `fixtures/sessions/combat_defense.ndjson` | parry + shadow absorb |
+| `fixtures/sessions/combat_failures.ndjson` | no-effect buff/debuff (0x44/0x3B) |
+| `fixtures/sessions/combat_counters.ndjson` | counter + retaliate |
+| `fixtures/sessions/combat_tp_drain.ndjson` | 0xA3 hit + 0xBB TP drain |
+| `fixtures/sessions/combat_enfeeble.ndjson` | enfeeble (0x39) |
+| `fixtures/sessions/combat_buff.ndjson` | enhance (0x38) |
+| `fixtures/sessions/combat_drain.ndjson` | drain (0x16) |
+| `fixtures/sessions/combat_ja.ndjson` | job ability (commandNo 13) |
+| `fixtures/sessions/combat_prepare.ndjson` | preparing spell (0x32) |
+| `fixtures/sessions/combat_cover.ndjson` | cover miss (0x6D) |
+| `fixtures/sessions/combat_skillchain.ndjson` | skillchain MsgBasic + follow-up |
 | `fixtures/sessions/bcmn30_petrifying_pair.ndjson` | retail BCMN30 slice: mob spawns (0x00E), combat, defeat |
+
+## kparser game-event test parity
+
+Legacy **kparser** (`TestParser.cs`) parses comma-hex chat log lines; **kparser2** maps the same semantics from **0x28/0x29** via `ParseCodesTables.fs` (ported from kparser `ParseCodes.cs`).
+
+| Tier | Project | What it covers |
+|------|---------|----------------|
+| 1 | `kparser2.Analytics.Tests/ParseCodesParityTests.fs` | Table-driven `(commandNo, messageId, miss, value)` → `BattleMessageCatalog.classifyActionEffect` for every active kparser `TestParser` scenario + empty regions |
+| 2 | `kparser2.Analytics.Tests/InteractionParityTests.fs` | Full `0x28` → `InteractionBuilder` pipeline with entity names |
+| 3 | `kparser2.Analytics.Tests/FixtureReplayParityTests` | NDJSON replay via `ReplayHelpers.ingestFixture` |
+| 4 | `kparser2.Decoders.Tests/DecoderTests.fs` | `TestMobNames01`–`10` via `0x00E` npc updates (16-char packet name limit) |
+
+```powershell
+# Fast parity oracle (no PacketSession replay)
+dotnet test C:\Users\porob\git\kparser2\kparser2.Analytics.Tests\kparser2.Analytics.Tests.fsproj --filter "FullyQualifiedName~ParseCodesParity|FullyQualifiedName~InteractionParity|FullyQualifiedName~FixtureReplay"
+
+# Retail integration slices (bcmn30_petrifying_pair, bst_camp_multi, bst_loot_name)
+dotnet test C:\Users\porob\git\kparser2\kparser2.Analytics.Tests\kparser2.Analytics.Tests.fsproj --filter "Category=Integration"
+
+# Regenerate synthetic combat parity fixtures
+powershell -File C:\Users\porob\git\kparser2\scripts\generate-fixtures.ps1
+```
+
+**Test reliability:** Analytics tests use synchronous `ReplayHelpers.ingestFixture` (not `PacketSessionFactory.fromReplayDefault`) so replay does not spawn background threads or block on `WaitForReplayComplete`. `PacketSession` replay is validated via `kparser2.cli analytics snapshot` (unit test skipped — xUnit sync-over-async deadlock). `xunit.runner.json` disables parallelization to avoid `EntityRegistry` races.
+
+Parity matrix rows are named after kparser test methods (`TestPlayerHitMob`, `FailSelfBuff`, `region_enfeeble`, etc.). Mark a row done when Tier 1–3 tests pass for that scenario.
 
 Reference captures (local, not committed): `C:\Users\porob\git\ffxi-captures\` — NDJSON recordings and retail unpacks for VieweD + CLI decode oracles. Promote small slices into `fixtures/sessions/` for golden tests.
 
