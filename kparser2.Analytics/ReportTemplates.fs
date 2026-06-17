@@ -164,6 +164,9 @@ module ReportTemplates =
         let mobListingHeader = "Mob                        Base XP   Number   Avg Fight Time"
         let xpListFormatNum = "{0,-16} : {1}"
         let xpListFormatTime = "{0,-16} : {1:d}:{2:d2}:{3:d2}"
+        let xpListFormatSec = "{0,-16} : {1:F2}"
+        let xpListFormatDec = "{0,-16} : {1:F2}"
+        let mobListingHeaderWithGain = "Mob                        Base XP  Gained XP   Number   Avg Fight Time"
 
     module Treasure =
         let dropItemFormat = "{0,9} {1,-28} [Max #: {2}]  [Items/Kill: {3,6:f3}]  [Drop Rate: {4,8:p2}]  [% of Drops: {5,8:p2}]"

@@ -619,60 +619,170 @@ module LootReport =
                 report
 
 module ExperienceReport =
+    let private completedFights (snap: AnalyticsSnapshot) =
+        snap.Battles |> List.filter (fun b -> b.Killed && b.ExperiencePoints > 0)
+
+    let private fightLengthMs (b: Battle) =
+        let endMs = b.EndMs |> Option.defaultValue b.StartMs
+        max 0L (endMs - b.StartMs)
+
+    let private chainBucketsFromFights fights =
+        let buckets = Array.create 11 (0, 0)
+
+        for fight in fights do
+            let chainNum = min fight.ExperienceChain 10
+            let count, xp = buckets.[chainNum]
+            buckets.[chainNum] <- (count + 1, xp + fight.ExperiencePoints)
+
+        buckets
+
+    let private chainRowsFromBuckets (buckets: (int * int) array) =
+        buckets
+        |> Array.mapi (fun chain (count, xp) -> chain, count, xp, if count > 0 then float xp / float count else 0.0)
+        |> Array.toList
+        |> List.filter (fun (_, count, _, _) -> count > 0)
+        |> List.sortBy (fun (chain, _, _, _) -> chain)
+
+    let private chainRowsFromRecords (records: ExperienceRecord list) =
+        records
+        |> List.filter (fun r -> r.ExperiencePoints > 0)
+        |> List.groupBy (fun r -> min r.Chain 10)
+        |> List.map (fun (chain, rows) ->
+            let xp = rows |> List.sumBy (fun r -> r.ExperiencePoints)
+            chain, rows.Length, xp, if rows.Length > 0 then float xp / float rows.Length else 0.0)
+        |> List.sortBy (fun (chain, _, _, _) -> chain)
+
     let format (snap: AnalyticsSnapshot) (_filter: MobFilter) =
-        if snap.ExperienceRecords.IsEmpty then
+        let fights = completedFights snap
+
+        if fights.IsEmpty && snap.ExperienceRecords.IsEmpty then
             ReportBuilder.empty
         else
-            let totalXp = snap.ExperienceRecords |> List.sumBy (fun r -> r.ExperiencePoints)
+            let totalXp, chainRows, fightCount, partyDurationMs, totalFightMs, startMs, endMs =
+                if not fights.IsEmpty then
+                    let sorted = fights |> List.sortBy (fun b -> b.StartMs)
+                    let first = List.head sorted
+                    let last = List.last sorted
+                    let endBattleMs = last.EndMs |> Option.defaultValue last.StartMs
+                    let partyMs = max 0L (endBattleMs - first.StartMs)
+                    let fightMs = fights |> List.sumBy fightLengthMs
 
-            let chains =
-                snap.ExperienceRecords
-                |> List.groupBy (fun r -> r.Chain)
-                |> List.map (fun (chain, rows) ->
-                    let xp = rows |> List.sumBy (fun r -> r.ExperiencePoints)
-                    chain, rows.Length, xp, if rows.Length > 0 then float xp / float rows.Length else 0.0)
-                |> List.sortBy (fun (chain, _, _, _) -> chain)
+                    fights |> List.sumBy (fun b -> b.ExperiencePoints),
+                    chainRowsFromBuckets (chainBucketsFromFights fights),
+                    fights.Length,
+                    partyMs,
+                    fightMs,
+                    first.StartMs,
+                    endBattleMs
+                else
+                    let records = snap.ExperienceRecords |> List.filter (fun r -> r.ExperiencePoints > 0)
+                    let total = records |> List.sumBy (fun r -> r.ExperiencePoints)
+                    let sorted = records |> List.sortBy (fun r -> r.TimestampMs)
+                    let firstTs = sorted |> List.tryHead |> Option.map (fun r -> r.TimestampMs) |> Option.defaultValue 0L
+                    let lastTs = sorted |> List.tryLast |> Option.map (fun r -> r.TimestampMs) |> Option.defaultValue firstTs
+
+                    total,
+                    chainRowsFromRecords snap.ExperienceRecords,
+                    records.Length,
+                    max 0L (lastTs - firstTs),
+                    0L,
+                    firstTs,
+                    lastTs
+
+            let minDurationMs = 1_000L
+            let partyDuration = TimeSpan.FromMilliseconds(float (max minDurationMs partyDurationMs))
+            let totalFightDuration = TimeSpan.FromMilliseconds(float totalFightMs)
+            let totalXpDouble = float totalXp
+            let fightCountDouble = float (max 1 fightCount)
+
+            let xpPerFight =
+                if fightCount > 0 then totalXpDouble / fightCountDouble else 0.0
+
+            let xpPerMinute =
+                if partyDuration.TotalMinutes > 0.0 then totalXpDouble / partyDuration.TotalMinutes else 0.0
+
+            let xpPerHour =
+                if partyDuration.TotalHours > 0.0 then totalXpDouble / partyDuration.TotalHours else 0.0
+
+            let avgFightLengthSec =
+                if fightCount > 0 then totalFightDuration.TotalSeconds / fightCountDouble else 0.0
+
+            let timePerFightSec =
+                if fightCount > 0 then partyDuration.TotalSeconds / fightCountDouble else 0.0
+
+            let startTime =
+                DateTimeOffset.FromUnixTimeMilliseconds(startMs + snap.SessionStartMs).LocalDateTime
+
+            let endTime =
+                DateTimeOffset.FromUnixTimeMilliseconds(endMs + snap.SessionStartMs).LocalDateTime
 
             let report =
                 ReportBuilder.empty
                 |> ReportBuilder.appendTitle ReportTemplates.Experience.experienceRates
                 |> ReportBuilder.appendFormatLine ReportTemplates.Experience.xpListFormatNum [| box "Total Experience"; box totalXp |]
+                |> ReportBuilder.appendFormatLine ReportTemplates.Experience.xpListFormatNum [| box "Number of Fights"; box fightCount |]
+                |> ReportBuilder.appendFormatLine ReportTemplates.Experience.xpListFormatNum [| box "Start Time"; box (startTime.ToLongTimeString()) |]
+                |> ReportBuilder.appendFormatLine ReportTemplates.Experience.xpListFormatNum [| box "End Time"; box (endTime.ToLongTimeString()) |]
+                |> ReportBuilder.appendFormatLine
+                    ReportTemplates.Experience.xpListFormatTime
+                    [| box "Party Duration"
+                       box (int partyDuration.TotalHours)
+                       box partyDuration.Minutes
+                       box partyDuration.Seconds |]
+                |> ReportBuilder.appendFormatLine
+                    ReportTemplates.Experience.xpListFormatTime
+                    [| box "Total Fight Time"
+                       box (int totalFightDuration.TotalHours)
+                       box totalFightDuration.Minutes
+                       box totalFightDuration.Seconds |]
+                |> ReportBuilder.appendFormatLine ReportTemplates.Experience.xpListFormatSec [| box "Avg Time/Fight"; box timePerFightSec |]
+                |> ReportBuilder.appendFormatLine ReportTemplates.Experience.xpListFormatSec [| box "Avg Fight Length"; box avgFightLengthSec |]
+                |> ReportBuilder.appendFormatLine ReportTemplates.Experience.xpListFormatDec [| box "XP/Fight"; box xpPerFight |]
+                |> ReportBuilder.appendFormatLine ReportTemplates.Experience.xpListFormatDec [| box "XP/Minute"; box xpPerMinute |]
+                |> ReportBuilder.appendFormatLine ReportTemplates.Experience.xpListFormatDec [| box "XP/Hour"; box xpPerHour |]
                 |> ReportBuilder.blankLine
                 |> ReportBuilder.appendTitle ReportTemplates.Experience.experienceChains
                 |> ReportBuilder.appendHeader ReportTemplates.Experience.chainHeader
 
             let report =
-                chains
+                chainRows
                 |> List.fold
                     (fun r (chain, count, xp, avg) ->
                         r |> ReportBuilder.appendFormatLine ReportTemplates.Experience.chainFormat [| box chain; box count; box xp; box avg |])
                     report
                 |> ReportBuilder.blankLine
                 |> ReportBuilder.appendTitle ReportTemplates.Experience.mobListing
-                |> ReportBuilder.appendHeader ReportTemplates.Experience.mobListingHeader
+                |> ReportBuilder.appendHeader ReportTemplates.Experience.mobListingHeaderWithGain
 
             snap.Battles
             |> List.filter (fun b -> b.Killed)
             |> List.groupBy (fun b -> b.EnemyName)
             |> List.map (fun (name, rows) ->
                 let baseXp = MobXpLookup.tryGetXp name |> Option.defaultValue 0
+                let gainedXp =
+                    if rows.Length > 0 then
+                        rows |> List.averageBy (fun b -> float b.ExperiencePoints) |> int
+                    else
+                        0
+
                 let avgFightMs =
                     if rows.Length > 0 then
-                        rows
-                        |> List.averageBy (fun b ->
-                            let e = b.EndMs |> Option.defaultValue b.StartMs
-                            float (max 0L (e - b.StartMs)))
+                        rows |> List.averageBy (fun b -> float (fightLengthMs b))
                     else
                         0.0
 
-                name, baseXp, rows.Length, avgFightMs)
-            |> List.sortByDescending (fun (_, _, count, _) -> count)
+                name, baseXp, gainedXp, rows.Length, avgFightMs)
+            |> List.sortByDescending (fun (_, _, _, count, _) -> count)
             |> List.fold
-                (fun r (name, baseXp, count, avgMs) ->
+                (fun r (name, baseXp, gainedXp, count, avgMs) ->
                     r
                     |> ReportBuilder.appendFormatLine
-                        "{0,-26}{1,9}{2,9}{3,16}"
-                        [| box name; box baseXp; box count; box (TimeSpanFormat.formatMs (int64 avgMs) false) |])
+                        "{0,-26}{1,9}{2,11}{3,9}{4,16}"
+                        [| box name
+                           box baseXp
+                           box gainedXp
+                           box count
+                           box (TimeSpanFormat.formatMs (int64 avgMs) false) |])
                 report
 
 module EnfeeblingReport =
