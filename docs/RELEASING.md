@@ -71,11 +71,8 @@ git add CHANGELOG.md Directory.Build.props LICENSE README.md CONTRIBUTING.md doc
 git commit -m "Release v$ver"
 git tag -a "v$ver" -m "kparser2 v$ver"
 git push origin main
-git push origin poro-old-mvp
 git push origin "v$ver"
 ```
-
-If `main` has not yet absorbed the MVP line, push and tag from `poro-old-mvp` until `main` is fast-forwarded.
 
 Create the release (requires [GitHub CLI](https://cli.github.com/)). Tag **kpacket2** before kparser2 when releasing a paired RC:
 
