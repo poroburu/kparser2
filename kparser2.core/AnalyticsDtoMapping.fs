@@ -307,6 +307,28 @@ module AnalyticsDtoMapping =
     let toRowDto (row: QueryRow) =
         AnalyticsRowDto(Label = row.Label, Value = row.Value, Count = row.Count, Total = row.Total)
 
+    let toReportSpanDto (span: ReportSpan) =
+        AnalyticsReportSpanDto(
+            Text = span.Text,
+            Bold = span.Bold,
+            Underline = span.Underline,
+            Color = span.Color
+        )
+
+    let toReportDto (report: AnalyticsReport) =
+        let spans = report.Spans |> List.map toReportSpanDto
+        AnalyticsReportDto(Spans = spans)
+
+module AnalyticsReportBridge =
+    let run (queryId: string) (snap: AnalyticsSnapshot) (filter: MobFilter) =
+        AnalyticsReports.format queryId snap filter |> AnalyticsDtoMapping.toReportDto
+
+    let runChat (snap: AnalyticsSnapshot) (modeFilter: string option) (speakerFilter: string option) =
+        AnalyticsReports.formatChat snap modeFilter speakerFilter |> AnalyticsDtoMapping.toReportDto
+
+    let runChatSummary (snap: AnalyticsSnapshot) (modeFilter: string option) (speakerFilter: string option) =
+        AnalyticsReports.formatChatSummary snap modeFilter speakerFilter |> AnalyticsDtoMapping.toReportDto
+
 module AnalyticsQueryBridge =
     let run (queryId: string) (snap: AnalyticsSnapshot) (filter: MobFilter) =
         let rows =
@@ -347,3 +369,17 @@ module AnalyticsQueryService =
         let snap = AnalyticsDtoMapping.fromSnapshotDto dto
         let mobFilter = AnalyticsDtoMapping.toMobFilter filter
         AnalyticsQueryBridge.run queryId snap mobFilter
+
+module AnalyticsReportService =
+    let format (queryId: string) (dto: AnalyticsSnapshotDto) (filter: MobFilterDto) =
+        let snap = AnalyticsDtoMapping.fromSnapshotDto dto
+        let mobFilter = AnalyticsDtoMapping.toMobFilter filter
+        AnalyticsReportBridge.run queryId snap mobFilter
+
+    let formatChat (dto: AnalyticsSnapshotDto) (modeFilter: string option) (speakerFilter: string option) =
+        let snap = AnalyticsDtoMapping.fromSnapshotDto dto
+        AnalyticsReportBridge.runChat snap modeFilter speakerFilter
+
+    let formatChatSummary (dto: AnalyticsSnapshotDto) (modeFilter: string option) (speakerFilter: string option) =
+        let snap = AnalyticsDtoMapping.fromSnapshotDto dto
+        AnalyticsReportBridge.runChatSummary snap modeFilter speakerFilter

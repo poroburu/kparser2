@@ -124,6 +124,19 @@ public sealed class AnalyticsRowDto
     public int Total { get; init; }
 }
 
+public sealed class AnalyticsReportSpanDto
+{
+    public string Text { get; init; } = "";
+    public bool Bold { get; init; }
+    public bool Underline { get; init; }
+    public string Color { get; init; } = "#000000";
+}
+
+public sealed class AnalyticsReportDto
+{
+    public IReadOnlyList<AnalyticsReportSpanDto> Spans { get; init; } = [];
+}
+
 public sealed class ReportMetaDto
 {
     public int SchemaVersion { get; init; }
