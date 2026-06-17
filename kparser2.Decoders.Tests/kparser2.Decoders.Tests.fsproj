@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <Compile Include="Fixtures.fs" />
+    <Compile Include="EntityRegistryCollection.fs" />
     <Compile Include="DecoderTests.fs" />
   </ItemGroup>
 

@@ -106,6 +106,35 @@ module Fixtures =
         Array.Copy(nameBytes, 0, data, 22, min 15 nameBytes.Length)
         data
 
+    let trophySolutionPacketWithIds (highestId: uint32) (currentId: uint32) (actorName: string) (poolSlot: int) (judgeFlag: int) =
+        let data = Array.create 60 0uy
+        data.[2] <- 0xD3uy
+        BitConverter.GetBytes(highestId).CopyTo(data, 4)
+        BitConverter.GetBytes(currentId).CopyTo(data, 8)
+        data.[20] <- byte poolSlot
+        data.[21] <- byte judgeFlag
+        let nameBytes = padName actorName
+        Array.Copy(nameBytes, 0, data, 22, min 15 nameBytes.Length)
+        Array.Copy(nameBytes, 0, data, 38, min 15 nameBytes.Length)
+        data
+
+    let petStatusPacket (ownerId: uint32) (targetId: uint32) (petName: string) =
+        let data = Array.create 44 0uy
+        data.[2] <- 0x68uy
+        BitConverter.GetBytes(ownerId).CopyTo(data, 8)
+        BitConverter.GetBytes(targetId).CopyTo(data, 20)
+        let nameBytes = padName petName
+        Array.Copy(nameBytes, 0, data, 24, min 15 nameBytes.Length)
+        data
+
+    let partyMemberPacket (playerId: uint32) (name: string) =
+        let data = Array.create 54 0uy
+        data.[2] <- 0xDDuy
+        BitConverter.GetBytes(playerId).CopyTo(data, 4)
+        let nameBytes = padName name
+        Array.Copy(nameBytes, 0, data, 38, min 15 nameBytes.Length)
+        data
+
     let battleMessagePacket (casterId: uint32) (targetId: uint32) (messageNum: uint16) =
         let data = Array.create 28 0uy
         data.[2] <- 0x29uy

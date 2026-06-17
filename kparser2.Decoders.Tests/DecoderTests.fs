@@ -4,6 +4,7 @@ open kparser2.Decoders
 open kparser2.Protocol
 open Xunit
 
+[<Collection("EntityRegistry")>]
 module DecoderTests =
     [<Fact>]
     let ``Chat0x17 decodes speaker and message`` () =
@@ -411,3 +412,151 @@ module DecoderTests =
               Data = Fixtures.groupAttrPacket 0x950F5u 140us }
 
         Assert.Equal(Some "Poroburu", EntityRegistry.localPlayerName())
+
+    [<Fact>]
+    let ``loot roll registers local player name from 0xD3`` () =
+        EntityRegistry.reset()
+
+        EntityRegistry.observe
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x00DFus
+              PacketName = "GP_SERV_COMMAND_GROUP_ATTR"
+              Size = 40u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = Fixtures.groupAttrPacket 5485u 0us }
+
+        EntityRegistry.observe
+            { Topic = "test"
+              Timestamp = 2UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x00D3us
+              PacketName = "GP_SERV_COMMAND_TROPHY_SOLUTION"
+              Size = 60u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 2UL
+              Data = Fixtures.trophySolutionPacketWithIds 5485u 5485u "Poroburu" 1 0 }
+
+        Assert.Equal(Some "Poroburu", EntityRegistry.localPlayerName())
+
+    [<Fact>]
+    let ``pet status labels prey target from 0x68`` () =
+        EntityRegistry.reset()
+
+        EntityRegistry.observe
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x00DFus
+              PacketName = "GP_SERV_COMMAND_GROUP_ATTR"
+              Size = 40u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = Fixtures.groupAttrPacket 5485u 0us }
+
+        EntityRegistry.observe
+            { Topic = "test"
+              Timestamp = 2UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x0068us
+              PacketName = "GP_SERV_COMMAND_PET_STATUS"
+              Size = 44u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 2UL
+              Data = Fixtures.petStatusPacket 5485u 99999u "Snoll" }
+
+        Assert.Equal("Snoll", EntityRegistry.formatEntity 99999u)
+        Assert.Equal(Some EntityRegistry.EntityKind.Mob, EntityRegistry.tryGetEntityKind 99999u)
+
+    [<Fact>]
+    let ``jug pet status does not rename prey from 0x68`` () =
+        EntityRegistry.reset()
+
+        EntityRegistry.observe
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x00DFus
+              PacketName = "GP_SERV_COMMAND_GROUP_ATTR"
+              Size = 40u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = Fixtures.groupAttrPacket 5485u 0us }
+
+        EntityRegistry.observe
+            { Topic = "test"
+              Timestamp = 2UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x0068us
+              PacketName = "GP_SERV_COMMAND_PET_STATUS"
+              Size = 44u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 2UL
+              Data = Fixtures.petStatusPacket 5485u 0u "LullabyMelodia" }
+
+        EntityRegistry.observe
+            { Topic = "test"
+              Timestamp = 3UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x0068us
+              PacketName = "GP_SERV_COMMAND_PET_STATUS"
+              Size = 44u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 3UL
+              Data = Fixtures.petStatusPacket 5485u 99999u "LullabyMelodia" }
+
+        Assert.Equal(Some "LullabyMelodia", EntityRegistry.tryLocalJugPetName ())
+        Assert.Equal("Entity 629145", EntityRegistry.formatEntity 99999u)
+        Assert.True(EntityRegistry.tryGetEntityKind 99999u |> Option.isNone)
+
+    [<Fact>]
+    let ``party member update registers player name from 0xDD`` () =
+        EntityRegistry.reset()
+
+        EntityRegistry.observe
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x00DDus
+              PacketName = "GP_SERV_COMMAND_PARTY_MEMBER"
+              Size = 54u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = Fixtures.partyMemberPacket 12345u "Alice" }
+
+        Assert.Equal("Alice", EntityRegistry.formatEntity 12345u)
+        Assert.Equal(Some EntityRegistry.EntityKind.Player, EntityRegistry.tryGetEntityKind 12345u)

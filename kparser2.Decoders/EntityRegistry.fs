@@ -16,9 +16,12 @@ module EntityRegistry =
     let private kinds = Dictionary<uint32, EntityKind>()
     let private jobs = Dictionary<uint32, string>()
 
+    // localPlayerId is UniqueNo from 0x00DF / outgoing 0x001A, not world spawn id from 0x00E.
     let mutable private localPlayerId: uint32 option = None
     let mutable private pendingLocalPlayerName: string option = None
     let mutable private zoneId: int option = None
+    let mutable private localJugPetName: string option = None
+    let private localPetEntityIds = HashSet<uint32>()
 
     let private readFixedName (data: byte[]) (offset: int) (length: int) =
         if offset >= data.Length then
@@ -45,7 +48,26 @@ module EntityRegistry =
     let private registerName (entityId: uint32) (name: string) (kind: EntityKind) =
         if isValidName name then
             names.[entityId] <- name
-            kinds.[entityId] <- kind
+
+            match kinds.TryGetValue entityId, kind with
+            | (true, EntityKind.Player), k when k <> EntityKind.Player && localPlayerId = Some entityId -> ()
+            | (true, EntityKind.Mob), EntityKind.Player -> ()
+            | (true, EntityKind.Pet), (EntityKind.Player | EntityKind.Mob) -> kinds.[entityId] <- kind
+            | _ -> kinds.[entityId] <- kind
+
+    let private registerLocalPlayerFromLoot (entityId: uint32) (name: string) =
+        if entityId = 0u || not (isValidName name) then
+            ()
+        else
+            match localPlayerId with
+            | Some id when id = entityId ->
+                registerName id name EntityKind.Player
+                pendingLocalPlayerName <- None
+            | None ->
+                localPlayerId <- Some entityId
+                registerName entityId name EntityKind.Player
+                pendingLocalPlayerName <- None
+            | _ -> ()
 
     let private applyPendingLocalPlayerName () =
         match localPlayerId, pendingLocalPlayerName with
@@ -72,6 +94,9 @@ module EntityRegistry =
         if not (String.IsNullOrWhiteSpace job) then
             jobs.[entityId] <- job
 
+    let private isLikelyJugPetName (name: string) =
+        isValidName name && not (name.Contains('_'))
+
     let observe (evt: kparser2.Protocol.PacketEvent) =
         match evt.PacketId with
         | 0x000Aus when evt.Data.Length >= 148 ->
@@ -88,6 +113,26 @@ module EntityRegistry =
             if evt.Data.Length >= 88 then
                 let mainJob = int evt.Data.[84]
                 let subJob = int evt.Data.[85]
+
+                if mainJob > 0 then
+                    registerJob entityId $"Job {mainJob}/{subJob}"
+
+        | 0x000Dus when evt.Data.Length >= 100 ->
+            let entityId = BitConverter.ToUInt32(evt.Data, 4)
+            let updateMask = evt.Data.[10]
+            let hasNameFlag = updateMask &&& 0x08uy <> 0uy || updateMask = 0x1Fuy
+            let name = readFixedName evt.Data 90 16
+
+            if hasNameFlag && evt.Data.Length >= 91 then
+                registerName entityId name EntityKind.Player
+            elif localPlayerId = Some entityId && not (hasLocalPlayerName ()) && isValidName name then
+                registerName entityId name EntityKind.Player
+
+            applyPendingLocalPlayerName ()
+
+            if evt.Data.Length >= 94 then
+                let mainJob = int evt.Data.[86]
+                let subJob = int evt.Data.[87]
 
                 if mainJob > 0 then
                     registerJob entityId $"Job {mainJob}/{subJob}"
@@ -112,13 +157,68 @@ module EntityRegistry =
                 if mainJob > 0 then
                     registerJob entityId $"Job {mainJob}/{subJob}"
 
+        | 0x00DDus when evt.Data.Length >= 54 ->
+            let playerId = BitConverter.ToUInt32(evt.Data, 4)
+            let name = readFixedName evt.Data 38 16
+
+            if isValidName name then
+                registerName playerId name EntityKind.Player
+
+                if localPlayerId = Some playerId then
+                    applyPendingLocalPlayerName ()
+
+        | 0x0068us when evt.Data.Length >= 28 ->
+            let ownerId = BitConverter.ToUInt32(evt.Data, 8)
+            let targetId = BitConverter.ToUInt32(evt.Data, 20)
+            let label = readFixedName evt.Data 24 16
+
+            if isValidName label && localPlayerId = Some ownerId && ownerId <> 0u then
+                if targetId = 0u && isLikelyJugPetName label then
+                    localJugPetName <- Some label
+                elif localJugPetName = Some label then
+                    // Jug engaged: name@24 is the pet name; target@20 is prey (name comes from 0x00E).
+                    ()
+                elif targetId <> 0u then
+                    // Charm pet UI: name@24 is the prey name.
+                    match kinds.TryGetValue targetId with
+                    | true, EntityKind.Player -> ()
+                    | _ -> registerName targetId label EntityKind.Mob
+
+        | 0x00D3us when evt.Data.Length >= 54 ->
+            let highestId = BitConverter.ToUInt32(evt.Data, 4)
+            let currentId = BitConverter.ToUInt32(evt.Data, 8)
+            let highestName = readFixedName evt.Data 22 16
+            let currentName = readFixedName evt.Data 38 16
+
+            registerLocalPlayerFromLoot highestId highestName
+            registerLocalPlayerFromLoot currentId currentName
+
         | 0x000Eus when evt.Data.Length >= 68 ->
             let entityId = BitConverter.ToUInt32(evt.Data, 4)
             let updateMask = evt.Data.[10]
 
             if updateMask &&& 0x08uy <> 0uy || updateMask = 0x1Fuy then
                 let name = readFixedName evt.Data 52 16
-                registerName entityId name EntityKind.Mob
+
+                let claimer =
+                    if evt.Data.Length >= 48 then
+                        BitConverter.ToUInt32(evt.Data, 44)
+                    else
+                        0u
+
+                let kind =
+                    if
+                        isValidName name
+                        && localJugPetName = Some name
+                        && localPlayerId = Some claimer
+                        && claimer <> 0u
+                    then
+                        localPetEntityIds.Add entityId |> ignore
+                        EntityKind.Pet
+                    else
+                        EntityKind.Mob
+
+                registerName entityId name kind
 
         | 0x00DFus when evt.Data.Length >= 28 ->
             let entityId = BitConverter.ToUInt32(evt.Data, 4)
@@ -138,15 +238,30 @@ module EntityRegistry =
 
         | _ -> ()
 
+    let setEntityKind (entityId: uint32) (kind: EntityKind) =
+        match kinds.TryGetValue entityId, kind with
+        | (true, EntityKind.Player), k when k <> EntityKind.Player && localPlayerId = Some entityId -> ()
+        | (true, EntityKind.Mob), EntityKind.Player -> ()
+        | (true, EntityKind.Pet), EntityKind.Mob -> ()
+        | _ -> kinds.[entityId] <- kind
+
     let tryGetName (entityId: uint32) =
         match names.TryGetValue entityId with
         | true, name -> Some name
         | _ -> None
 
+    let tryGetEntityKind (entityId: uint32) =
+        match kinds.TryGetValue entityId with
+        | true, kind -> Some kind
+        | _ -> None
+
     let formatEntity (entityId: uint32) =
         match tryGetName entityId with
         | Some name -> name
-        | None -> $"Entity {entityId}"
+        | None ->
+            match tryGetEntityKind entityId with
+            | Some EntityKind.Pet -> "Pet"
+            | _ -> $"Entity {entityId}"
 
     let localPlayerName () =
         match localPlayerId with
@@ -162,15 +277,29 @@ module EntityRegistry =
         | true, job -> Some job
         | _ -> None
 
-    let tryGetEntityKind (entityId: uint32) =
-        match kinds.TryGetValue entityId with
-        | true, kind -> Some kind
-        | _ -> None
+    let isLocalPet (entityId: uint32) =
+        localPetEntityIds.Contains entityId
+        || tryGetEntityKind entityId = Some EntityKind.Pet
 
     let isLocalPlayer (entityId: uint32) =
         match localPlayerId with
         | Some id -> id = entityId
         | None -> false
+
+    let registerLocalPetActor (entityId: uint32) =
+        if entityId = 0u || isLocalPlayer entityId then
+            ()
+        else
+            match tryGetEntityKind entityId with
+            | Some EntityKind.Player | Some EntityKind.Pet -> ()
+            | _ ->
+                match localJugPetName with
+                | Some petName ->
+                    localPetEntityIds.Add entityId |> ignore
+                    registerName entityId petName EntityKind.Pet
+                | None -> ()
+
+    let tryLocalJugPetName () = localJugPetName
 
     let allEntityIds () =
         names.Keys |> Seq.toList
@@ -182,6 +311,8 @@ module EntityRegistry =
         localPlayerId <- None
         pendingLocalPlayerName <- None
         zoneId <- None
+        localJugPetName <- None
+        localPetEntityIds.Clear()
 
     let private isLocalPlayerSpeech (packetId: uint16) (modeId: int) =
         packetId = 0x00B5us
