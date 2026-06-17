@@ -159,6 +159,10 @@ let private runProbe () =
             h.session_uuid
             h.version
 
+    match ConnectionProbe.playerName() with
+    | Some name -> printfn "player_name=%s" name
+    | None -> printfn "player_name=(unavailable)"
+
     match ConnectionProbe.pluginStats() with
     | None -> printfn "plugin stats: unavailable"
     | Some s ->
@@ -192,45 +196,96 @@ let private runProbe () =
     else
         printfn "OK: live ingest path is receiving packets"
 
-let private runWatch (durationMs: int) (intervalMs: int) =
-    use source = LivePacketSource("tcp://localhost:5555") :> IPacketSource
-    let live = source :?> LivePacketSource
-    let deadline = DateTime.UtcNow.AddMilliseconds(float durationMs)
-    let mutable lastPublished = 0L
+let private runWatch (durationMs: int) (intervalMs: int) (analytics: bool) =
+    if analytics then
+        use session = PacketSessionFactory.fromLiveDefault() :> IAnalyticsSession
+        let deadline = DateTime.UtcNow.AddMilliseconds(float durationMs)
 
-    while DateTime.UtcNow < deadline do
-        let pluginStats = ConnectionProbe.pluginStats()
-        let diag = live.Diagnostics
-        let mutable ingested = 0
-        let mutable evt = Unchecked.defaultof<PacketEvent>
+        while DateTime.UtcNow < deadline do
+            let snap = session.GetSnapshot()
+            let unnamed =
+                snap.Combatants
+                |> Seq.filter (fun c -> c.Name.StartsWith("Entity ", StringComparison.Ordinal))
+                |> Seq.length
 
-        while source.Packets.TryRead(&evt) do
-            ingested <- ingested + 1
+            printfn
+                "[%s] fights=%d interactions=%d combatants=%d unnamed=%d zone=%s"
+                (DateTime.Now.ToString("HH:mm:ss"))
+                snap.Battles.Count
+                snap.Interactions.Count
+                snap.Combatants.Count
+                unnamed
+                snap.ZoneName
 
-        let published =
-            pluginStats |> Option.map (fun s -> s.packets_published) |> Option.defaultValue 0L
+            Thread.Sleep(intervalMs)
 
-        let pubDelta = published - lastPublished
-        lastPublished <- published
+        0
+    else
+        use source = LivePacketSource("tcp://localhost:5555") :> IPacketSource
+        let live = source :?> LivePacketSource
+        let deadline = DateTime.UtcNow.AddMilliseconds(float durationMs)
+        let mutable lastPublished = 0L
 
-        printfn
-            "[%s] plugin +%d (total %d) | zmq %d parsed %d parse_err %d session_ingested %d reconnects %d"
-            (DateTime.Now.ToString("HH:mm:ss"))
-            pubDelta
-            published
-            diag.RawFramesReceived
-            diag.PacketsReceived
-            diag.ParseErrors
-            ingested
-            diag.Reconnects
+        while DateTime.UtcNow < deadline do
+            let pluginStats = ConnectionProbe.pluginStats()
+            let diag = live.Diagnostics
+            let mutable ingested = 0
+            let mutable evt = Unchecked.defaultof<PacketEvent>
 
-        Thread.Sleep(intervalMs)
+            while source.Packets.TryRead(&evt) do
+                ingested <- ingested + 1
 
-    0
+            let published =
+                pluginStats |> Option.map (fun s -> s.packets_published) |> Option.defaultValue 0L
+
+            let pubDelta = published - lastPublished
+            lastPublished <- published
+
+            printfn
+                "[%s] plugin +%d (total %d) | zmq %d parsed %d parse_err %d session_ingested %d reconnects %d"
+                (DateTime.Now.ToString("HH:mm:ss"))
+                pubDelta
+                published
+                diag.RawFramesReceived
+                diag.PacketsReceived
+                diag.ParseErrors
+                ingested
+                diag.Reconnects
+
+            Thread.Sleep(intervalMs)
+
+        0
+
+let private runReport (queryId: string) (path: string) (live: bool) =
+    if live then
+        use session = PacketSessionFactory.fromLiveDefault() :> IAnalyticsSession
+        let snap = session.GetSnapshot()
+        let report = AnalyticsReportService.format queryId snap (MobFilterDto())
+
+        for span in report.Spans do
+            printf "%s" span.Text
+
+        0
+    else
+        use session = PacketSessionFactory.fromReplayDefault path
+        session.WaitForReplayComplete()
+        let snap = (session :> IAnalyticsSession).GetSnapshot()
+        let report = AnalyticsReportService.format queryId snap (MobFilterDto())
+
+        for span in report.Spans do
+            printf "%s" span.Text
+
+        0
 
 let private runRecord (output: string) (durationMs: int) =
+    ConnectionProbe.tryBootstrapLocalPlayerName ()
     use source = LivePacketSource("tcp://localhost:5555") :> IPacketSource
     use writer = new StreamWriter(output)
+
+    let recordStartMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+    let playerName = ConnectionProbe.playerName()
+
+    Ndjson.writeSessionHeader writer playerName recordStartMs
 
     let deadline = DateTime.UtcNow.AddMilliseconds(float durationMs)
     let mutable count = 0
@@ -263,9 +318,7 @@ let private runRecord (output: string) (durationMs: int) =
 
     printfn "Recorded %d packets to %s" count output
 
-    printfn "Recorded %d packets to %s" count output
-
-let private runAnalyticsSnapshot (path: string) (asJson: bool) =
+let private runAnalyticsSnapshot (path: string) (asJson: bool) (assertCombat: bool) (minBattles: int option) (assertNames: bool) =
     use session = PacketSessionFactory.fromReplayDefault path
     session.WaitForReplayComplete()
     let snap = (session :> IAnalyticsSession).GetSnapshot()
@@ -297,6 +350,20 @@ let private runAnalyticsSnapshot (path: string) (asJson: bool) =
 
             for row in offense do
                 printfn "  %s: %d (%d hits)" row.Label row.Total row.Count
+
+    if assertCombat || minBattles.IsSome || assertNames then
+        let fSnap = AnalyticsDtoMapping.fromSnapshotDto snap
+
+        let report =
+            if assertNames then
+                AnalyticsValidate.validateNames fSnap
+            elif minBattles.IsSome then
+                AnalyticsValidate.validateMultiFight fSnap minBattles.Value
+            else
+                AnalyticsValidate.validateCombat fSnap
+
+        if not (AnalyticsValidate.printReport report) then
+            failwith "Combat validation failed"
 
     snap
 
@@ -389,9 +456,17 @@ let private runImportPacketViewer (fullLog: string option) (incomingLog: string 
             eprintfn "PacketViewer import failed with exit code %d" proc.ExitCode
             1
 
-let private runImportValidate (path: string) =
+let private runImportValidate (path: string) (assertCombat: bool) (minBattles: int option) (assertNames: bool) =
     EntityRegistry.reset()
     InteractionBuilder.reset()
+
+    match Ndjson.tryReadSessionHeader path with
+    | Some header when not (String.IsNullOrWhiteSpace header.player_name) ->
+        EntityRegistry.registerLocalPlayerName header.player_name
+    | _ -> ()
+
+    ConnectionProbe.tryBootstrapLocalPlayerName ()
+
     let store = SessionStore.create()
     let opCounts = System.Collections.Generic.Dictionary<int, int>()
     let mutable total = 0
@@ -433,7 +508,21 @@ let private runImportValidate (path: string) =
     |> List.truncate 12
     |> List.iter (fun c -> printfn "  %s (%A) id=%d" c.Name c.Kind c.Id)
 
-    0
+    if assertCombat || minBattles.IsSome || assertNames then
+        let report =
+            if assertNames then
+                AnalyticsValidate.validateNames snap
+            elif minBattles.IsSome then
+                AnalyticsValidate.validateMultiFight snap minBattles.Value
+            else
+                AnalyticsValidate.validateCombat snap
+
+        if AnalyticsValidate.printReport report then
+            0
+        else
+            1
+    else
+        0
 
 [<EntryPoint>]
 let main argv =
@@ -443,16 +532,17 @@ let main argv =
         printfn "  kparser2.cli stats [--replay <file.ndjson>]"
         printfn "  kparser2.cli hello"
         printfn "  kparser2.cli probe"
-        printfn "  kparser2.cli watch [--duration-ms 30000] [--interval-ms 2000]"
+        printfn "  kparser2.cli watch [--duration-ms 30000] [--interval-ms 2000] [--analytics]"
         printfn "  kparser2.cli record <file.ndjson> [--duration-ms 5000]"
         printfn "  kparser2.cli decode <file.ndjson> [--filter 0x17] [--json]"
+        printfn "  kparser2.cli report <queryId> <file.ndjson> [--live]"
         printfn "  kparser2.cli export-items [--sql <path>] [--output <path>]"
         printfn "  kparser2.cli export-actions [--sql <path>] [--output <path>]"
-        printfn "  kparser2.cli analytics snapshot <file.ndjson> [--json]"
+        printfn "  kparser2.cli analytics snapshot <file.ndjson> [--json] [--assert-combat] [--assert-names] [--min-battles N]"
         printfn "  kparser2.cli export report <file.ndjson> -o <file.kparse2.json>"
         printfn "  kparser2.cli import report <file.kparse2.json> [--validate]"
         printfn "  kparser2.cli import packetviewer [--full path.log | --incoming in.log [--outgoing out.log]] -o capture.ndjson [--session-id name]"
-        printfn "  kparser2.cli import packetviewer --validate capture.ndjson"
+        printfn "  kparser2.cli import packetviewer --validate capture.ndjson [--assert-combat] [--assert-names] [--min-battles N]"
         printfn "  kparser2.cli export-zones [--sql <path>] [--output <path>]"
         1
     else
@@ -499,6 +589,7 @@ let main argv =
             | "watch" ->
                 let mutable duration = 30000
                 let mutable interval = 2000
+                let mutable analytics = false
                 let mutable i = 1
 
                 while i < argv.Length do
@@ -509,9 +600,12 @@ let main argv =
                     | "--interval-ms" when i + 1 < argv.Length ->
                         interval <- Int32.Parse argv.[i + 1]
                         i <- i + 2
+                    | "--analytics" ->
+                        analytics <- true
+                        i <- i + 1
                     | _ -> i <- i + 1
 
-                runWatch duration interval
+                runWatch duration interval analytics
             | "record" when argv.Length >= 2 ->
                 let output = argv.[1]
                 let mutable duration = 5000
@@ -526,6 +620,20 @@ let main argv =
 
                 runRecord output duration
                 0
+            | "report" when argv.Length >= 3 ->
+                let queryId = argv.[1]
+                let mutable live = false
+                let mutable path = argv.[2]
+                let mutable i = 3
+
+                while i < argv.Length do
+                    match argv.[i] with
+                    | "--live" ->
+                        live <- true
+                        i <- i + 1
+                    | _ -> i <- i + 1
+
+                runReport queryId path live
             | "decode" when argv.Length >= 2 ->
                 let path = argv.[1]
                 let mutable filter = None
@@ -548,6 +656,9 @@ let main argv =
             | "analytics" when argv.Length >= 3 && argv.[1].ToLowerInvariant() = "snapshot" ->
                 let path = argv.[2]
                 let mutable asJson = false
+                let mutable assertCombat = false
+                let mutable assertNames = false
+                let mutable minBattles = None
                 let mutable i = 3
 
                 while i < argv.Length do
@@ -555,9 +666,19 @@ let main argv =
                     | "--json" ->
                         asJson <- true
                         i <- i + 1
+                    | "--assert-combat" ->
+                        assertCombat <- true
+                        i <- i + 1
+                    | "--assert-names" ->
+                        assertNames <- true
+                        i <- i + 1
+                    | "--min-battles" when i + 1 < argv.Length ->
+                        minBattles <- Some(Int32.Parse argv.[i + 1])
+                        assertCombat <- true
+                        i <- i + 2
                     | _ -> i <- i + 1
 
-                runAnalyticsSnapshot path asJson |> ignore
+                runAnalyticsSnapshot path asJson assertCombat minBattles assertNames |> ignore
                 0
             | "export" when argv.Length >= 4 && argv.[1].ToLowerInvariant() = "report" ->
                 let path = argv.[2]
@@ -589,6 +710,9 @@ let main argv =
                 0
             | "import" when argv.Length >= 3 && argv.[1].ToLowerInvariant() = "packetviewer" ->
                 let mutable validateOnly = false
+                let mutable assertCombat = false
+                let mutable assertNames = false
+                let mutable minBattles = None
                 let mutable fullLog = None
                 let mutable incomingLog = None
                 let mutable outgoingLog = None
@@ -601,6 +725,16 @@ let main argv =
                     | "--validate" when i + 1 < argv.Length ->
                         validateOnly <- true
                         output <- argv.[i + 1]
+                        i <- i + 2
+                    | "--assert-combat" ->
+                        assertCombat <- true
+                        i <- i + 1
+                    | "--assert-names" ->
+                        assertNames <- true
+                        i <- i + 1
+                    | "--min-battles" when i + 1 < argv.Length ->
+                        minBattles <- Some(Int32.Parse argv.[i + 1])
+                        assertCombat <- true
                         i <- i + 2
                     | "--full" when i + 1 < argv.Length ->
                         fullLog <- Some argv.[i + 1]
@@ -620,7 +754,7 @@ let main argv =
                     | _ -> i <- i + 1
 
                 if validateOnly then
-                    runImportValidate output
+                    runImportValidate output assertCombat minBattles assertNames
                 else
                     runImportPacketViewer fullLog incomingLog outgoingLog output sessionId
             | "export-items" ->
