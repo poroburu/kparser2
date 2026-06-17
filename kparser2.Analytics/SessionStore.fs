@@ -189,6 +189,8 @@ module SessionStore =
         let interactions =
             InteractionBuilder.fromDecoderEvents ts None decoded.Events
             |> List.map (fun interaction ->
+                CombatEntityInference.inferFromInteraction interaction
+
                 let fightState', battleId = FightSegmenter.applyInteraction fightState interaction
                 fightState <- fightState'
                 { interaction with BattleId = battleId })
@@ -205,9 +207,33 @@ module SessionStore =
                     ExperienceParser.tryParseBattleMessage (int message.MessageNum) message.Param1 message.Param2
                 with
                 | Some parsed ->
-                    recordExperience store ts message.CasterId (EntityRegistry.formatEntity message.CasterId) parsed.Points parsed.Chain
+                    let casterId = message.CasterId
+                    let targetId = message.TargetId
+
+                    let actorId, actorName =
+                        if EntityRegistry.isLocalPlayer casterId then
+                            casterId, EntityRegistry.formatEntity casterId
+                        elif EntityRegistry.isLocalPlayer targetId then
+                            targetId, EntityRegistry.formatEntity targetId
+                        elif
+                            EntityRegistry.tryGetEntityKind casterId = Some EntityRegistry.EntityKind.Pet
+                            && EntityRegistry.tryLocalPlayerId().IsSome
+                        then
+                            EntityRegistry.tryLocalPlayerId().Value,
+                            EntityRegistry.localPlayerName ()
+                            |> Option.defaultWith (fun () -> EntityRegistry.formatEntity casterId)
+                        else
+                            casterId, EntityRegistry.formatEntity casterId
+
+                    recordExperience store ts actorId actorName parsed.Points parsed.Chain
                 | None -> ()
             | DecoderEvent.Loot loot ->
+                match loot.ActorId with
+                | Some id when EntityRegistry.isLocalPlayer (uint32 id) ->
+                    if not (String.IsNullOrWhiteSpace loot.ActorName) then
+                        EntityRegistry.registerLocalPlayerName loot.ActorName
+                | _ -> ()
+
                 store.LootRecords <-
                     { TimestampMs = ts
                       EventType = lootTypeLabel loot.EventType

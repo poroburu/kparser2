@@ -15,10 +15,30 @@ module FightSegmenter =
           LastEventMs = 0L
           NextBattleId = 1 }
 
-    let private isMob (entityId: uint32) =
-        match EntityRegistry.tryGetEntityKind entityId with
-        | Some EntityRegistry.EntityKind.Mob -> true
-        | _ -> false
+    let private isMobTarget (targetId: uint32) (actorId: uint32) =
+        if EntityRegistry.isLocalPlayer targetId then
+            false
+        else
+            match EntityRegistry.tryGetEntityKind targetId with
+            | Some EntityRegistry.EntityKind.Mob -> true
+            | Some EntityRegistry.EntityKind.Player -> false
+            | Some EntityRegistry.EntityKind.Pet -> false
+            | Some EntityRegistry.EntityKind.Fellow -> false
+            | _ ->
+                not (EntityRegistry.isLocalPlayer targetId)
+                && (EntityRegistry.isLocalPlayer actorId
+                    || EntityRegistry.isLocalPet actorId)
+
+    let private isDefeatedEnemy (targetId: uint32) =
+        if EntityRegistry.isLocalPlayer targetId || EntityRegistry.isLocalPet targetId then
+            false
+        else
+            match EntityRegistry.tryGetEntityKind targetId with
+            | Some EntityRegistry.EntityKind.Player -> false
+            | Some EntityRegistry.EntityKind.Pet -> false
+            | Some EntityRegistry.EntityKind.Fellow -> false
+            | Some EntityRegistry.EntityKind.Mob -> true
+            | _ -> not (EntityRegistry.isLocalPlayer targetId)
 
     let private enemyName (targetId: uint32) =
         EntityRegistry.formatEntity targetId
@@ -75,7 +95,7 @@ module FightSegmenter =
 
         let state =
             match interaction.InteractionType, state.CurrentBattleId with
-            | InteractionType.Harm, None when isMob interaction.TargetId ->
+            | InteractionType.Harm, None when isMobTarget interaction.TargetId interaction.ActorId ->
                 openBattle state interaction.TimestampMs interaction.TargetId
             | _ -> state
 
@@ -86,7 +106,7 @@ module FightSegmenter =
 
         let state =
             match interaction.InteractionType with
-            | InteractionType.Death when isMob interaction.TargetId ->
+            | InteractionType.Death when isDefeatedEnemy interaction.TargetId ->
                 closeBattle state interaction.TimestampMs true (Some interaction.ActorId)
             | InteractionType.Death ->
                 state
