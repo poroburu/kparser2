@@ -15,8 +15,14 @@
     <Compile Include="InteractionClassification.fs" />
     <Compile Include="InteractionBuilder.fs" />
     <Compile Include="FightSegmenter.fs" />
+    <Compile Include="CombatEntityInference.fs" />
     <Compile Include="ChatIngest.fs" />
     <Compile Include="AnalyticsQueries.fs" />
+    <Compile Include="AnalyticsReport.fs" />
+    <Compile Include="ReportTemplates.fs" />
+    <Compile Include="ReportAggregators.fs" />
+    <Compile Include="AnalyticsReports.fs" />
+    <Compile Include="AnalyticsValidate.fs" />
     <Compile Include="ReportInterchange.fs" />
     <Compile Include="SessionStore.fs" />
   </ItemGroup>
