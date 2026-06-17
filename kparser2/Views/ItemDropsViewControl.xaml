@@ -1,0 +1,19 @@
+<UserControl x:Class="kparser2.Views.ItemDropsViewControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ListView ItemsSource="{Binding Events}">
+        <ListView.View>
+            <GridView>
+                <GridViewColumn Header="Time" DisplayMemberBinding="{Binding Timestamp}" Width="120" />
+                <GridViewColumn Header="Type" DisplayMemberBinding="{Binding EventType}" Width="70" />
+                <GridViewColumn Header="Item" DisplayMemberBinding="{Binding ItemName}" Width="180" />
+                <GridViewColumn Header="ID" DisplayMemberBinding="{Binding ItemId}" Width="60" />
+                <GridViewColumn Header="Qty" DisplayMemberBinding="{Binding Quantity}" Width="50" />
+                <GridViewColumn Header="Gil" DisplayMemberBinding="{Binding Gil}" Width="60" />
+                <GridViewColumn Header="Slot" DisplayMemberBinding="{Binding PoolSlot}" Width="50" />
+                <GridViewColumn Header="Actor" DisplayMemberBinding="{Binding ActorName}" Width="120" />
+                <GridViewColumn Header="Detail" DisplayMemberBinding="{Binding Detail}" Width="220" />
+            </GridView>
+        </ListView.View>
+    </ListView>
+</UserControl>

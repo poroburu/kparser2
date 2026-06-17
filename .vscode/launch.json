@@ -1,0 +1,20 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "kparser2 (debug)",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "${workspaceFolder}/kparser2/bin/Debug/net8.0-windows/kparser2.dll",
+      "cwd": "${workspaceFolder}/kparser2/bin/Debug/net8.0-windows",
+      "console": "internalConsole",
+      "stopAtEntry": false
+    },
+    {
+      "name": "kparser2 (attach)",
+      "type": "coreclr",
+      "request": "attach"
+    }
+  ],
+  "compounds": []
+}

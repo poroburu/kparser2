@@ -1,0 +1,18 @@
+<UserControl x:Class="kparser2.Views.ChatAnalyticsViewControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <DockPanel Margin="8">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+            <TextBlock Text="Mode:" VerticalAlignment="Center" Margin="0,0,4,0" />
+            <ComboBox Width="120" ItemsSource="{Binding ModeOptions}" SelectedItem="{Binding SelectedMode, Mode=TwoWay}" Margin="0,0,12,0" />
+            <TextBlock Text="Speaker:" VerticalAlignment="Center" Margin="0,0,4,0" />
+            <ComboBox Width="160" ItemsSource="{Binding SpeakerOptions}" SelectedItem="{Binding SelectedSpeaker, Mode=TwoWay}" />
+        </StackPanel>
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <FlowDocumentScrollViewer Document="{Binding ReportDocument}"
+                                      IsSelectionEnabled="True"
+                                      VerticalScrollBarVisibility="Disabled"
+                                      HorizontalScrollBarVisibility="Disabled" />
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWpf>true</UseWpf>
+    <OutputType>WinExe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>kparser2</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+    <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.0-rc2" />
+    <PackageReference Include="System.Reactive" Version="6.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\kparser2.Abstractions\kparser2.Abstractions.csproj" />
+    <ProjectReference Include="..\kparser2.Core\kparser2.Core.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\fixtures\sessions\**\*" Link="fixtures\sessions\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\data\items.json" Link="data\items.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\data\actions.json" Link="data\actions.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\data\mob_xp.json" Link="data\mob_xp.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- dotnet watch: F# hot reload is unsupported; watch .fs sources for rebuild-on-change -->
+  <ItemGroup>
+    <Watch Include="..\**\*.fs" Exclude="..\**\obj\**;..\**\bin\**" />
+  </ItemGroup>
+
+</Project>
