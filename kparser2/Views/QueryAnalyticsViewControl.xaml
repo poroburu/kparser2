@@ -3,6 +3,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <DockPanel Margin="8">
         <TextBlock DockPanel.Dock="Top" Text="{Binding StatusText}" Margin="0,0,0,8" />
-        <DataGrid ItemsSource="{Binding Rows}" AutoGenerateColumns="True" IsReadOnly="True" />
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <FlowDocumentScrollViewer Document="{Binding ReportDocument}"
+                                      IsSelectionEnabled="True"
+                                      VerticalScrollBarVisibility="Disabled"
+                                      HorizontalScrollBarVisibility="Disabled" />
+        </ScrollViewer>
     </DockPanel>
 </UserControl>

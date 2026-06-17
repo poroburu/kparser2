@@ -1,5 +1,5 @@
-using System.Collections.ObjectModel;
 using System.Reactive.Disposables;
+using System.Windows.Documents;
 using CommunityToolkit.Mvvm.ComponentModel;
 using kparser2.Abstractions;
 using kparser2.Core;
@@ -16,7 +16,8 @@ public sealed partial class QueryAnalyticsViewModel : ObservableObject, IDisposa
     private readonly IDisposable? _filterSubscription;
     private int _refreshGeneration;
 
-    public ObservableCollection<AnalyticsRowDto> Rows { get; } = [];
+    [ObservableProperty]
+    private FlowDocument _reportDocument = new();
 
     [ObservableProperty]
     private string _statusText = "";
@@ -49,7 +50,7 @@ public sealed partial class QueryAnalyticsViewModel : ObservableObject, IDisposa
         var filter = _mobFilter?.Current ?? new MobFilterDto();
         var queryId = _queryId;
 
-        Task.Run(() => AnalyticsQueryService.query(queryId, snapshot, filter))
+        Task.Run(() => AnalyticsReportService.format(queryId, snapshot, filter))
             .ContinueWith(
                 t =>
                 {
@@ -58,27 +59,21 @@ public sealed partial class QueryAnalyticsViewModel : ObservableObject, IDisposa
                         return;
                     }
 
-                    var rows = t.Result;
-                    UiThread.RunBackground(() => ApplyRows(generation, rows, snapshot));
+                    var report = t.Result;
+                    UiThread.RunBackground(() => ApplyReport(generation, report, snapshot));
                 },
                 TaskScheduler.Default);
     }
 
-    private void ApplyRows(int generation, IReadOnlyList<AnalyticsRowDto> rows, AnalyticsSnapshotDto snapshot)
+    private void ApplyReport(int generation, AnalyticsReportDto report, AnalyticsSnapshotDto snapshot)
     {
         if (generation != Volatile.Read(ref _refreshGeneration))
         {
             return;
         }
 
-        Rows.Clear();
-
-        foreach (var row in rows)
-        {
-            Rows.Add(row);
-        }
-
-        StatusText = $"{Rows.Count} rows | {snapshot.Interactions.Count} interactions | {snapshot.Battles.Count} fights";
+        ReportDocument = AnalyticsReportRenderer.ToFlowDocument(report);
+        StatusText = $"{report.Spans.Count} spans | {snapshot.Interactions.Count} interactions | {snapshot.Battles.Count} fights";
     }
 
     public void Dispose()

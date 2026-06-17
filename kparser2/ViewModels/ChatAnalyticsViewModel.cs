@@ -1,17 +1,18 @@
 using System.Collections.ObjectModel;
+using System.Reactive.Disposables;
+using System.Windows.Documents;
 using CommunityToolkit.Mvvm.ComponentModel;
 using kparser2.Abstractions;
+using kparser2.Core;
+using kparser2.Services;
 
 namespace kparser2.ViewModels;
 
 public sealed partial class ChatAnalyticsViewModel : ObservableObject, IDisposable
 {
-    private const int MaxDisplayedMessages = 1000;
     private readonly IAnalyticsSession _session;
     private readonly IDisposable _subscription;
     private bool _isRefreshing;
-
-    public ObservableCollection<ChatMessageRow> Messages { get; } = [];
 
     public ObservableCollection<string> ModeOptions { get; } =
     [
@@ -25,6 +26,9 @@ public sealed partial class ChatAnalyticsViewModel : ObservableObject, IDisposab
 
     [ObservableProperty]
     private string _selectedSpeaker = "All";
+
+    [ObservableProperty]
+    private FlowDocument _reportDocument = new();
 
     public ChatAnalyticsViewModel(IAnalyticsSession session)
     {
@@ -58,8 +62,7 @@ public sealed partial class ChatAnalyticsViewModel : ObservableObject, IDisposab
     private static bool IsAll(string? value) =>
         string.IsNullOrWhiteSpace(value) || value.Equals("All", StringComparison.OrdinalIgnoreCase);
 
-    private static bool Matches(string? filter, string value) =>
-        IsAll(filter) || value.Equals(filter, StringComparison.OrdinalIgnoreCase);
+    private static string? ToFilter(string? value) => IsAll(value) ? null : value;
 
     private void Refresh(AnalyticsSnapshotDto snapshot)
     {
@@ -92,22 +95,12 @@ public sealed partial class ChatAnalyticsViewModel : ObservableObject, IDisposab
                 ? previousSpeaker
                 : "All";
 
-            Messages.Clear();
+            var report = AnalyticsReportService.formatChat(
+                snapshot,
+                ToFilter(SelectedMode),
+                ToFilter(SelectedSpeaker));
 
-            foreach (var message in snapshot.ChatMessages.OrderByDescending(m => m.TimestampMs).Take(MaxDisplayedMessages))
-            {
-                if (!Matches(SelectedMode, message.Mode))
-                {
-                    continue;
-                }
-
-                if (!Matches(SelectedSpeaker, message.Speaker))
-                {
-                    continue;
-                }
-
-                Messages.Add(ChatMessageRow.From(message, snapshot.SessionStartMs));
-            }
+            ReportDocument = AnalyticsReportRenderer.ToFlowDocument(report);
         }
         finally
         {

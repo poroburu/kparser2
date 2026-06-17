@@ -8,27 +8,11 @@
             <TextBlock Text="Speaker:" VerticalAlignment="Center" Margin="0,0,4,0" />
             <ComboBox Width="160" ItemsSource="{Binding SpeakerOptions}" SelectedItem="{Binding SelectedSpeaker, Mode=TwoWay}" />
         </StackPanel>
-        <ListView ItemsSource="{Binding Messages}">
-            <ListView.View>
-                <GridView>
-                    <GridViewColumn Header="Time" DisplayMemberBinding="{Binding Time}" Width="80" />
-                    <GridViewColumn Header="Mode" Width="90">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Mode}" Foreground="{Binding ModeForeground}" FontWeight="SemiBold" />
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                    <GridViewColumn Header="Speaker" Width="140">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Speaker}" Foreground="{Binding SpeakerForeground}" />
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                    <GridViewColumn Header="Message" DisplayMemberBinding="{Binding Message}" Width="500" />
-                </GridView>
-            </ListView.View>
-        </ListView>
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <FlowDocumentScrollViewer Document="{Binding ReportDocument}"
+                                      IsSelectionEnabled="True"
+                                      VerticalScrollBarVisibility="Disabled"
+                                      HorizontalScrollBarVisibility="Disabled" />
+        </ScrollViewer>
     </DockPanel>
 </UserControl>
