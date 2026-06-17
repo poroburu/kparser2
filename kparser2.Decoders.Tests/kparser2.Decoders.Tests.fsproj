@@ -25,6 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\data\items.json" Link="data\items.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
