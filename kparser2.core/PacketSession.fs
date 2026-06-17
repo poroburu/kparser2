@@ -4,6 +4,7 @@ open System
 open System.Reactive.Subjects
 open System.Threading
 open System.Threading.Tasks
+open Microsoft.FSharp.Control
 open kparser2.Abstractions
 open kparser2.Analytics
 open kparser2.Decoders
@@ -117,7 +118,10 @@ type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int) 
 
     member _.WaitForReplayComplete() =
         source.WaitForCompletion()
-        _ingestTask.GetAwaiter().GetResult()
+
+        if not _ingestTask.IsCompleted then
+            Async.AwaitTask _ingestTask |> Async.RunSynchronously
+
         flushAnalytics true
 
     interface IAnalyticsSession with
