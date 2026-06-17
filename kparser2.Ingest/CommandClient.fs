@@ -20,8 +20,13 @@ type CommandClient(reqEndpoint: string) =
 
         try
             socket.SendFrame(payload) |> ignore
-            let response = socket.ReceiveFrameString()
-            Some response
+            let mutable response = ""
+            let ok = socket.TryReceiveFrameString(TimeSpan.FromMilliseconds(500), &response)
+
+            if ok then
+                Some response
+            else
+                None
         with _ ->
             None
 
