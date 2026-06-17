@@ -2,12 +2,18 @@ namespace kparser2.Analytics
 
 open System
 open System.IO
+open System.Reflection
 open System.Text.Json
 open System.Text.Json.Serialization
 open FSharp.SystemTextJson
 
 module ReportInterchange =
     let SchemaVersion = 1
+
+    let productVersion =
+        match Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>() with
+        | null -> "unknown"
+        | attr -> attr.InformationalVersion
 
     type ReportMeta =
         { [<JsonPropertyName("schema_version")>] SchemaVersion: int
@@ -51,7 +57,7 @@ module ReportInterchange =
               Title = title
               Zone = snap.ZoneName
               RecordedAt = DateTimeOffset.UtcNow.ToString("O")
-              Kparser2Version = "kparser2" }
+              Kparser2Version = productVersion }
           Combatants = snap.Combatants
           Fights = snap.Battles
           Events = snap.Interactions

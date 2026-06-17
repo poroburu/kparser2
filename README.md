@@ -75,6 +75,10 @@ Run with no arguments for the full command list.
 | PUB | `tcp://localhost:5555` | Multipart: topic + JSON meta + raw bytes |
 | REP | `tcp://localhost:5556` | JSON commands (`status`, `stats`, `hello`) |
 
+### Compatibility
+
+Paired RC tags: **kparser2 v0.1.0-rc.1** ↔ **kpacket2 v0.1.0-rc.1** ↔ wire **`kpacket.v1`**. See [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
+
 ## Quick start
 
 ### Build
@@ -144,6 +148,7 @@ Golden sessions in `fixtures/sessions/`:
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
 | [docs/CREDITS.md](docs/CREDITS.md) | Upstream sources and attribution |
 | [docs/RELEASING.md](docs/RELEASING.md) | Cutting a GitHub release |
+| [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) | Paired kpacket2 / kparser2 versions |
 | [docs/report-schema.md](docs/report-schema.md) | `.kparse2.json` interchange format |
 | [AGENTS.md](AGENTS.md) | Cursor agent quick reference |
 | [docs/AGENT_DEV.md](docs/AGENT_DEV.md) | Live session and oracle workflows |
@@ -157,7 +162,7 @@ Golden sessions in `fixtures/sessions/`:
 
 ## License
 
-kparser2 is maintained by [poroburu](https://github.com/poroburu). See [docs/CREDITS.md](docs/CREDITS.md) for upstream projects. **Add an explicit LICENSE file before distributing binaries** if one is not yet present in the repository.
+kparser2 is maintained by [poroburu](https://github.com/poroburu). See [LICENSE](LICENSE) (MIT) and [docs/CREDITS.md](docs/CREDITS.md) for upstream projects.
 
 ## Related projects
 

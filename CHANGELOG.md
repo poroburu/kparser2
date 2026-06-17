@@ -2,6 +2,23 @@
 
 All notable changes to kparser2 are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.0-rc.1] - 2026-06-17
+
+Pre-release candidate for the kpacket2 + kparser2 stack. Wire protocol `kpacket.v1` unchanged.
+
+### Added (since 0.1.0 draft)
+
+- kparser ParseCodes parity tests (Tier 1–3)
+- BST camp fixtures, jug-pet entity naming, fight segmentation
+- `analytics snapshot --assert-combat` / `--assert-names` / `--min-battles`
+- 27 golden fixtures including `bcmn30_petrifying_pair` and `bst_camp_multi`
+- Assembly version stamping via `Directory.Build.props`
+
+### Notes
+
+- Pre-release; not intended for broad public distribution yet
+- Requires [kpacket2 v0.1.0-rc.1](https://github.com/poroburu/kpacket2/releases/tag/v0.1.0-rc.1) for live capture
+
 ## [0.1.0] - 2026-06-16
 
 First public release: packet-native rewrite of KParser with offline replay, analytics, and headless CLI.
@@ -39,4 +56,5 @@ First public release: packet-native rewrite of KParser with offline replay, anal
 - Legacy KParser `.sdf` files cannot be imported
 - WPF host requires Windows; CLI core libraries run on .NET 8 anywhere
 
+[0.1.0-rc.1]: https://github.com/poroburu/kparser2/releases/tag/v0.1.0-rc.1
 [0.1.0]: https://github.com/poroburu/kparser2/releases/tag/v0.1.0

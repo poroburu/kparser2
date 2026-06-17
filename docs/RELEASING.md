@@ -10,7 +10,9 @@ Use [Semantic Versioning](https://semver.org/):
 - **MINOR** — new decoders, analytics tabs, fixtures
 - **PATCH** — bug fixes, lookup data updates
 
-Update `CHANGELOG.md` under a new `## [x.y.z] - YYYY-MM-DD` section before tagging.
+Update `CHANGELOG.md` under a new `## [x.y.z] - YYYY-MM-DD` section before tagging. Git semver is set in [`Directory.Build.props`](../Directory.Build.props). Keep tags aligned with [kpacket2](https://github.com/poroburu/kpacket2) — see [COMPATIBILITY.md](COMPATIBILITY.md).
+
+For RC releases use tags like `v0.1.0-rc.1` and pass `--prerelease` to `gh release create`.
 
 ## Pre-release checklist
 
@@ -36,7 +38,7 @@ dotnet run -c Release --project kparser2.Cli/kparser2.Cli.fsproj -- analytics sn
 ## Build publish artifacts
 
 ```powershell
-$ver = "0.1.0"
+$ver = "0.1.0-rc.1"
 $out = "dist/v$ver"
 New-Item -ItemType Directory -Force -Path $out | Out-Null
 
@@ -65,21 +67,22 @@ Compress-Archive -Path "$out/kparser2-cli-win-x64/*" -DestinationPath "$out/kpar
 ## Tag and GitHub release
 
 ```powershell
-git add CHANGELOG.md README.md CONTRIBUTING.md docs/
+git add CHANGELOG.md Directory.Build.props LICENSE README.md CONTRIBUTING.md docs/
 git commit -m "Release v$ver"
 git tag -a "v$ver" -m "kparser2 v$ver"
 git push origin main
 git push origin "v$ver"
 ```
 
-Create the release (requires [GitHub CLI](https://cli.github.com/)):
+Create the release (requires [GitHub CLI](https://cli.github.com/)). Tag **kpacket2** before kparser2 when releasing a paired RC:
 
 ```powershell
 gh release create "v$ver" `
   "$out/kparser2-v$ver-win-x64.zip" `
   "$out/kparser2-cli-v$ver-win-x64.zip" `
   --title "kparser2 v$ver" `
-  --notes-file CHANGELOG.md
+  --prerelease `
+  --notes "Requires [kpacket2 v$ver](https://github.com/poroburu/kpacket2/releases/tag/v$ver) for live capture. Wire: kpacket.v1."
 ```
 
 Edit the generated release notes on GitHub to keep only the section for `v$ver` if `CHANGELOG.md` contains older entries.
