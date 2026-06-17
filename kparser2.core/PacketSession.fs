@@ -208,6 +208,14 @@ type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int) 
                 cts.Dispose()
 
 module PacketSessionFactory =
+    let private bootstrapSessionNames (path: string) =
+        match Ndjson.tryReadSessionHeader path with
+        | Some header when not (String.IsNullOrWhiteSpace header.player_name) ->
+            EntityRegistry.registerLocalPlayerName header.player_name
+        | _ -> ()
+
+        ConnectionProbe.tryBootstrapLocalPlayerName ()
+
     let fromLive(subEndpoint: string) =
         new PacketSession(LivePacketSource(subEndpoint) :> IPacketSource, $"live:{subEndpoint}")
 
@@ -215,6 +223,7 @@ module PacketSessionFactory =
         fromLive "tcp://localhost:5555"
 
     let fromReplay(path: string, speed: float) =
+        bootstrapSessionNames path
         new PacketSession(ReplayPacketSource(path, speed = speed) :> IPacketSource, $"replay:{path}")
 
     let fromReplayDefault(path: string) =
