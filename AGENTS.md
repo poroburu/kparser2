@@ -43,6 +43,13 @@ powershell -File C:\Users\porob\git\kparser2\scripts\generate-fixtures.ps1
 
 # Live plugin health (requires game + kpacket2 loaded)
 dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- probe
+
+# Long BST camp session (20 min record + post-session oracles)
+dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- record C:\Users\porob\git\ffxi-captures\ndjson\bst_leveling.ndjson --duration-ms 1200000
+dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- watch --analytics --duration-ms 300000 --interval-ms 5000
+dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- analytics snapshot capture.ndjson --assert-combat --min-battles 2
+dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- report fights capture.ndjson
+dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- report offense capture.ndjson
 ```
 
 ## Decoder oracle workflow
