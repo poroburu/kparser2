@@ -122,6 +122,14 @@ function New-CombatActionPacket(
     return $header + $payloadBytes
 }
 
+function New-GroupAttrPacket([uint32]$EntityId = 100, [uint16]$ZoneId = 140) {
+    $data = New-Object byte[] 40
+    $data[2] = 0xDF
+    [BitConverter]::GetBytes($EntityId).CopyTo($data, 4)
+    [BitConverter]::GetBytes($ZoneId).CopyTo($data, 26)
+    return $data
+}
+
 function New-Meta([int]$PacketId, [string]$PacketName, [int]$Size, [int]$MessageId, [string]$Direction = "incoming") {
     return @{
         timestamp = 1700000000000 + $MessageId
@@ -213,5 +221,130 @@ $chatXpLines = @(
     (New-NdjsonLine "kpacket.v1.world.s2c.0x0017" (New-Meta 0x17 "GP_SERV_COMMAND_CHAT_STD" $xpChat.Length 3) $xpChat)
 )
 Set-Content -Path (Join-Path $OutputDir "chat_xp.ndjson") -Value $chatXpLines -Encoding UTF8
+
+$playerId = 100
+$mobId = 200
+$groupAttr = New-GroupAttrPacket $playerId 140
+$harm = New-CombatActionPacket -ActorId $playerId -TargetId $mobId -CommandNo 1 -Damage 55 -MessageId 1
+$killMsg = New-BattleMessagePacket $playerId $mobId 6
+$fallMsg = New-BattleMessagePacket $mobId $mobId 20
+$killXp = New-BattleMessagePacket $playerId $playerId 8 0 150
+$chainChat = New-ChatPacket "System" "EXP chain #2!" 6
+$combatKillXpLines = @(
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x00DF" (New-Meta 0xDF "GP_SERV_COMMAND_GROUP_ATTR" $groupAttr.Length 1) $groupAttr)
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $harm.Length 2) $harm)
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0029" (New-Meta 0x29 "GP_SERV_COMMAND_BATTLE_MESSAGE" $killMsg.Length 3) $killMsg)
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0029" (New-Meta 0x29 "GP_SERV_COMMAND_BATTLE_MESSAGE" $fallMsg.Length 4) $fallMsg)
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0029" (New-Meta 0x29 "GP_SERV_COMMAND_BATTLE_MESSAGE" $killXp.Length 5) $killXp)
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0017" (New-Meta 0x17 "GP_SERV_COMMAND_CHAT_STD" $chainChat.Length 6) $chainChat)
+)
+Set-Content -Path (Join-Path $OutputDir "combat_kill_xp.ndjson") -Value $combatKillXpLines -Encoding UTF8
+
+$playerEntityId = 100
+$mobEntityId = 200
+$partyEntityId = 300
+$bootstrap = New-GroupAttrPacket $playerEntityId 140
+
+$meleeHitPlayer = New-CombatActionPacket -ActorId $playerEntityId -TargetId $mobEntityId -CommandNo 1 -Damage 128 -MessageId 0x14
+$meleeHitMob = New-CombatActionPacket -ActorId $mobEntityId -TargetId $playerEntityId -CommandNo 1 -Damage 170 -MessageId 0x1C
+$meleeHitParty = New-CombatActionPacket -ActorId $partyEntityId -TargetId $mobEntityId -CommandNo 1 -Damage 168 -MessageId 0x19
+$combatMeleeHitsLines = @(
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x00DF" (New-Meta 0xDF "GP_SERV_COMMAND_GROUP_ATTR" $bootstrap.Length 1) $bootstrap)
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $meleeHitPlayer.Length 2) $meleeHitPlayer)
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $meleeHitMob.Length 3) $meleeHitMob)
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $meleeHitParty.Length 4) $meleeHitParty)
+)
+Set-Content -Path (Join-Path $OutputDir "combat_melee_hits.ndjson") -Value $combatMeleeHitsLines -Encoding UTF8
+
+$missPlayer = New-CombatActionPacket -ActorId $playerEntityId -TargetId $mobEntityId -CommandNo 1 -Damage 0 -MessageId 0x15 -Miss 1
+$missMob = New-CombatActionPacket -ActorId $mobEntityId -TargetId $playerEntityId -CommandNo 1 -Damage 0 -MessageId 0x1D -Miss 1
+$combatMissesLines = @(
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x00DF" (New-Meta 0xDF "GP_SERV_COMMAND_GROUP_ATTR" $bootstrap.Length 1) $bootstrap)
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $missPlayer.Length 2) $missPlayer)
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $missMob.Length 3) $missMob)
+)
+Set-Content -Path (Join-Path $OutputDir "combat_misses.ndjson") -Value $combatMissesLines -Encoding UTF8
+
+$rangedHit = New-CombatActionPacket -ActorId $partyEntityId -TargetId $mobEntityId -CommandNo 2 -Damage 247 -MessageId 0x19
+$rangedMiss = New-CombatActionPacket -ActorId $playerEntityId -TargetId $mobEntityId -CommandNo 2 -Damage 0 -MessageId 0x15 -Miss 1
+$combatRangedLines = @(
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $rangedHit.Length 1) $rangedHit)
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $rangedMiss.Length 2) $rangedMiss)
+)
+Set-Content -Path (Join-Path $OutputDir "combat_ranged.ndjson") -Value $combatRangedLines -Encoding UTF8
+
+$parry = New-CombatActionPacket -ActorId $mobEntityId -TargetId $playerEntityId -CommandNo 1 -Damage 0 -MessageId 0x1D -Miss 3
+$shadow = New-CombatActionPacket -ActorId $mobEntityId -TargetId $playerEntityId -CommandNo 1 -Damage 0 -MessageId 0x1D -Miss 0
+$combatDefenseLines = @(
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x00DF" (New-Meta 0xDF "GP_SERV_COMMAND_GROUP_ATTR" $bootstrap.Length 1) $bootstrap)
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $parry.Length 2) $parry)
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $shadow.Length 3) $shadow)
+)
+Set-Content -Path (Join-Path $OutputDir "combat_defense.ndjson") -Value $combatDefenseLines -Encoding UTF8
+
+$failBuff = New-CombatActionPacket -ActorId $playerEntityId -TargetId $playerEntityId -CommandNo 4 -Damage 0 -MessageId 0x44 -Miss 0
+$failDebuff = New-CombatActionPacket -ActorId $mobEntityId -TargetId $playerEntityId -CommandNo 4 -Damage 0 -MessageId 0x3B -Miss 0
+$combatFailuresLines = @(
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $failBuff.Length 1) $failBuff)
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $failDebuff.Length 2) $failDebuff)
+)
+Set-Content -Path (Join-Path $OutputDir "combat_failures.ndjson") -Value $combatFailuresLines -Encoding UTF8
+
+$counter = New-CombatActionPacket -ActorId $playerEntityId -TargetId $mobEntityId -CommandNo 1 -Damage 56 -MessageId 0x14 -Miss 0
+$retaliate = New-CombatActionPacket -ActorId $partyEntityId -TargetId $mobEntityId -CommandNo 1 -Damage 52 -MessageId 0x19 -Miss 0
+$combatCountersLines = @(
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $counter.Length 1) $counter)
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $retaliate.Length 2) $retaliate)
+)
+Set-Content -Path (Join-Path $OutputDir "combat_counters.ndjson") -Value $combatCountersLines -Encoding UTF8
+
+$tpHit = New-CombatActionPacket -ActorId $playerEntityId -TargetId $mobEntityId -CommandNo 1 -Damage 90 -MessageId 0xA3 -Miss 0
+$tpDrain = New-CombatActionPacket -ActorId $playerEntityId -TargetId $mobEntityId -CommandNo 1 -Damage 3 -MessageId 0xBB -Miss 0
+$combatTpDrainLines = @(
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $tpHit.Length 1) $tpHit)
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $tpDrain.Length 2) $tpDrain)
+)
+Set-Content -Path (Join-Path $OutputDir "combat_tp_drain.ndjson") -Value $combatTpDrainLines -Encoding UTF8
+
+$enfeeble = New-CombatActionPacket -ActorId $playerEntityId -TargetId $mobEntityId -CommandNo 4 -Damage 0 -MessageId 0x39 -Miss 0
+$buff = New-CombatActionPacket -ActorId $playerEntityId -TargetId $playerEntityId -CommandNo 4 -Damage 0 -MessageId 0x38 -Miss 0
+$drain = New-CombatActionPacket -ActorId $mobEntityId -TargetId $playerEntityId -CommandNo 4 -Damage 50 -MessageId 0x16 -Miss 0
+$ja = New-CombatActionPacket -ActorId $playerEntityId -TargetId $mobEntityId -CommandNo 13 -Damage 80 -MessageId 0x68 -Miss 0
+$combatEnfeebleLines = @(
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $enfeeble.Length 1) $enfeeble)
+)
+Set-Content -Path (Join-Path $OutputDir "combat_enfeeble.ndjson") -Value $combatEnfeebleLines -Encoding UTF8
+$combatBuffLines = @(
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $buff.Length 1) $buff)
+)
+Set-Content -Path (Join-Path $OutputDir "combat_buff.ndjson") -Value $combatBuffLines -Encoding UTF8
+$combatDrainLines = @(
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $drain.Length 1) $drain)
+)
+Set-Content -Path (Join-Path $OutputDir "combat_drain.ndjson") -Value $combatDrainLines -Encoding UTF8
+$combatJaLines = @(
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $ja.Length 1) $ja)
+)
+Set-Content -Path (Join-Path $OutputDir "combat_ja.ndjson") -Value $combatJaLines -Encoding UTF8
+
+$prepare = New-CombatActionPacket -ActorId $playerEntityId -TargetId $mobEntityId -CommandNo 4 -Damage 0 -MessageId 0x32 -Miss 0
+$combatPrepareLines = @(
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $prepare.Length 1) $prepare)
+)
+Set-Content -Path (Join-Path $OutputDir "combat_prepare.ndjson") -Value $combatPrepareLines -Encoding UTF8
+
+$cover = New-CombatActionPacket -ActorId $mobEntityId -TargetId $playerEntityId -CommandNo 1 -Damage 0 -MessageId 0x6D -Miss 1
+$combatCoverLines = @(
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $cover.Length 1) $cover)
+)
+Set-Content -Path (Join-Path $OutputDir "combat_cover.ndjson") -Value $combatCoverLines -Encoding UTF8
+
+$scMsg = New-BattleMessagePacket $playerEntityId $mobEntityId 287
+$scFollow = New-CombatActionPacket -ActorId $playerEntityId -TargetId $mobEntityId -CommandNo 1 -Damage 100 -MessageId 0x28 -Miss 0
+$combatSkillchainLines = @(
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0029" (New-Meta 0x29 "GP_SERV_COMMAND_BATTLE_MESSAGE" $scMsg.Length 1) $scMsg)
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $scFollow.Length 2) $scFollow)
+)
+Set-Content -Path (Join-Path $OutputDir "combat_skillchain.ndjson") -Value $combatSkillchainLines -Encoding UTF8
 
 Write-Host "Generated fixtures in $OutputDir"

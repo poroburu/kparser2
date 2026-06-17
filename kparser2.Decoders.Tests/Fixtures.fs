@@ -135,52 +135,77 @@ module Fixtures =
         Array.Copy(nameBytes, 0, data, 38, min 15 nameBytes.Length)
         data
 
-    let battleMessagePacket (casterId: uint32) (targetId: uint32) (messageNum: uint16) =
+    let battleMessagePacket
+        (casterId: uint32)
+        (targetId: uint32)
+        (messageNum: uint16)
+        (param1: uint32)
+        (param2: uint32)
+        (messageType: byte)
+        =
         let data = Array.create 28 0uy
         data.[2] <- 0x29uy
         BitConverter.GetBytes(casterId).CopyTo(data, 4)
         BitConverter.GetBytes(targetId).CopyTo(data, 8)
+        BitConverter.GetBytes(param1).CopyTo(data, 12)
+        BitConverter.GetBytes(param2).CopyTo(data, 16)
         BitConverter.GetBytes(messageNum).CopyTo(data, 24)
-        data.[26] <- 0uy
+        data.[26] <- messageType
         data
 
-    let battle2Packet () =
-        let mutable bits = ResizeArray<int>()
+    let battleMessagePacketSimple (casterId: uint32) (targetId: uint32) (messageNum: uint16) =
+        battleMessagePacket casterId targetId messageNum 0u 0u 0uy
+
+    let private bitsToBytes (bits: ResizeArray<int>) =
+        let byteCount = (bits.Count + 7) / 8
+
+        Array.init byteCount (fun bi ->
+            let mutable value = 0
+
+            for bit in 0 .. 7 do
+                let idx = bi * 8 + bit
+
+                if idx < bits.Count && bits.[idx] = 1 then
+                    value <- value ||| (1 <<< bit)
+
+            byte value)
+
+    let combatActionPacket
+        (actorId: uint32)
+        (targetId: uint32)
+        (commandNo: int)
+        (damage: int)
+        (messageId: int)
+        (miss: int)
+        =
+        let bits = ResizeArray<int>()
 
         let addBits (value: uint32) (count: int) =
             for i in 0 .. count - 1 do
                 bits.Add(int ((value >>> i) &&& 1u))
 
-        addBits 1u 32
+        addBits actorId 32
         addBits 1u 6
         addBits 0u 4
-        addBits 1u 4
+        addBits (uint32 commandNo) 4
         addBits 0u 32
         addBits 0u 32
-        addBits 2u 32
+        addBits targetId 32
         addBits 1u 4
-        addBits 0u 3
+        addBits (uint32 miss) 3
         addBits 0u 2
         addBits 0u 12
         addBits 0u 5
         addBits 0u 5
-        addBits 42u 17
-        addBits 1u 10
+        addBits (uint32 damage) 17
+        addBits (uint32 messageId) 10
         addBits 0u 31
         addBits 0u 1
         addBits 0u 1
 
-        let payloadBytes =
-            let byteCount = (bits.Count + 7) / 8
-            Array.init byteCount (fun bi ->
-                let mutable value = 0
-
-                for bit in 0 .. 7 do
-                    let idx = bi * 8 + bit
-
-                    if idx < bits.Count && bits.[idx] = 1 then
-                        value <- value ||| (1 <<< bit)
-
-                byte value)
-
+        let payloadBytes = bitsToBytes bits
         Array.concat [ [| 0x20uy; 0uy; 0x28uy; 0uy; byte payloadBytes.Length |]; payloadBytes ]
+
+    /// Default melee hit fixture (actor=1, target=2, damage=42).
+    let battle2Packet () =
+        combatActionPacket 1u 2u 1 42 1 0

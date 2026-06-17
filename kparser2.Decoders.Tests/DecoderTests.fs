@@ -190,7 +190,7 @@ module DecoderTests =
 
     [<Fact>]
     let ``Battle0x29 decodes battle message`` () =
-        let data = Fixtures.battleMessagePacket 100u 200u 0x0033us
+        let data = Fixtures.battleMessagePacketSimple 100u 200u 0x0033us
 
         match Battle0x29.decode data with
         | None -> failwith "Expected battle message decode"
@@ -533,10 +533,10 @@ module DecoderTests =
               SessionUuid = "test"
               Version = "v1"
               MessageId = 3UL
-              Data = Fixtures.petStatusPacket 5485u 99999u "LullabyMelodia" }
+              Data = Fixtures.petStatusPacket 5485u 0x99999u "LullabyMelodia" }
 
         Assert.Equal(Some "LullabyMelodia", EntityRegistry.tryLocalJugPetName ())
-        Assert.Equal("Entity 629145", EntityRegistry.formatEntity 99999u)
+        Assert.Equal("Entity 629145", EntityRegistry.formatEntity 0x99999u)
         Assert.True(EntityRegistry.tryGetEntityKind 99999u |> Option.isNone)
 
     [<Fact>]
@@ -560,3 +560,34 @@ module DecoderTests =
 
         Assert.Equal("Alice", EntityRegistry.formatEntity 12345u)
         Assert.Equal(Some EntityRegistry.EntityKind.Player, EntityRegistry.tryGetEntityKind 12345u)
+
+    [<Theory>]
+    [<InlineData("Mandragora", 0x26B9u)>]
+    [<InlineData("Greater Colibri", 0x26BAu)>]
+    [<InlineData("Lamia No.9", 0x26BBu)>]
+    [<InlineData("Ga'Dho Softstep", 0x26BDu)>]
+    [<InlineData("Maymun 53", 0x26BEu)>]
+    [<InlineData("Fantoccini", 0x26BFu)>]
+    [<InlineData("Moo Ouzi the Swi", 0x26BCu)>]
+    [<InlineData("Tzee Xicu's Elem", 0x26C0u)>]
+    [<InlineData("Mamool Ja's Wyve", 0x26C1u)>]
+    [<InlineData("Lamia's Elementa", 0x26C2u)>]
+    let ``mob name parity TestMobNames`` (name: string, entityId: uint32) =
+        EntityRegistry.reset()
+
+        EntityRegistry.observe
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x000Eus
+              PacketName = "GP_SERV_COMMAND_CHAR_NPC"
+              Size = 68u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = Fixtures.npcUpdatePacket name entityId }
+
+        Assert.Equal(name, EntityRegistry.formatEntity entityId)
