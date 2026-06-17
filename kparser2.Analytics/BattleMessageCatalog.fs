@@ -29,22 +29,32 @@ module BattleMessageCatalog =
             InteractionType.Unknown, None, None
 
     let classifyActionEffect (commandNo: int) (messageId: int) (miss: int) (value: int) =
-        if messageId > 0 then
+        if messageId = 0xBB && value > 0 then
+            InteractionType.Harm, Some HarmType.Other, None
+        elif messageId > 0 then
             let resolvedId = ParseCodesTables.resolveAlternateMessageId messageId
 
             match ParseCodesTables.tryInteractionType resolvedId with
             | Some interactionType ->
                 let harmType =
                     if interactionType = InteractionType.Harm then
-                        ParseCodesTables.tryHarmType resolvedId
-                        |> Option.orElseWith (fun () ->
+                        let fromMessage = ParseCodesTables.tryHarmType resolvedId
+
+                        let fromCommand =
                             match commandNo with
                             | 1 -> Some HarmType.Melee
                             | 2 -> Some HarmType.Ranged
+                            | 3 -> Some HarmType.Ranged
                             | n when n >= 4 && n <= 6 -> Some HarmType.Spell
                             | n when n >= 7 && n <= 12 -> Some HarmType.Weaponskill
                             | n when n >= 13 -> Some HarmType.Ability
-                            | _ -> Some HarmType.Other)
+                            | _ -> Some HarmType.Other
+
+                        match fromMessage, fromCommand with
+                        | Some HarmType.Melee, Some HarmType.Ranged -> Some HarmType.Ranged
+                        | Some HarmType.Melee, Some HarmType.Spell -> Some HarmType.Spell
+                        | Some ht, _ -> Some ht
+                        | None, hc -> hc
                     else
                         None
 
@@ -74,6 +84,16 @@ module BattleMessageCatalog =
         | 4 -> "block"
         | 9 -> "evade"
         | n -> $"state-{n}"
+
+    let successLabelForEffect (messageId: int) (miss: int) (value: int) =
+        if value = 0 && (messageId = 0x44 || messageId = 0x43 || messageId = 0x3B || messageId = 0x45) then
+            "no-effect"
+        elif value = 0 && messageId = 0x69 then
+            "anticipate"
+        elif value = 0 && (messageId = 0x1A || messageId = 0x1D) && miss = 0 then
+            "shadow-absorb"
+        else
+            successLabel miss
 
     let actionName commandNo commandArg messageId =
         match ActionLookup.tryGetName commandArg with

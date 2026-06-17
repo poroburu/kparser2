@@ -31,11 +31,15 @@ module ParseCodesTables =
             0x2C, InteractionType.Death
             0x38, InteractionType.Aid
             0x39, InteractionType.Harm
+            0x3B, InteractionType.Aid
             0x3C, InteractionType.Aid
             0x3D, InteractionType.Harm
             0x40, InteractionType.Aid
             0x41, InteractionType.Harm
             0x43, InteractionType.Harm
+            0x44, InteractionType.Aid
+            0x45, InteractionType.Aid
+            0x69, InteractionType.Harm
             0x51, InteractionType.Aid
             0x55, InteractionType.Aid
             0x5A, InteractionType.Aid
@@ -88,6 +92,9 @@ module ParseCodesTables =
             0x3D, HarmType.Enfeeble
             0x41, HarmType.Enfeeble
             0x43, HarmType.Enfeeble
+            0x44, HarmType.Enfeeble
+            0x69, HarmType.Melee
+            0xBB, HarmType.Other
             0x66, HarmType.Enfeeble
             0x68, HarmType.Ability
             0x6B, HarmType.Enfeeble
@@ -117,8 +124,10 @@ module ParseCodesTables =
             0x2A, AidType.Recovery
             0x2B, AidType.Recovery
             0x38, AidType.Enhance
+            0x3B, AidType.Enhance
             0x3C, AidType.Enhance
-            0x40, AidType.Enhance
+            0x44, AidType.Enhance
+            0x45, AidType.Enhance
             0x51, AidType.Item
             0x55, AidType.Item
             0x5A, AidType.Item
@@ -163,11 +172,14 @@ module ParseCodesTables =
     let tryAidType messageId = Map.tryFind messageId aidTypeMap
 
     let resolveAlternateMessageId messageId =
-        alternateCodes
-        |> Map.tryFind messageId
-        |> Option.defaultValue []
-        |> List.tryFind (fun alt -> Map.containsKey alt interactionTypeMap)
-        |> Option.defaultValue messageId
+        if Map.containsKey messageId interactionTypeMap then
+            messageId
+        else
+            alternateCodes
+            |> Map.tryFind messageId
+            |> Option.defaultValue []
+            |> List.tryFind (fun alt -> Map.containsKey alt interactionTypeMap)
+            |> Option.defaultValue messageId
 
 /// LandSandBoat MsgBasic values for 0x29 GP_SERV_COMMAND_BATTLE_MESSAGE.
 module MsgBasicCatalog =

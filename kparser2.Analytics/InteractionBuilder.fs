@@ -79,7 +79,7 @@ module InteractionBuilder =
                             aidType
                             (BattleMessageCatalog.actionName action.CommandNo (int action.CommandArg) effect.MessageId)
                             effect.Value
-                            (BattleMessageCatalog.successLabel effect.Miss)
+                            (BattleMessageCatalog.successLabelForEffect effect.MessageId effect.Miss effect.Value)
                             action.CommandNo
                             effect.MessageId
                             effect.HasProc
