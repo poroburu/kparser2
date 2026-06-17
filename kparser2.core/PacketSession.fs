@@ -120,7 +120,7 @@ type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int) 
         source.WaitForCompletion()
 
         if not _ingestTask.IsCompleted then
-            Async.AwaitTask _ingestTask |> Async.RunSynchronously
+            _ingestTask.GetAwaiter().GetResult()
 
         flushAnalytics true
 
@@ -217,8 +217,6 @@ module PacketSessionFactory =
         | Some header when not (String.IsNullOrWhiteSpace header.player_name) ->
             EntityRegistry.registerLocalPlayerName header.player_name
         | _ -> ()
-
-        ConnectionProbe.tryBootstrapLocalPlayerName ()
 
     let fromLive(subEndpoint: string) =
         new PacketSession(LivePacketSource(subEndpoint) :> IPacketSource, $"live:{subEndpoint}")
