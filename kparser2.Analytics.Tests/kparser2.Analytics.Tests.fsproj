@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <Compile Include="..\kparser2.Decoders.Tests\Fixtures.fs" Link="Fixtures.fs" />
+    <Compile Include="EntityRegistryCollection.fs" />
     <Compile Include="AnalyticsTests.fs" />
   </ItemGroup>
 
