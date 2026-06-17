@@ -17,7 +17,8 @@ module SessionStore =
           mutable ExperienceRecords: ExperienceRecord list
           mutable FightState: FightSegmenter.State
           mutable Battles: Battle list
-          mutable PendingOutgoing: ChatIngest.PendingOutgoing list }
+          mutable PendingOutgoing: ChatIngest.PendingOutgoing list
+          mutable RecentMsgBasicXp: (int64 * int) list }
 
     let create () =
         { SessionStartMs = None
@@ -30,7 +31,8 @@ module SessionStore =
           ExperienceRecords = []
           FightState = FightSegmenter.initial
           Battles = []
-          PendingOutgoing = [] }
+          PendingOutgoing = []
+          RecentMsgBasicXp = [] }
 
     let private timestampMs (store: T) (evt: PacketEvent) =
         let ts = int64 evt.Timestamp
@@ -109,11 +111,29 @@ module SessionStore =
         else
             c
 
-    let private recordExperience (store: T) timestampMs actorId actorName points chain =
+    let private trackMsgBasicXp (store: T) timestampMs points =
+        if points > 0 then
+            store.RecentMsgBasicXp <- (timestampMs, points) :: store.RecentMsgBasicXp |> List.truncate 8
+
+    let private isDuplicateChatXp (store: T) timestampMs points =
+        if points <= 0 then
+            false
+        else
+            store.RecentMsgBasicXp
+            |> List.exists (fun (ts, xp) -> xp = points && timestampMs - ts <= 2_000L)
+
+    let private recordExperience (store: T) timestampMs actorId actorName points chain fromMsgBasic =
         if points <= 0 && chain <= 0 then
             ()
+        elif not fromMsgBasic && isDuplicateChatXp store timestampMs points then
+            ()
         else
-            let battleId = store.FightState.CurrentBattleId
+            let fightState, battleId = FightSegmenter.applyExperience store.FightState timestampMs points chain
+            store.FightState <- fightState
+            syncBattles store
+
+            if fromMsgBasic then
+                trackMsgBasicXp store timestampMs points
 
             store.ExperienceRecords <-
                 { TimestampMs = timestampMs
@@ -123,9 +143,6 @@ module SessionStore =
                   Chain = chain
                   BattleId = battleId }
                 :: store.ExperienceRecords
-
-            store.FightState <- FightSegmenter.applyExperience store.FightState timestampMs points chain
-            syncBattles store
 
     let private ingestChat (store: T) (ts: int64) (evt: PacketEvent) (chat: ChatDecoded) =
         EntityRegistry.observeChatBootstrap chat evt.PacketId
@@ -165,7 +182,7 @@ module SessionStore =
                     else
                         speaker)
 
-            recordExperience store ts actorId actorName parsed.Points parsed.Chain
+            recordExperience store ts actorId actorName parsed.Points parsed.Chain false
         | None -> ()
 
     let ingest (store: T) (evt: PacketEvent) (decoded: DecoderResult) =
@@ -225,7 +242,7 @@ module SessionStore =
                         else
                             casterId, EntityRegistry.formatEntity casterId
 
-                    recordExperience store ts actorId actorName parsed.Points parsed.Chain
+                    recordExperience store ts actorId actorName parsed.Points parsed.Chain true
                 | None -> ()
             | DecoderEvent.Loot loot ->
                 match loot.ActorId with
@@ -294,6 +311,7 @@ module SessionStore =
         store.ExperienceRecords <- snap.ExperienceRecords |> List.rev
         store.Battles <- snap.Battles
         store.PendingOutgoing <- []
+        store.RecentMsgBasicXp <- []
 
         store.FightState <-
             { FightSegmenter.initial with
@@ -301,7 +319,8 @@ module SessionStore =
                 NextBattleId =
                     (snap.Battles |> List.map (fun b -> b.Id) |> function
                      | [] -> 1
-                     | ids -> List.max ids + 1) }
+                     | ids -> List.max ids + 1)
+                PendingExperience = [] }
 
     let reset (store: T) =
         EntityRegistry.reset ()
@@ -317,3 +336,4 @@ module SessionStore =
         store.FightState <- FightSegmenter.initial
         store.Battles <- []
         store.PendingOutgoing <- []
+        store.RecentMsgBasicXp <- []

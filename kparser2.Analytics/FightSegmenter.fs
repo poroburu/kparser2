@@ -7,13 +7,17 @@ module FightSegmenter =
         { Battles: Battle list
           CurrentBattleId: int option
           LastEventMs: int64
-          NextBattleId: int }
+          NextBattleId: int
+          PendingExperience: (int64 * int * int) list }
 
     let initial =
         { Battles = []
           CurrentBattleId = None
           LastEventMs = 0L
-          NextBattleId = 1 }
+          NextBattleId = 1
+          PendingExperience = [] }
+
+    let private xpLookbackMs = 15_000L
 
     let private isMobTarget (targetId: uint32) (actorId: uint32) =
         if EntityRegistry.isLocalPlayer targetId then
@@ -42,6 +46,36 @@ module FightSegmenter =
 
     let private enemyName (targetId: uint32) =
         EntityRegistry.formatEntity targetId
+
+    let private applyXpToBattle (battles: Battle list) battleId xp chain =
+        battles
+        |> List.map (fun b ->
+            if b.Id = battleId then
+                { b with
+                    ExperiencePoints = if xp > 0 then xp else b.ExperiencePoints
+                    ExperienceChain = if chain > 0 then chain else b.ExperienceChain }
+            else
+                b)
+
+    let private findRecentKilledBattle (battles: Battle list) timestampMs requireZeroXp =
+        battles
+        |> List.filter (fun b -> b.Killed)
+        |> List.filter (fun b -> not requireZeroXp || b.ExperiencePoints = 0)
+        |> List.filter (fun b ->
+            let endMs = b.EndMs |> Option.defaultValue b.StartMs
+            timestampMs - endMs <= xpLookbackMs && timestampMs >= endMs)
+        |> List.sortByDescending (fun b -> b.EndMs |> Option.defaultValue b.StartMs)
+        |> List.tryHead
+        |> Option.map (fun b -> b.Id)
+
+    let private findXpTargetBattle state timestampMs xp =
+        match state.CurrentBattleId with
+        | Some id -> Some id
+        | None ->
+            if xp > 0 then
+                findRecentKilledBattle state.Battles timestampMs true
+            else
+                findRecentKilledBattle state.Battles timestampMs false
 
     let private openBattle state timestampMs targetId =
         let battle =
@@ -76,10 +110,18 @@ module FightSegmenter =
                     else
                         b)
 
-            { state with
-                Battles = battles
-                CurrentBattleId = None
-                LastEventMs = timestampMs }
+            match state.PendingExperience, killed with
+            | (_, xp, chain) :: rest, true ->
+                { state with
+                    Battles = applyXpToBattle battles battleId xp chain
+                    CurrentBattleId = None
+                    LastEventMs = timestampMs
+                    PendingExperience = rest }
+            | _ ->
+                { state with
+                    Battles = battles
+                    CurrentBattleId = None
+                    LastEventMs = timestampMs }
 
     let private shouldCloseIdle state timestampMs =
         match state.CurrentBattleId, state.LastEventMs with
@@ -120,20 +162,21 @@ module FightSegmenter =
         { state with LastEventMs = timestampMs }
 
     let applyExperience state timestampMs xp chain =
-        match state.CurrentBattleId with
-        | None -> state
-        | Some battleId ->
-            let battles =
-                state.Battles
-                |> List.map (fun b ->
-                    if b.Id = battleId then
-                        { b with
-                            ExperiencePoints = b.ExperiencePoints + xp
-                            ExperienceChain =
-                                if chain > 0 then chain else b.ExperienceChain }
-                    else
-                        b)
+        if xp <= 0 && chain <= 0 then
+            state, None
+        else
+            match findXpTargetBattle state timestampMs xp with
+            | Some battleId ->
+                let battles = applyXpToBattle state.Battles battleId xp chain
 
-            { state with
-                Battles = battles
-                LastEventMs = timestampMs }
+                { state with
+                    Battles = battles
+                    LastEventMs = timestampMs },
+                Some battleId
+            | None ->
+                let pending = (timestampMs, xp, chain) :: state.PendingExperience |> List.truncate 8
+
+                { state with
+                    PendingExperience = pending
+                    LastEventMs = timestampMs },
+                None
