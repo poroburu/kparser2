@@ -4,37 +4,26 @@ All notable changes to kparser2 are documented here. The format follows [Keep a 
 
 ## [0.1.0-rc.1] - 2026-06-17
 
-Pre-release candidate for the kpacket2 + kparser2 stack. Wire protocol `kpacket.v1` unchanged.
-
-### Added (since 0.1.0 draft)
-
-- kparser ParseCodes parity tests (Tier 1–3)
-- BST camp fixtures, jug-pet entity naming, fight segmentation
-- `analytics snapshot --assert-combat` / `--assert-names` / `--min-battles`
-- 27 golden fixtures including `bcmn30_petrifying_pair` and `bst_camp_multi`
-- Assembly version stamping via `Directory.Build.props`
-
-### Notes
-
-- Pre-release; not intended for broad public distribution yet
-- Requires [kpacket2 v0.1.0-rc.1](https://github.com/poroburu/kpacket2/releases/tag/v0.1.0-rc.1) for live capture
-
-## [0.1.0] - 2026-06-16
-
-First public release: packet-native rewrite of KParser with offline replay, analytics, and headless CLI.
+First pre-release of the packet-native FFXI parser and analytics tool for the kpacket2 stack.
 
 ### Added
 
-- **Ingest:** NetMQ subscriber for kpacket2 (`5555`), REQ command client (`5556`), NDJSON record/replay
+- **Ingest:** NetMQ subscriber for kpacket2 (`tcp://localhost:5555`), REQ command client (`5556`), NDJSON record/replay with optional `kparser2.session` header line
+- **Wire contract:** multipart ZMQ topic + JSON meta + raw bytes; topics `kpacket.v1.world.s2c.0xHHHH` / `kpacket.v1.world.c2s.0xHHHH`
 - **Decoders:** 0x17/0xB5 chat, 0x28 combat action, 0x29 battle message, 0xD2/0xD3 trophy/loot
-- **Entity registry** from 0x00E spawns and 0x00DF vitals; zone lookup from 0x00A / 0x00DF
+- **Entity registry** from 0x00A login, 0x00D/0x00E spawns, 0x00DF vitals, 0x0068/0x00DD updates; zone lookup from 0x00A / 0x00DF
 - **Analytics:** fight segmentation, offense/defense/recovery/deaths, buffs, skillchains, job-specific queries, XP parsing
-- **WPF UI:** packet monitor, chat, combat, item drops, and full analytics tab catalog
-- **CLI:** `replay`, `decode`, `record`, `probe`, `watch`, `analytics snapshot`, `export report`, `import report`, `import packetviewer`, lookup exporters
-- **Report interchange:** `.kparse2.json` schema v1 ([docs/report-schema.md](docs/report-schema.md))
-- **Golden fixtures** under `fixtures/sessions/` for CI and agent oracles
-- **Data lookups** (`data/items.json`, `actions.json`, `zones.json`, `mob_xp.json`) generated from LandSandBoat SQL
-- **Documentation:** README, CONTRIBUTING, CREDITS, RELEASING, AGENTS guides
+- **WPF UI:** packet monitor, chat, combat, item drops, and full analytics tab catalog (Windows / .NET 8)
+- **CLI:** `replay`, `decode`, `record`, `probe`, `watch`, `hello`, `stats`, `analytics snapshot`, `report`, `export report`, `import report`, `import packetviewer`, lookup exporters (`export-items`, `export-actions`, `export-zones`, `export-mob-xp`)
+- **CLI validation flags:** `analytics snapshot --assert-combat`, `--assert-names`, `--min-battles N`
+- **Report interchange:** `.kparse2.json` schema v1 with `kparser2_version` stamped from assembly semver ([docs/report-schema.md](docs/report-schema.md))
+- **Golden fixtures:** 27 NDJSON sessions under `fixtures/sessions/` including `bcmn30_petrifying_pair`, `bst_camp_multi`, `bst_loot_name`, and synthetic combat parity suite
+- **kparser parity:** ParseCodes alignment tests (Tier 1–3), InteractionParity, FixtureReplayParity
+- **Data lookups:** `data/items.json`, `actions.json`, `zones.json`, `mob_xp.json` generated from LandSandBoat SQL
+- **Version stamping:** `Directory.Build.props` semver (`0.1.0-rc.1`) in published binaries and report exports
+- **Documentation:** README, CONTRIBUTING, CREDITS, RELEASING, COMPATIBILITY, AGENTS guides
+- **CI:** GitHub Actions build + test workflow (`Category!=Integration`)
+- **LICENSE:** MIT
 
 ### Changed from KParser
 
@@ -43,18 +32,21 @@ First public release: packet-native rewrite of KParser with offline replay, anal
 - Parsing: English text templates → binary opcode decoders (XiPackets / LandSandBoat aligned)
 - Testing: manual in-game only → fixtures, unit tests, CLI decode oracles, PacketViewer import
 
-### Removed / not carried forward
+### Fixed
 
-- SQL Server Compact `.sdf` database format
-- Per-client-build memory offsets
-- Lua kpacket (port 6666) and MessagePack ingest paths
-- Elmish.WPF UI stack
+- Offline NDJSON replay no longer blocks probing live kpacket on `:5556` when the game is not running
+- `CommandClient` uses a 500 ms receive timeout instead of indefinite blocking
 
-### Known limitations
+### Notes
 
-- Subset of opcodes decoded; most packets appear as raw in monitor view
-- Legacy KParser `.sdf` files cannot be imported
+- Pair with [kpacket2 v0.1.0-rc.1](https://github.com/poroburu/kpacket2/releases/tag/v0.1.0-rc.1) for live capture; wire protocol `kpacket.v1` unchanged
 - WPF host requires Windows; CLI core libraries run on .NET 8 anywhere
+- Opcode subset only — most packets appear as raw in monitor view
+- Legacy KParser `.sdf` files and Lua kpacket (port 6666) are not supported
+
+## [0.1.0] - 2026-06-16 (planned GA)
+
+Planned first stable release. Scope matches the RC feature set above; GA will drop the `-rc.N` suffix and incorporate RC feedback.
 
 [0.1.0-rc.1]: https://github.com/poroburu/kparser2/releases/tag/v0.1.0-rc.1
 [0.1.0]: https://github.com/poroburu/kparser2/releases/tag/v0.1.0

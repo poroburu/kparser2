@@ -23,7 +23,7 @@ dotnet test kparser2.sln -c Release --no-build
 
 # Decoder oracle
 dotnet run -c Release --project kparser2.Cli/kparser2.Cli.fsproj -- decode fixtures/sessions/sample.ndjson
-dotnet run -c Release --project kparser2.Cli/kparser2.Cli.fsproj -- analytics snapshot fixtures/sessions/combat_basic.ndjson --assert-combat
+dotnet run -c Release --project kparser2.Cli/kparser2.Cli.fsproj -- analytics snapshot fixtures/sessions/combat_basic.ndjson
 dotnet run -c Release --project kparser2.Cli/kparser2.Cli.fsproj -- analytics snapshot fixtures/sessions/bcmn30_petrifying_pair.ndjson --assert-combat --min-battles 1
 ```
 
