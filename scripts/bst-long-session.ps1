@@ -1,10 +1,10 @@
 param(
     [int]$DurationMinutes = 20,
-    [string]$OutputDir = "C:\Users\porob\git\ffxi-captures\ndjson"
+    [string]$OutputDir = "C:\Users\porob\git\kdev\ffxi-captures\ndjson"
 )
 
 $ErrorActionPreference = "Stop"
-$cli = "C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj"
+$cli = "C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj"
 $durationMs = $DurationMinutes * 60 * 1000
 $stamp = Get-Date -Format "yyyyMMdd_HHmm"
 $output = Join-Path $OutputDir "bst_leveling_$stamp.ndjson"

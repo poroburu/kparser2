@@ -1,7 +1,7 @@
 # Promote BST capture slices into golden fixtures.
 param(
-    [string]$Source = "C:\Users\porob\git\ffxi-captures\ndjson\bst_leveling_20260616_1713.ndjson",
-    [string]$OutDir = "C:\Users\porob\git\kparser2\fixtures\sessions"
+    [string]$Source = "C:\Users\porob\git\kdev\ffxi-captures\ndjson\bst_leveling_20260616_1713.ndjson",
+    [string]$OutDir = "C:\Users\porob\git\kdev\kparser2\fixtures\sessions"
 )
 
 $ErrorActionPreference = "Stop"

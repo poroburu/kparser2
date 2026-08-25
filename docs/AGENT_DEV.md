@@ -39,7 +39,7 @@ If they diverge, the bug is in ingest — not views.
 ## Recording new fixtures
 
 ```powershell
-dotnet run --project kparser2.Cli/kparser2.Cli.fsproj -- record C:\Users\porob\git\ffxi-captures\ndjson\my_session.ndjson --duration-ms 15000
+dotnet run --project kparser2.Cli/kparser2.Cli.fsproj -- record C:\Users\porob\git\kdev\ffxi-captures\ndjson\my_session.ndjson --duration-ms 15000
 ```
 
 Commit small, focused fixtures (login, chat, drop) rather than long captures.
@@ -59,14 +59,14 @@ When Ashita is unavailable, validate against PV logs under `ffxi-captures/retail
 
 ```powershell
 dotnet run --project kparser2.Cli/kparser2.Cli.fsproj -- import packetviewer `
-  --full C:\Users\porob\git\ffxi-captures\retail\_extract\PetrifyingPair\packetviewer\full.log `
-  -o C:\Users\porob\git\ffxi-captures\ndjson\petrifying_pair.ndjson
+  --full C:\Users\porob\git\kdev\ffxi-captures\retail\_extract\PetrifyingPair\packetviewer\full.log `
+  -o C:\Users\porob\git\kdev\ffxi-captures\ndjson\petrifying_pair.ndjson
 
 dotnet run --project kparser2.Cli/kparser2.Cli.fsproj -- import packetviewer --validate `
-  C:\Users\porob\git\ffxi-captures\ndjson\petrifying_pair.ndjson
+  C:\Users\porob\git\kdev\ffxi-captures\ndjson\petrifying_pair.ndjson
 
 dotnet run --project kparser2.Cli/kparser2.Cli.fsproj -- analytics snapshot `
-  C:\Users\porob\git\ffxi-captures\ndjson\petrifying_pair.ndjson
+  C:\Users\porob\git\kdev\ffxi-captures\ndjson\petrifying_pair.ndjson
 ```
 
 WPF: **Session → Import PacketViewer…** — select `full.log` or `incoming.log` + `outgoing.log`; converts to temp NDJSON and replays.

@@ -6,53 +6,53 @@ This document helps Cursor agents iterate on kparser2 **without Ashita running**
 
 ```powershell
 # Build everything
-dotnet build C:\Users\porob\git\kparser2\kparser2.sln
+dotnet build C:\Users\porob\git\kdev\kparser2\kparser2.sln
 
 # Run all unit tests (sync ingest path; ~2 min)
-dotnet test C:\Users\porob\git\kparser2\kparser2.sln
+dotnet test C:\Users\porob\git\kdev\kparser2\kparser2.sln
 
 # CI / agent fast path — skip retail NDJSON slices (~3100 lines each)
-dotnet test C:\Users\porob\git\kparser2\kparser2.sln --filter "Category!=Integration"
+dotnet test C:\Users\porob\git\kdev\kparser2\kparser2.sln --filter "Category!=Integration"
 
 # Replay golden fixture (preferred verification)
-dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- replay C:\Users\porob\git\kparser2\fixtures\sessions\sample.ndjson
+dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- replay C:\Users\porob\git\kdev\kparser2\fixtures\sessions\sample.ndjson
 
 # Structured decoder output (no WPF required)
-dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- decode C:\Users\porob\git\kparser2\fixtures\sessions\sample.ndjson
+dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- decode C:\Users\porob\git\kdev\kparser2\fixtures\sessions\sample.ndjson
 
 # Filter by opcode
-dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- decode C:\Users\porob\git\kparser2\fixtures\sessions\sample.ndjson --filter 0x17 --json
+dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- decode C:\Users\porob\git\kdev\kparser2\fixtures\sessions\sample.ndjson --filter 0x17 --json
 
 # Regenerate item name lookup from LandSandBoat SQL
-dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- export-items
+dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- export-items
 
 # Regenerate ability name lookup from LandSandBoat SQL
-dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- export-actions
+dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- export-actions
 
 # Regenerate zone name lookup from LandSandBoat SQL
-dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- export-zones
+dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- export-zones
 
 # Import PacketViewer .log → NDJSON (fixed s2c/c2s topics)
-dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- import packetviewer --full C:\path\to\full.log -o capture.ndjson
+dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- import packetviewer --full C:\path\to\full.log -o capture.ndjson
 
 # Validate imported capture (entity/opcode/analytics summary)
-dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- import packetviewer --validate capture.ndjson
+dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- import packetviewer --validate capture.ndjson
 
 # Analytics snapshot (waits for replay completion; no 500 ms race)
-dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- analytics snapshot capture.ndjson
+dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- analytics snapshot capture.ndjson
 
 # Regenerate synthetic fixtures with valid packet bytes
-powershell -File C:\Users\porob\git\kparser2\scripts\generate-fixtures.ps1
+powershell -File C:\Users\porob\git\kdev\kparser2\scripts\generate-fixtures.ps1
 
 # Live plugin health (requires game + kpacket2 loaded)
-dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- probe
+dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- probe
 
 # Long BST camp session (20 min record + post-session oracles)
-dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- record C:\Users\porob\git\ffxi-captures\ndjson\bst_leveling.ndjson --duration-ms 1200000
-dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- watch --analytics --duration-ms 300000 --interval-ms 5000
-dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- analytics snapshot capture.ndjson --assert-combat --min-battles 2
-dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- report fights capture.ndjson
-dotnet run --project C:\Users\porob\git\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- report offense capture.ndjson
+dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- record C:\Users\porob\git\kdev\ffxi-captures\ndjson\bst_leveling.ndjson --duration-ms 1200000
+dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- watch --analytics --duration-ms 300000 --interval-ms 5000
+dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- analytics snapshot capture.ndjson --assert-combat --min-battles 2
+dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- report fights capture.ndjson
+dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- report offense capture.ndjson
 ```
 
 ## Decoder oracle workflow
@@ -116,20 +116,20 @@ Legacy **kparser** (`TestParser.cs`) parses comma-hex chat log lines; **kparser2
 
 ```powershell
 # Fast parity oracle (no PacketSession replay)
-dotnet test C:\Users\porob\git\kparser2\kparser2.Analytics.Tests\kparser2.Analytics.Tests.fsproj --filter "FullyQualifiedName~ParseCodesParity|FullyQualifiedName~InteractionParity|FullyQualifiedName~FixtureReplay"
+dotnet test C:\Users\porob\git\kdev\kparser2\kparser2.Analytics.Tests\kparser2.Analytics.Tests.fsproj --filter "FullyQualifiedName~ParseCodesParity|FullyQualifiedName~InteractionParity|FullyQualifiedName~FixtureReplay"
 
 # Retail integration slices (bcmn30_petrifying_pair, bst_camp_multi, bst_loot_name)
-dotnet test C:\Users\porob\git\kparser2\kparser2.Analytics.Tests\kparser2.Analytics.Tests.fsproj --filter "Category=Integration"
+dotnet test C:\Users\porob\git\kdev\kparser2\kparser2.Analytics.Tests\kparser2.Analytics.Tests.fsproj --filter "Category=Integration"
 
 # Regenerate synthetic combat parity fixtures
-powershell -File C:\Users\porob\git\kparser2\scripts\generate-fixtures.ps1
+powershell -File C:\Users\porob\git\kdev\kparser2\scripts\generate-fixtures.ps1
 ```
 
 **Test reliability:** Analytics tests use synchronous `ReplayHelpers.ingestFixture` (not `PacketSessionFactory.fromReplayDefault`) so replay does not spawn background threads or block on `WaitForReplayComplete`. `PacketSession` replay is validated via `kparser2.cli analytics snapshot` (unit test skipped — xUnit sync-over-async deadlock). `xunit.runner.json` disables parallelization to avoid `EntityRegistry` races.
 
 Parity matrix rows are named after kparser test methods (`TestPlayerHitMob`, `FailSelfBuff`, `region_enfeeble`, etc.). Mark a row done when Tier 1–3 tests pass for that scenario.
 
-Reference captures (local, not committed): `C:\Users\porob\git\ffxi-captures\` — NDJSON recordings and retail unpacks for VieweD + CLI decode oracles. Promote small slices into `fixtures/sessions/` for golden tests.
+Reference captures (local, not committed): `C:\Users\porob\git\kdev\ffxi-captures\` — NDJSON recordings and retail unpacks for VieweD + CLI decode oracles. Promote small slices into `fixtures/sessions/` for golden tests.
 
 Expected `decode sample.ndjson` output (non-JSON mode):
 
@@ -173,7 +173,7 @@ data/zones.json          zone id → name (from server/sql/zone_settings.sql)
 
 ## Live session (only when task says `live`)
 
-1. Build kpacket2 plugin: `C:\Users\porob\git\kpacket2\build.ps1`
+1. Build kpacket2 plugin: `C:\Users\porob\git\kdev\kpacket2\build.ps1`
 2. Load in Ashita: `/load kpacket`
 3. Run `packet_monitor.exe` as oracle
 4. Record: `kparser2.cli record capture.ndjson --duration-ms 30000`

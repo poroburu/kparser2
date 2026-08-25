@@ -1,5 +1,5 @@
 param(
-    [string]$Source = "C:\Users\porob\git\ffxi-captures\ndjson\bst_leveling_20260616_1713.ndjson",
+    [string]$Source = "C:\Users\porob\git\kdev\ffxi-captures\ndjson\bst_leveling_20260616_1713.ndjson",
     [string]$PetName = "LullabyMelodia",
     [uint32]$LocalId = 5485
 )
