@@ -51,7 +51,7 @@ powershell -File C:\Users\porob\git\kdev\kparser2\scripts\generate-fixtures.ps1
 dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- probe
 
 # Long BST camp session (20 min record + post-session oracles)
-dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- record C:\Users\porob\git\kdev\ffxi-captures\ndjson\bst_leveling.ndjson --duration-ms 1200000 --idle-ms 180000
+dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- record C:\Users\porob\git\kdev\ffxi-captures\ndjson\bst_leveling.ndjson --duration-ms 1200000 --idle-ms 180000 --checkpoint-ms 120000
 dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- watch --analytics --duration-ms 300000 --interval-ms 5000
 dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- analytics snapshot capture.ndjson --assert-combat --min-battles 2
 dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- report fights capture.ndjson
@@ -235,12 +235,27 @@ Docs: [docs/parity-inequalities.md](docs/parity-inequalities.md), [docs/metadata
 Horizon loaded, `/load kpacket`. New **Agent** chat (not Plan):
 
 ```
-Parity scan while I play. Record last-green kparser2 CLI to ffxi-captures/ndjson (or attach if a recorder is already writing). Poll analytics snapshot --assert-settled after settle. Rank gaps; skip deferred/spiral/open-PR codes. Classify each ticket with parity-inequalities.md (kparser-only / kparser2-missing / kparser2-extra / deferred) before coding. Lookup XiPackets, VieweD, server/scripts/enum/msg.lua — never edit those pins or kparser. Bootstrap may port a whole message family; later leftover ids. Prove with --assert-settled-code (targeted code gone; leftovers OK) plus dotnet test --filter Category!=Integration after freeze, not on every packet. Commit green work on cursor/session-<yyyymmdd-hhmm> from develop; open a draft PR into develop — never into main. Do not ask me to cast. Stop recording if I say stop or the plugin goes away.
+Parity scan while I play. Record last-green kparser2 CLI to ffxi-captures/ndjson with --checkpoint-ms 120000 (or attach if a recorder is already writing). Notify on `record checkpoint:` and `recording stopped:` from that process — do not start a Sleep / AGENT_LOOP_WAKE shell. On each checkpoint, reconcile and analytics snapshot --assert-settled. Rank gaps; skip deferred/spiral/open-PR codes. Classify each ticket with parity-inequalities.md (kparser-only / kparser2-missing / kparser2-extra / deferred) before coding. Lookup XiPackets, VieweD, server/scripts/enum/msg.lua — never edit those pins or kparser. Bootstrap may port a whole message family; later leftover ids. Prove with --assert-settled-code (targeted code gone; leftovers OK) plus dotnet test --filter Category!=Integration after freeze, not on every packet. Commit green work on cursor/session-<yyyymmdd-hhmm> from develop; open a draft PR into develop — never into main. Do not ask me to cast. Stop recording if I say stop or the plugin goes away.
 ```
 
 ### Paste this (fork / crowd)
 
 Same play rules. You do **not** share `ffxi-captures`. Search GitHub kparser2 issues/PRs for the divergence `code` first. Fork, one family or leftover id, scoped prove, PR **into `develop`**. No push to `main`, no kdev pin bump. Redact live player names on public fixtures; never commit a full session dump.
+
+### Scan ticks (no agent sleeper)
+
+The long-running job is **`kparser2.cli record`** (last-green exe). Cursor auto-review treats a second `Start-Sleep` + `AGENT_LOOP_WAKE {"prompt":...}` shell as an unattended agent workflow and will block it. Do not use Cursor `/loop` that way during a scan.
+
+Do:
+
+- `record … --checkpoint-ms 120000` and `notify_on_output` on `record checkpoint:` / `recording stopped:`
+- Reconcile + `--assert-settled` when a checkpoint line appears
+- Optional `watch --analytics` only if you need live plugin health and it is not a synthetic prompt injector
+
+Do not:
+
+- `Start-Sleep`; `echo AGENT_LOOP_WAKE_… {"prompt":"…"}`
+- A second timer whose only job is to inject a follow-up prompt
 
 ### Last-green ingest
 
