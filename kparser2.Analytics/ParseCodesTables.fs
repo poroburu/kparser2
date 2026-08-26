@@ -217,6 +217,9 @@ module MsgBasicCatalog =
     let UnableToUseJa2 = 88
     let TimeLeft = 202
     let NoJugPetItem = 337
+    // /check evasion-defense lines; Windower BtlMess 170-178, LSB enum has a hole here. Live camp used 176-178.
+    let CheckHighEvaDef = 170
+    let CheckLowEvaDef = 178
 
     let private isCastInterruptedOrBlocked n =
         n = IsInterrupted
@@ -233,6 +236,9 @@ module MsgBasicCatalog =
         || n = UnableToUseJa
         || n = UnableToUseJa2
         || n = NoJugPetItem
+
+    let private isCheckEvasionDefense n =
+        n >= CheckHighEvaDef && n <= CheckLowEvaDef
 
     /// 0x28 BattleResult.message uses xi.msg.basic, not kparser chatline ParseCodes.
     let tryClassifyAction messageId =
@@ -253,6 +259,7 @@ module MsgBasicCatalog =
             Some(InteractionType.Aid, None, Some AidType.Enhance)
         | n when n = TimeLeft -> Some(InteractionType.Unknown, None, None)
         | n when isActionBlocked n -> Some(InteractionType.Unknown, None, None)
+        | n when isCheckEvasionDefense n -> Some(InteractionType.Unknown, None, None)
         | _ -> None
 
     let classify (messageNum: int) (messageType: int) =
@@ -273,6 +280,7 @@ module MsgBasicCatalog =
             InteractionType.Aid, None, Some AidType.Enhance
         | n when n = TimeLeft -> InteractionType.Unknown, None, None
         | n when isActionBlocked n -> InteractionType.Unknown, None, None
+        | n when isCheckEvasionDefense n -> InteractionType.Unknown, None, None
         | _ when messageType >= 4 -> InteractionType.Aid, None, Some AidType.Enhance
         | _ -> InteractionType.Unknown, None, None
 
@@ -305,4 +313,13 @@ module MsgBasicCatalog =
         | 88 -> "Unable To Use Job Ability"
         | 202 -> "Time Left"
         | 337 -> "No Jug Pet Item"
+        | 170 -> "Check High Evasion And Defense"
+        | 171 -> "Check High Evasion"
+        | 172 -> "Check High Evasion Low Defense"
+        | 173 -> "Check High Defense"
+        | 174 -> "Check"
+        | 175 -> "Check Low Defense"
+        | 176 -> "Check Low Evasion High Defense"
+        | 177 -> "Check Low Evasion"
+        | 178 -> "Check Low Evasion And Defense"
         | n -> $"MsgBasic-{n}"

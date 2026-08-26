@@ -642,6 +642,11 @@ module AnalyticsTests =
             InteractionType.Unknown,
             (MsgBasicCatalog.classify MsgBasicCatalog.TimeLeft 4 |> fun (t, _, _) -> t)
         )
+        Assert.Equal("Check Low Evasion High Defense", MsgBasicCatalog.messageLabel 176)
+        Assert.Equal("Check Low Evasion", MsgBasicCatalog.messageLabel 177)
+        Assert.Equal("Check Low Evasion And Defense", MsgBasicCatalog.messageLabel 178)
+        Assert.Equal(InteractionType.Unknown, (MsgBasicCatalog.classify 176 4 |> fun (t, _, _) -> t))
+        Assert.True(SettledDivergence.isMessageClassified 176)
 
     [<Fact>]
     let ``0x29 casting interrupted is not classified as enhance`` () =
