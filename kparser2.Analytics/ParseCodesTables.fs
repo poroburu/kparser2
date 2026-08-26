@@ -197,6 +197,11 @@ module MsgBasicCatalog =
     let MagicGainEffect = 230
     let MagicEnfeebIs = 236
     let MagicEnfeeb = 237
+    // xi.msg.basic status region (LandSandBoat scripts/enum/msg.lua); live Horizon 0x29 used 206.
+    let IsStatus = 203
+    let IsNoLongerStatus = 204
+    let GainsEffectOfStatus = 205
+    let StatusWearsOff = 206
 
     /// 0x28 BattleResult.message uses xi.msg.basic, not kparser chatline ParseCodes.
     let tryClassifyAction messageId =
@@ -207,6 +212,13 @@ module MsgBasicCatalog =
         | n when n = MagicNoEffect || n = MagicFail -> Some(InteractionType.Aid, None, Some AidType.Enhance)
         | n when n = MagicDmg -> Some(InteractionType.Harm, Some HarmType.Spell, None)
         | n when n = MagicEnfeebIs || n = MagicEnfeeb -> Some(InteractionType.Harm, Some HarmType.Enfeeble, None)
+        | n when
+            n = IsStatus
+            || n = IsNoLongerStatus
+            || n = GainsEffectOfStatus
+            || n = StatusWearsOff
+            ->
+            Some(InteractionType.Aid, None, Some AidType.Enhance)
         | _ -> None
 
     let classify (messageNum: int) (messageType: int) =
@@ -217,6 +229,13 @@ module MsgBasicCatalog =
         | n when n = ExperiencePointsGained || n = ExpChain -> InteractionType.Unknown, None, None
         | n when n = AttackHits -> InteractionType.Harm, Some HarmType.Melee, None
         | n when n = AttackMisses -> InteractionType.Harm, Some HarmType.Melee, None
+        | n when
+            n = IsStatus
+            || n = IsNoLongerStatus
+            || n = GainsEffectOfStatus
+            || n = StatusWearsOff
+            ->
+            InteractionType.Aid, None, Some AidType.Enhance
         | _ when messageType >= 4 -> InteractionType.Aid, None, Some AidType.Enhance
         | _ -> InteractionType.Unknown, None, None
 
@@ -232,4 +251,8 @@ module MsgBasicCatalog =
         | 7 -> "Magic Recovers HP"
         | 1 -> "Attack Hits"
         | 15 -> "Attack Misses"
+        | 203 -> "Is Status"
+        | 204 -> "No Longer Status"
+        | 205 -> "Gains Effect"
+        | 206 -> "Status Wears Off"
         | n -> $"MsgBasic-{n}"

@@ -574,6 +574,48 @@ module AnalyticsTests =
         Assert.Equal(InteractionType.Death, interactionType)
 
     [<Fact>]
+    let ``MsgBasic classifies status wears off as enhance`` () =
+        let interactionType, _, aidType =
+            MsgBasicCatalog.classify MsgBasicCatalog.StatusWearsOff 0
+
+        Assert.Equal(InteractionType.Aid, interactionType)
+        Assert.Equal(Some AidType.Enhance, aidType)
+        Assert.Equal("Status Wears Off", MsgBasicCatalog.messageLabel MsgBasicCatalog.StatusWearsOff)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.StatusWearsOff)
+
+    [<Fact>]
+    let ``0x29 status wears off becomes an enhance interaction`` () =
+        EntityRegistry.reset()
+        InteractionBuilder.reset()
+        let store = SessionStore.create()
+        let data = Fixtures.battleMessagePacketSimple 20149u 20149u 206us
+        let evt =
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x0029us
+              PacketName = "GP_SERV_COMMAND_BATTLE_MESSAGE"
+              Size = 28u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = data }
+
+        EntityRegistry.observe evt
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        let snap = SessionStore.snapshot store
+        Assert.Contains(
+            snap.Interactions,
+            fun i ->
+                i.ActionName = "Status Wears Off"
+                && i.InteractionType = InteractionType.Aid
+                && i.MessageId = 206
+        )
+
+    [<Fact>]
     let ``experience parser reads battle message`` () =
         match ExperienceParser.tryParseBattleMessage 8 0u 150u with
         | Some parsed ->
