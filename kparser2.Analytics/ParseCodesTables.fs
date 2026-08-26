@@ -206,8 +206,11 @@ module MsgBasicCatalog =
     let MagicNoEffect = 75
     let MagicFail = 114
     let MagicGainEffect = 230
+    let DisappearNum = 231
     let MagicEnfeebIs = 236
     let MagicEnfeeb = 237
+    // Live Horizon 0x28 cmd 4: Erase finish (xi.msg.basic MAGIC_ERASE).
+    let MagicErase = 341
     // xi.msg.basic status region (LandSandBoat scripts/enum/msg.lua); live Horizon 0x29 used 206.
     let IsStatus = 203
     let IsNoLongerStatus = 204
@@ -252,8 +255,18 @@ module MsgBasicCatalog =
     let private isCheckEvasionDefense n =
         n >= CheckHighEvaDef && n <= CheckLowEvaDef
 
+    let TooFarAway = 78
+    let TooFarAway2 = 328
+    let CannotAttackTarget = 446
+
     let private isTargetingBlocked n =
-        n = TargOutOfRange || n = UnableToSeeTarg || n = LoseSight || n = CannotSee
+        n = TargOutOfRange
+        || n = UnableToSeeTarg
+        || n = LoseSight
+        || n = CannotSee
+        || n = TooFarAway
+        || n = TooFarAway2
+        || n = CannotAttackTarget
 
     let private isMagicDrain n =
         n = MagicDrainHp || n = MagicDrainMp
@@ -266,7 +279,8 @@ module MsgBasicCatalog =
         match messageId with
         | n when n = MagicRecoversHP || n = TargetRecoversHPSimple || n = SkillRecoversMp ->
             Some(InteractionType.Aid, None, Some AidType.Recovery)
-        | n when n = MagicGainEffect -> Some(InteractionType.Aid, None, Some AidType.Enhance)
+        | n when n = MagicGainEffect || n = MagicErase || n = DisappearNum ->
+            Some(InteractionType.Aid, None, Some AidType.Enhance)
         | n when n = MagicNoEffect || n = MagicFail -> Some(InteractionType.Aid, None, Some AidType.Enhance)
         | n when n = MagicDmg || n = MagicBurstDamage || isMagicDrain n ->
             Some(InteractionType.Harm, Some HarmType.Spell, None)
@@ -295,6 +309,8 @@ module MsgBasicCatalog =
         | n when n = MagicDmg || n = MagicBurstDamage || isMagicDrain n ->
             InteractionType.Harm, Some HarmType.Spell, None
         | n when isSkillDrain n -> InteractionType.Harm, Some HarmType.Ability, None
+        | n when n = MagicGainEffect || n = MagicErase || n = DisappearNum ->
+            InteractionType.Aid, None, Some AidType.Enhance
         | n when n = AttackMisses -> InteractionType.Harm, Some HarmType.Melee, None
         | n when isTargetingBlocked n -> InteractionType.Unknown, None, None
         | n when
@@ -322,6 +338,11 @@ module MsgBasicCatalog =
         | 7 -> "Magic Recovers HP"
         | 1 -> "Attack Hits"
         | 252 -> "Magic Burst"
+        | 231 -> "Effects Disappear"
+        | 341 -> "Magic Erase"
+        | 78 -> "Too Far Away"
+        | 328 -> "Too Far Away"
+        | 446 -> "Cannot Attack Target"
         | 224 -> "Skill Recovers MP"
         | 225 -> "Skill Drain MP"
         | 226 -> "Skill Drain TP"

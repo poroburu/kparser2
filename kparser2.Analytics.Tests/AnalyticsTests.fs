@@ -655,6 +655,10 @@ module AnalyticsTests =
         Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicDrainMp)
         Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicDrainHp)
         Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.SkillDrainMp)
+        Assert.Equal("Magic Erase", MsgBasicCatalog.messageLabel MsgBasicCatalog.MagicErase)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicErase)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.TooFarAway)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.CannotAttackTarget)
 
     [<Fact>]
     let ``0x29 casting interrupted is not classified as enhance`` () =
