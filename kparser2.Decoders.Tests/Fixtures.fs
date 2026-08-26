@@ -92,6 +92,14 @@ module Fixtures =
         BitConverter.GetBytes(zoneId).CopyTo(data, 26)
         data
 
+    /// S2C 0x0037 GP_SERV_COMMAND_SERVERSTATUS. UniqueNo is at offset 36
+    /// (4-byte header + 32-byte BufStatus). Horizon live packets are 96 bytes.
+    let serverStatusPacket (entityId: uint32) =
+        let data = Array.create 96 0uy
+        data.[2] <- 0x37uy
+        BitConverter.GetBytes(entityId).CopyTo(data, 36)
+        data
+
     let trophyListPacket (itemId: int) (quantity: int) (dropperId: uint32) =
         let data = Array.create 60 0uy
         data.[2] <- 0xD2uy

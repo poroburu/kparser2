@@ -50,6 +50,7 @@ module private ReplayHelpers =
 
     let ingestFixture path =
         EntityRegistry.reset()
+        Ndjson.tryPlayerName path |> Option.iter EntityRegistry.registerLocalPlayerName
         let store = SessionStore.create()
 
         for topic, metaJson, data in Ndjson.readAll path do
@@ -642,6 +643,93 @@ module AnalyticsTests =
         let snap = SessionStore.snapshot store
         Assert.Contains(snap.ChatMessages, fun c -> c.Mode = "Say" && c.Speaker = "Poroburu" && c.Message = "hello")
         Assert.Contains(snap.ChatMessages, fun c -> c.Mode = "Tell" && c.Speaker = "Poroburu")
+
+    [<Fact>]
+    let ``incoming 0x0037 server status is not recorded as an item use`` () =
+        EntityRegistry.reset()
+        EntityRegistry.registerLocalPlayerName "Porobururu"
+        let store = SessionStore.create()
+
+        let evt =
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x0037us
+              PacketName = "GP_SERV_COMMAND_SERVERSTATUS"
+              Size = 96u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = Fixtures.serverStatusPacket 20149u }
+
+        EntityRegistry.observe evt
+        SessionStore.ingest store evt DecoderResult.empty
+        let snap = SessionStore.snapshot store
+        Assert.Empty snap.ItemUses
+        Assert.Equal(Some 20149u, EntityRegistry.tryLocalPlayerId())
+        Assert.Equal("Porobururu", EntityRegistry.formatEntity 20149u)
+
+    [<Fact>]
+    let ``snapshot backfills interaction names after local player id is known`` () =
+        EntityRegistry.reset()
+        InteractionBuilder.reset()
+        let store = SessionStore.create()
+
+        store.Interactions <-
+            [ { Id = 0
+                BattleId = None
+                TimestampMs = 1L
+                InteractionType = InteractionType.Aid
+                HarmType = None
+                AidType = Some AidType.Recovery
+                Category = InteractionCategory.Recovery
+                DamageModifier = DamageModifier.Normal
+                ActorId = 20149u
+                TargetId = 20149u
+                ActorName = "Entity 20149"
+                TargetName = "Entity 20149"
+                ActionName = "Cure"
+                Value = 0
+                Success = "hit"
+                CommandNo = 4
+                MessageId = 7
+                IsProc = false
+                ProcValue = 0
+                IsLocalPlayerActor = false
+                IsLocalPlayerTarget = false } ]
+
+        EntityRegistry.registerLocalPlayerName "Porobururu"
+
+        EntityRegistry.observe
+            { Topic = "test"
+              Timestamp = 2UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x0037us
+              PacketName = "GP_SERV_COMMAND_SERVERSTATUS"
+              Size = 96u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 2UL
+              Data = Fixtures.serverStatusPacket 20149u }
+
+        let snap = SessionStore.snapshot store
+        Assert.Equal("Porobururu", snap.Interactions.Head.ActorName)
+        Assert.True(snap.Interactions.Head.IsLocalPlayerActor)
+
+    [<Fact>]
+    let ``session header name is reapplied after PacketStore reset`` () =
+        EntityRegistry.reset()
+        EntityRegistry.registerLocalPlayerName "Porobururu"
+        let _store = PacketStore(8)
+        Assert.Equal(None, EntityRegistry.localPlayerName())
+        EntityRegistry.registerLocalPlayerName "Porobururu"
+        Assert.Equal(Some "Porobururu", EntityRegistry.localPlayerName())
 
     [<Fact>]
     let ``chat_self_say fixture resolves outgoing say speaker`` () =

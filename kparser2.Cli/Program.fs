@@ -600,10 +600,9 @@ let private runImportValidate (path: string) (assertCombat: bool) (minBattles: i
     EntityRegistry.reset()
     InteractionBuilder.reset()
 
-    match Ndjson.tryReadSessionHeader path with
-    | Some header when not (String.IsNullOrWhiteSpace header.player_name) ->
-        EntityRegistry.registerLocalPlayerName header.player_name
-    | _ -> ()
+    match Ndjson.tryPlayerName path with
+    | Some name -> EntityRegistry.registerLocalPlayerName name
+    | None -> ()
 
     ConnectionProbe.tryBootstrapLocalPlayerName ()
 

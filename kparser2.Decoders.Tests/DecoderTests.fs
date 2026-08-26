@@ -450,6 +450,51 @@ module DecoderTests =
         Assert.Equal(Some "Poroburu", EntityRegistry.localPlayerName())
 
     [<Fact>]
+    let ``incoming 0x0037 server status UniqueNo is the local player`` () =
+        EntityRegistry.reset()
+        EntityRegistry.registerLocalPlayerName "Porobururu"
+
+        EntityRegistry.observe
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x0037us
+              PacketName = "GP_SERV_COMMAND_SERVERSTATUS"
+              Size = 96u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = Fixtures.serverStatusPacket 20149u }
+
+        Assert.Equal(Some 20149u, EntityRegistry.tryLocalPlayerId())
+        Assert.Equal(Some "Porobururu", EntityRegistry.localPlayerName())
+        Assert.Equal("Porobururu", EntityRegistry.formatEntity 20149u)
+
+    [<Fact>]
+    let ``outgoing 0x0037 item-use is not treated as local player status`` () =
+        EntityRegistry.reset()
+
+        EntityRegistry.observe
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Outgoing
+              PacketType = "world_c2s"
+              PacketId = 0x0037us
+              PacketName = "GP_CLI_COMMAND_ITEM_USE"
+              Size = 20u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = Fixtures.serverStatusPacket 20149u }
+
+        Assert.Equal(None, EntityRegistry.tryLocalPlayerId())
+
+    [<Fact>]
     let ``loot roll registers local player name from 0xD3`` () =
         EntityRegistry.reset()
 
