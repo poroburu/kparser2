@@ -758,7 +758,8 @@ module ExperienceReport =
             |> List.filter (fun b -> b.Killed)
             |> List.groupBy (fun b -> b.EnemyName)
             |> List.map (fun (name, rows) ->
-                let baseXp = MobXpLookup.tryGetXp name |> Option.defaultValue 0
+                let baseXp =
+                    ExperienceParser.minBaseXp (rows |> List.map (fun b -> b.ExperiencePoints, b.ExperienceChain))
                 let gainedXp =
                     if rows.Length > 0 then
                         rows |> List.averageBy (fun b -> float b.ExperiencePoints) |> int

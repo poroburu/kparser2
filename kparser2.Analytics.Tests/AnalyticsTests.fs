@@ -816,6 +816,45 @@ module AnalyticsTests =
         )
 
     [<Fact>]
+    let ``withoutChain reverses kparser chain bonuses`` () =
+        Assert.Equal(0, ExperienceParser.withoutChain 0 3)
+        Assert.Equal(200, ExperienceParser.withoutChain 200 0)
+        Assert.Equal(200, ExperienceParser.withoutChain 240 1)
+        Assert.Equal(200, ExperienceParser.withoutChain 250 2)
+        Assert.Equal(200, ExperienceParser.withoutChain 260 3)
+        Assert.Equal(200, ExperienceParser.withoutChain 280 4)
+        Assert.Equal(200, ExperienceParser.withoutChain 300 5)
+
+    [<Fact>]
+    let ``exclude zero xp drops battles with no awarded experience`` () =
+        let battle id name xp =
+            { Id = id
+              EnemyName = name
+              EnemyId = None
+              StartMs = 0L
+              EndMs = Some 1L
+              Killed = true
+              KillerId = None
+              ExperiencePoints = xp
+              ExperienceChain = 0 }
+
+        let snap =
+            { AnalyticsSnapshot.empty with
+                Battles = [ battle 1 "Crab" 150; battle 2 "Crate" 0 ] }
+
+        let kept =
+            ReportAggregators.filterBattles
+                snap
+                { MobFilter.defaultFilter with ExcludeZeroXp = true }
+
+        Assert.Equal(1, kept.Length)
+        Assert.Equal("Crab", kept.Head.EnemyName)
+
+        let picker = AnalyticsQueries.mobs snap
+        Assert.Equal(150, (picker |> List.find (fun r -> r.Label = "Crab")).Total)
+        Assert.Equal(0, (picker |> List.find (fun r -> r.Label = "Crate")).Total)
+
+    [<Fact>]
     let ``combat_recovery includes aid interactions`` () =
         let snap = ReplayHelpers.ingestFixtureDto (FixturePaths.combatRecovery())
         Assert.True(snap.Interactions |> Seq.exists (fun i -> i.InteractionType = "Aid"))
