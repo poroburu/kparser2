@@ -49,7 +49,7 @@ dotnet run -c Release --project kparser2.Cli/kparser2.Cli.fsproj -- analytics sn
 ## Build publish artifacts
 
 ```powershell
-$ver = "0.1.0-rc.1"
+$ver = "0.1.0-rc.2"
 $out = "dist/v$ver"
 New-Item -ItemType Directory -Force -Path $out | Out-Null
 

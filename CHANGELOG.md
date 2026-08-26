@@ -4,9 +4,41 @@ All notable changes to kparser2 are documented here. The format follows [Keep a 
 
 ## [Unreleased]
 
+## [0.1.0-rc.2] - 2026-08-26
+
+Second pre-release. Live HorizonXI parity work on `develop` since rc.1.
+
+### Added
+
+- **0x002D** XP/limit battle-message decoder; live EXP chain uses Data as XP and Data2 as chain
+- Spell name lookup (`data/spells.json`, `export-spells`)
+- HorizonXI yell layout (zone in Data) and `0xFD` auto-translate in chat
+- `analytics snapshot --parity-chat` / `--assert-chat` and `scripts/compare-chat-parity.ps1`
+- Settled-gap ranking: `--assert-settled`, `--assert-settled-code`, `--skip-code`; opcode-heat skip via `scripts/opcode-heat.ps1`
+- Record session lifecycle: stop on DC, stall, or session UUID change; keep recording through `0x000B` zone handoff; `--checkpoint-ms` stdout
+- Capture helpers: `scripts/reconcile-capture.ps1`, `scripts/wait-kpacket-session.ps1`
+- Live `0x28`/`0x29` classifiers: magic finish (skip start), drain, burst, erase, extra targeting, status wear-off, interrupted, out of range, unable-to-see, `/check` evasion, JA blocked/timer/jug, must-have-pet-food
+- Golden slices: `chat_yell_live`, `combat_magic_live`
+- CI on `develop` PRs
+
+### Changed
+
+- GitFlow: integration PRs target `develop`; `main` is the release line
+- Experience-report base XP and exclude-0-XP use session awards (kparser chain reverse), not a stub catalog
+
+### Fixed
+
+- Local player resolution on mid-capture replay (no `0x00A`)
+- Live `0x002D` EXP chain XP from Data
+
 ### Removed
 
-- Stub `data/mob_xp.json`, `MobXpLookup`, and `scripts/export-mob-xp.ps1`. Exclude 0 XP and experience-report base XP use session awards (kparser chain reverse).
+- Stub `data/mob_xp.json`, `MobXpLookup`, and `scripts/export-mob-xp.ps1`
+
+### Notes
+
+- Pair with [kpacket2 v0.1.0-rc.1](https://github.com/poroburu/kpacket2/releases/tag/v0.1.0-rc.1) for live capture; wire protocol `kpacket.v1` unchanged
+- `kparser2.cli echo` needs kpacket2 Ashita chat echo (not in kpacket2 rc.1)
 
 ## [0.1.0-rc.1] - 2026-06-17
 
@@ -54,5 +86,6 @@ First pre-release of the packet-native FFXI parser and analytics tool for the kp
 
 Planned first stable release. Scope matches the RC feature set above; GA will drop the `-rc.N` suffix and incorporate RC feedback.
 
+[0.1.0-rc.2]: https://github.com/poroburu/kparser2/releases/tag/v0.1.0-rc.2
 [0.1.0-rc.1]: https://github.com/poroburu/kparser2/releases/tag/v0.1.0-rc.1
 [0.1.0]: https://github.com/poroburu/kparser2/releases/tag/v0.1.0
