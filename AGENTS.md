@@ -41,6 +41,8 @@ dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.
 # Analytics snapshot (waits for replay completion; no 500 ms race)
 dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- analytics snapshot capture.ndjson
 dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- analytics snapshot capture.ndjson --parity-chat -o chat.json --assert-chat
+dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- analytics snapshot capture.ndjson --assert-settled
+dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- analytics snapshot capture.ndjson --assert-settled-code unclassified_message-236
 
 # Regenerate synthetic fixtures with valid packet bytes
 powershell -File C:\Users\porob\git\kdev\kparser2\scripts\generate-fixtures.ps1
@@ -49,7 +51,7 @@ powershell -File C:\Users\porob\git\kdev\kparser2\scripts\generate-fixtures.ps1
 dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- probe
 
 # Long BST camp session (20 min record + post-session oracles)
-dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- record C:\Users\porob\git\kdev\ffxi-captures\ndjson\bst_leveling.ndjson --duration-ms 1200000
+dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- record C:\Users\porob\git\kdev\ffxi-captures\ndjson\bst_leveling.ndjson --duration-ms 1200000 --idle-ms 180000
 dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- watch --analytics --duration-ms 300000 --interval-ms 5000
 dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- analytics snapshot capture.ndjson --assert-combat --min-battles 2
 dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- report fights capture.ndjson
@@ -89,6 +91,7 @@ Packet payloads include the **4-byte world header**; decoder field offsets start
 | `fixtures/sessions/combat_kill_xp.ndjson` | kill + XP + chain attribution |
 | `fixtures/sessions/chat_self_say.ndjson` | outgoing say + tell bootstrap |
 | `fixtures/sessions/chat_yell.ndjson` | yell (0x17 kind 0x1A) |
+| `fixtures/sessions/chat_yell_live.ndjson` | live HorizonXI yells (zone in Data, 0xFD auto-translate) |
 | `fixtures/sessions/combat_melee_hits.ndjson` | 0x28 melee hits (0x14/0x19/0x1C) |
 | `fixtures/sessions/combat_misses.ndjson` | melee misses (0x15/0x1D) |
 | `fixtures/sessions/combat_ranged.ndjson` | ranged hit + miss |
@@ -151,6 +154,12 @@ powershell -File C:\Users\porob\git\kdev\kparser2\scripts\compare-chat-parity.ps
 
 These fixture dumps do not load kpacket. They only prove both CLIs agree on **constructed** bytes/text (`generate-fixtures.ps1`), not that HorizonXI sends that layout. Combat still diffs `parity.interactions` by **name** (not IDs). Schema: [kparser/docs/snapshot-schema.md](../kparser/docs/snapshot-schema.md). kparser `actionType` is Melee/Ranged/Spell; kparser2 `HarmType` uses the same labels. kparser `success` uses `hit` / `miss` / `parry` / `shadow-absorb` / `no-effect`. Chat `message` is body-only; kparser native `chat[]` keeps the full line.
 
+**Oracle policy:** live NDJSON is ground truth. `kparser.cli` is a **read-only** oracle (chatlines / `parity.chat` / `parity.interactions`). It can be wrong. Do **not** change kparser to match kparser2. If they disagree, research XiPackets / VieweD / the capture, then fix kparser2 (or note that kparser omits the event). Dual-dump never authorizes editing kparser.
+
+Long-running parity: observe (`watch` / `record` under `ffxi-captures/ndjson/`). When one pattern fails to reconcile, implement that event in kparser2 only. Prompt in-game with `kparser2.cli echo`, not a Cursor checklist.
+
+**Disconnect:** `record` stops on `:5556` hello failure (3 missed 1s polls), `session_uuid` change, incoming `0x000B`, or `--idle-ms` stall after packets (default 180s; `0` disables). It does not append across sessions. Copy complete lines with `scripts/reconcile-capture.ps1`. Do not treat a truncated last line or a magic start without finish as a decoder bug. Wait with `scripts/wait-kpacket-session.ps1 -PreviousUuid <old>`, then `record` a **new** path. If the user ends the parity run, do not start another recorder.
+
 ### Promote a fixture
 
 Oracle is **live bytes**, then VieweD, then a golden slice. Never the reverse (do not invent NDJSON to match a test).
@@ -210,9 +219,71 @@ Fixture replay (`analytics snapshot`, `--parity-chat`, `dotnet test`) does **not
 1. Close HorizonXI, then rebuild/deploy: `C:\Users\porob\git\kdev\kpacket2\build.ps1` (Ashita 4.3 SDK; plugin must export `expDestroyPlugin`)
 2. Load in Ashita: `/load kpacket`
 3. Confirm: `kparser2.cli probe` (or `packet_monitor.exe`)
-4. Record: `kparser2.cli record capture.ndjson --duration-ms 30000`
+4. Record (prints in Ashita chat via kpacket `echo`):
+   `kparser2.cli record capture.ndjson --duration-ms 120000 --prompt "Cast: Yell; Cure at full HP; Protect; Blaze Spikes"`
 5. Decode: `kparser2.cli decode capture.ndjson --json`
 6. Run kparser2 WPF with **Session → Use Live Feed**
+
+## Agentic parity scan
+
+Testers **only play**. A local Cursor Agent thread on the game PC records last-green CLI and ranks settled gaps. Not a cloud Automation (`:5555` is localhost). Not WPF. No in-game cast checklist.
+
+Docs: [docs/parity-inequalities.md](docs/parity-inequalities.md), [docs/metadata-gaps.md](docs/metadata-gaps.md).
+
+### Paste this (solo, same box)
+
+Horizon loaded, `/load kpacket`. New **Agent** chat (not Plan):
+
+```
+Parity scan while I play. Record last-green kparser2 CLI to ffxi-captures/ndjson (or attach if a recorder is already writing). Poll analytics snapshot --assert-settled after settle. Rank gaps; skip deferred/spiral/open-PR codes. Classify each ticket with parity-inequalities.md (kparser-only / kparser2-missing / kparser2-extra / deferred) before coding. Lookup XiPackets, VieweD, server/scripts/enum/msg.lua — never edit those pins or kparser. Bootstrap may port a whole message family; later leftover ids. Prove with --assert-settled-code (targeted code gone; leftovers OK) plus dotnet test --filter Category!=Integration after freeze, not on every packet. Commit green work on cursor/session-<yyyymmdd-hhmm> from develop; open a draft PR into develop — never into main. Do not ask me to cast. Stop recording if I say stop or the plugin goes away.
+```
+
+### Paste this (fork / crowd)
+
+Same play rules. You do **not** share `ffxi-captures`. Search GitHub kparser2 issues/PRs for the divergence `code` first. Fork, one family or leftover id, scoped prove, PR **into `develop`**. No push to `main`, no kdev pin bump. Redact live player names on public fixtures; never commit a full session dump.
+
+### Last-green ingest
+
+Live `record` / `watch` uses the last merged **`develop`** SHA, not a session WIP. Never overwrite a locked `kparser2.Cli.exe` mid-run. `main` is the current **release** only. GitHub may keep `main` as the default branch; scan and feature PRs still set base **`develop`**.
+
+### Ranked `--assert-settled`
+
+Priority: `start_as_harm-*` / `fourcc_as_spell-*` → `unknown_kind-*` → `unclassified_message-*` (prefer a ParseCodes / `msg.lua` **region** in bootstrap) → `nameless_self_unnamed` after local name is known. `unnamed_entities` is deferred. In-flight nameless self-chat before `localPlayerName` is not a halt. Cmd 8 without a finish is incomplete, not a miss.
+
+Prove: `--assert-settled-code <code>` (prefix match, e.g. `unclassified_message`). Do not require a clean camp. `--skip-code` for spiral skip-list.
+
+### Lookup before coding
+
+1. Frozen NDJSON slice (`scripts/reconcile-capture.ps1` if the file is still open).
+2. Root `XiPackets/world/server/0xNNNN/README.md` (C2S chat is `client/0x00B5`, not S2C Help Desk `0x00B5`).
+3. VieweD on a PacketViewer `.log` if needed; prefer XiPackets for the `0x28` bitstream.
+4. `server/scripts/enum/msg.lua` + `sql/spell_list.sql` as named ids only (Horizon live bytes still win).
+5. Optional kparser `parity.*` by name. Dual-dump of constructed fixtures ≠ Horizon.
+
+### Self-heal
+
+Failed prove: discard the working tree; **do not commit**. One retry only if the first attempt skipped an oracle. Same `code` fails twice: stop auto-heal, skip that code, keep recording. Do not weaken tests, edit kparser, retcon NDJSON, or classify everything Unknown. Search open PRs for the same `code` before implementing (dedup).
+
+### Git (scan agents)
+
+GitFlow trunks plus [Conventional Branch 1.1.0](https://conventionalbranch.org/) names (`<type>/<description>`, lowercase, hyphens). Trunks `main` and `develop` have no prefix. Do not use `parity/` as a prefix. Conventional **commits** stay (`feat:`, `fix:`, `chore:`).
+
+`main` = current release. Do not open scan PRs against `main`.
+
+| Layer | Branch | Who |
+|-------|--------|-----|
+| Scan session (Cursor) | `cursor/session-yyyymmdd-hhmm` | Agent; green commits only |
+| Human / crowd one-off | `feat/...`, `fix/...` | e.g. `fix/unclassified-message-236` (no underscores) |
+| Integration | `develop` | **PR target**; last-green ingest; kdev pin this cycle |
+| Release cut | `release/v0.1.0` | From `develop`; then PR into `main` ([docs/RELEASING.md](docs/RELEASING.md)) |
+| Hotfix | `hotfix/...` | From `main` if production is broken |
+| Production | `main` | Human release + tags only |
+
+One conventional commit per green **family** (bootstrap) or leftover `code` (converge). Draft PR into `develop` after the first green commit; freeze when Ready (tester stops, 5 commits, ~400 lines excluding fixtures, or a split-worthy change). Merge session PRs with rebase or a merge commit — **not squash**. Further gaps after freeze wait on the next session branch.
+
+Split off `develop`: kpacket2/wire, DTO/bitstream, spirals, WPF. Crowd: fork → PR to `develop` after dedup.
+
+kdev pin bump: after **`develop`** advances, one `chore/bump-kparser2` on the parent — not per Kind, not from `main` until a release. Scan agents never push `main` and never auto-merge.
 
 ## Do not use
 

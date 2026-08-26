@@ -88,7 +88,7 @@ Compare opcode counts with kpacket2's `packet_monitor.exe`. If ingest diverges, 
 2. Add query logic in `AnalyticsQueries.fs`
 3. Register a view in `kparser2/Views/AnalyticsViews.cs` if user-facing
 4. Add analytics tests with fixture NDJSON
-5. Validate with `analytics snapshot` and `report <queryId>`
+5. Validate with `analytics snapshot` (`--assert-combat`, `--assert-settled` / `--assert-settled-code`) and `report <queryId>`
 
 ### 5. Add a WPF view tab
 
@@ -117,14 +117,30 @@ dotnet run --project kparser2.Cli/kparser2.Cli.fsproj -- record my_slice.ndjson 
 # Trim manually or script, then copy to fixtures/sessions/
 ```
 
+## Branching
+
+GitFlow trunks plus [Conventional Branch 1.1.0](https://conventionalbranch.org/) names.
+
+- **`develop`** — integration line and **PR target**. Last-green ingest and the kdev pin during this cycle point here.
+- **`main`** — current **release** only (tags). GitHub may keep `main` as the default branch; still open PRs with base **`develop`**. Scan agents never PR `main`.
+- **Prefixed work:** `feat/`, `fix/`, `chore/`, `hotfix/`, `release/`, `cursor/` (Cursor agent session). Format `<type>/<description>`: lowercase, hyphens, no underscores or spaces. Release versions may use dots (`release/v0.1.0`).
+- **Do not** use `parity/` as a prefix (not in the spec). Cursor scan sessions: `cursor/session-yyyymmdd-hhmm` off `develop`.
+- Cut a release from `develop` as `release/vX.Y.Z`, then PR into `main`. Hotfix production from `main` as `hotfix/...`. See [docs/RELEASING.md](docs/RELEASING.md).
+
+Commits use [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `chore:`). See [AGENTS.md](AGENTS.md) (agentic parity scan).
+
 ## Pull request checklist
 
+Parity-scan / decoder work: open PRs against **`develop`**, not `main`.
+
 - [ ] `dotnet build kparser2.sln` succeeds
-- [ ] `dotnet test kparser2.sln` passes
+- [ ] `dotnet test kparser2.sln --filter Category!=Integration` passes
+- [ ] Targeted `--assert-settled-code` (if a live gap) — original code gone; leftover camp gaps are OK
 - [ ] New behavior has a fixture or unit test where practical
 - [ ] `decode` / `analytics snapshot` run clean on affected fixtures
 - [ ] Public CLI behavior documented if commands or flags changed
 - [ ] Upstream sources credited in code comments or [docs/CREDITS.md](docs/CREDITS.md) when referencing external layouts
+- [ ] Inequality bucket labeled ([docs/parity-inequalities.md](docs/parity-inequalities.md)); no kparser edits
 
 ## Coding conventions
 
