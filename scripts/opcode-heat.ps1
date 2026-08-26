@@ -29,10 +29,12 @@ $lootD2 = 0
 $login0a = 0
 $dig2f = 0
 $digC2s63 = 0
+$xp2d = 0
 $chatKinds = New-Object 'System.Collections.Generic.HashSet[int]'
 $logoutStates = New-Object 'System.Collections.Generic.HashSet[int]'
 $combatCmds = New-Object 'System.Collections.Generic.HashSet[int]'
 $msg29 = New-Object 'System.Collections.Generic.HashSet[int]'
+$msg2d = New-Object 'System.Collections.Generic.HashSet[int]'
 $packets = 0
 
 # LSB-first bits after world header + info-size byte (Battle0x28 BitstreamReader).
@@ -76,7 +78,7 @@ try {
             $dirn = $Matches[1]
             $op = $Matches[2].ToLower()
             $bytes = $null
-            if ("$dirn $op" -in @("s2c 0x0017", "s2c 0x000b", "s2c 0x0028", "s2c 0x0029") -and -not [string]::IsNullOrWhiteSpace($row.data_b64)) {
+            if ("$dirn $op" -in @("s2c 0x0017", "s2c 0x000b", "s2c 0x0028", "s2c 0x0029", "s2c 0x002d") -and -not [string]::IsNullOrWhiteSpace($row.data_b64)) {
                 try { $bytes = [Convert]::FromBase64String($row.data_b64) } catch { $bytes = $null }
             }
 
@@ -90,6 +92,12 @@ try {
                     $combat29++
                     if ($null -ne $bytes -and $bytes.Length -ge 26) {
                         [void]$msg29.Add([int][BitConverter]::ToUInt16($bytes, 24))
+                    }
+                }
+                "s2c 0x002d" {
+                    $xp2d++
+                    if ($null -ne $bytes -and $bytes.Length -ge 26) {
+                        [void]$msg2d.Add([int][BitConverter]::ToUInt16($bytes, 24))
                     }
                 }
                 "s2c 0x00d2" { $lootD2++ }
@@ -115,10 +123,11 @@ $kindList = @($chatKinds | Sort-Object)
 $stateList = @($logoutStates | Sort-Object)
 $cmdList = @($combatCmds | Sort-Object)
 $msg29List = @($msg29 | Sort-Object)
+$msg2dList = @($msg2d | Sort-Object)
 $lootBit = [int]($lootD2 -gt 0)
 $digBit = [int](($dig2f -gt 0) -or ($digC2s63 -gt 0))
 # Shape, not volume: extra melee of the same commandNo / extra yells of the same Kind stay cool.
-$canon = "cmds=$($cmdList -join ',');m29=$($msg29List -join ',');kinds=$($kindList -join ',');d2=$lootBit;a=$login0a;b=$($stateList -join ',');dig=$digBit"
+$canon = "cmds=$($cmdList -join ',');m29=$($msg29List -join ',');kinds=$($kindList -join ',');d2=$lootBit;a=$login0a;b=$($stateList -join ',');dig=$digBit;m2d=$($msg2dList -join ',')"
 
 $fp = [ordered]@{
     fingerprint     = $canon
@@ -126,6 +135,8 @@ $fp = [ordered]@{
     combat_cmds     = @($cmdList)
     combat_0x29     = $combat29
     combat_0x29_msg = @($msg29List)
+    xp_0x2d         = $xp2d
+    xp_0x2d_msg     = @($msg2dList)
     chat_kinds_0x17 = @($kindList)
     loot_0xd2       = $lootD2
     login_0x0a      = $login0a
@@ -150,8 +161,8 @@ if (-not [string]::IsNullOrWhiteSpace($Previous) -and (Test-Path -LiteralPath $P
 [System.IO.File]::WriteAllText($Output, $json, $utf8)
 
 Write-Host "packets=$packets fingerprint=$Output"
-Write-Host ("  0x28={0} cmds=[{1}] 0x29={2} msg=[{3}] 0x17_kinds=[{4}] 0xD2={5} 0x0A={6} 0x0B_states=[{7}] dig={8}" -f `
-    $combat28, ($cmdList -join ","), $combat29, ($msg29List -join ","), ($kindList -join ","), $lootD2, $login0a, ($stateList -join ","), $digBit)
+Write-Host ("  0x28={0} cmds=[{1}] 0x29={2} msg=[{3}] 0x2D={4} msg=[{5}] 0x17_kinds=[{6}] 0xD2={7} 0x0A={8} 0x0B_states=[{9}] dig={10}" -f `
+    $combat28, ($cmdList -join ","), $combat29, ($msg29List -join ","), $xp2d, ($msg2dList -join ","), ($kindList -join ","), $lootD2, $login0a, ($stateList -join ","), $digBit)
 
 if ($unchanged) {
     Write-Host "HEAT unchanged"

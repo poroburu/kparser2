@@ -43,15 +43,22 @@ module ExperienceParser =
                 | _ -> None
 
     let tryParseBattleMessage (messageNum: int) (param1: uint32) (param2: uint32) =
+        // 0x29 synthetic fixtures put XP in Data2 (param2). Live 0x002D puts XP in Data (param1), Data2=0.
+        let xpAmount =
+            if param2 <> 0u then
+                int param2
+            else
+                int param1
+
         match messageNum with
         | n when n = MsgBasicCatalog.ExperiencePointsGained ->
             Some
-                { Points = int param2
+                { Points = xpAmount
                   Chain = 0
                   ActorName = None }
         | n when n = MsgBasicCatalog.ExpChain ->
             Some
-                { Points = int param2
+                { Points = xpAmount
                   Chain = int param1
                   ActorName = None }
         | _ -> None

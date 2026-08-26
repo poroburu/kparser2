@@ -1,5 +1,6 @@
 namespace kparser2.Decoders.Tests
 
+open System
 open kparser2.Decoders
 open kparser2.Protocol
 open Xunit
@@ -234,6 +235,44 @@ module DecoderTests =
             Assert.Equal(100u, message.CasterId)
             Assert.Equal(200u, message.TargetId)
             Assert.Equal(0x0033us, message.MessageNum)
+
+    [<Fact>]
+    let ``Battle0x2D decodes live XP message`` () =
+        let data = Convert.FromBase64String("LQ6eI20VAABtFQAAHgQeBIUAAAAAAAAACAAAAA==")
+
+        match Battle0x2D.decode data with
+        | None -> failwith "Expected battle message2 decode"
+        | Some message ->
+            Assert.Equal(5485u, message.CasterId)
+            Assert.Equal(5485u, message.TargetId)
+            Assert.Equal(8us, message.MessageNum)
+            Assert.Equal(133u, message.Param1)
+            Assert.Equal(0u, message.Param2)
+
+    [<Fact>]
+    let ``DecoderRegistry routes 0x002D to CombatMessage`` () =
+        let evt =
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x002Dus
+              PacketName = "GP_SERV_COMMAND_BATTLE_MESSAGE2"
+              Size = 28u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = Fixtures.battleMessage2Packet 100u 100u 8us 150u 0u }
+
+        let result = DecoderRegistry.decode evt
+        Assert.Contains(
+            result.Events,
+            function
+            | DecoderEvent.CombatMessage m -> m.MessageNum = 8us && m.Param1 = 150u
+            | _ -> false
+        )
 
     [<Fact>]
     let ``Battle0x28 decodes action packet`` () =

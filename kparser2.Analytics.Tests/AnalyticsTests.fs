@@ -689,6 +689,38 @@ module AnalyticsTests =
         | None -> failwith "Expected XP parse"
 
     [<Fact>]
+    let ``experience parser reads 0x002D XP in param1`` () =
+        match ExperienceParser.tryParseBattleMessage 8 133u 0u with
+        | Some parsed -> Assert.Equal(133, parsed.Points)
+        | None -> failwith "Expected XP parse from 0x002D Data"
+
+    [<Fact>]
+    let ``0x002D experience message records XP`` () =
+        EntityRegistry.reset()
+        InteractionBuilder.reset()
+        let store = SessionStore.create()
+        let data = Fixtures.battleMessage2Packet 20149u 20149u 8us 133u 0u
+        let evt =
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x002Dus
+              PacketName = "GP_SERV_COMMAND_BATTLE_MESSAGE2"
+              Size = 28u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = data }
+
+        EntityRegistry.observe evt
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        let snap = SessionStore.snapshot store
+        Assert.Contains(snap.ExperienceRecords, fun r -> r.ExperiencePoints = 133)
+
+    [<Fact>]
     let ``combat_recovery includes aid interactions`` () =
         let snap = ReplayHelpers.ingestFixtureDto (FixturePaths.combatRecovery())
         Assert.True(snap.Interactions |> Seq.exists (fun i -> i.InteractionType = "Aid"))
