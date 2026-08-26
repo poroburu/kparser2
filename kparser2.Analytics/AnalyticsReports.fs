@@ -115,11 +115,11 @@ module ChatReport =
                     DateTimeOffset.FromUnixTimeMilliseconds(msg.TimestampMs + snap.SessionStartMs).LocalDateTime.ToString("T")
 
                 let prefix = $"[{time}] "
-                let text = if msg.IsLocalPlayer then msg.Message else msg.Message
+                let labeled = $"[{msg.Mode}] {msg.Speaker}: {msg.Message}"
 
                 report
                 |> ReportBuilder.appendStyled prefix false false ReportColors.purple
-                |> ReportBuilder.appendStyled (text + "\n") false false (modeColor msg.Mode))
+                |> ReportBuilder.appendStyled (labeled + "\n") false false (modeColor msg.Mode))
             ReportBuilder.empty
 
 module FightsReport =

@@ -25,6 +25,7 @@ module private FixturePaths =
     let chatXp () = find "chat_xp.ndjson"
     let combatKillXp () = find "combat_kill_xp.ndjson"
     let chatSelfSay () = find "chat_self_say.ndjson"
+    let chatYell () = find "chat_yell.ndjson"
     let sample () = find "sample.ndjson"
     let login () = find "login.ndjson"
     let itemDrop () = find "item_drop.ndjson"
@@ -123,6 +124,8 @@ module ReportFormatTests =
         let report = AnalyticsReportService.formatChat snap None None
         let text = report.Spans |> Seq.map (fun s -> s.Text) |> String.Concat
         Assert.Contains("[", text)
+        Assert.Contains("[Say]", text)
+        Assert.Contains("Poroburu", text)
         Assert.Contains("hello", text)
 
     [<Fact>]
@@ -666,6 +669,14 @@ module FixtureReplayParityTests =
         EntityRegistry.reset()
         let snap = ReplayHelpers.ingestFixture (FixturePaths.login())
         Assert.True(snap.ChatMessages |> List.exists (fun c -> c.Mode = "System"))
+
+    [<Fact>]
+    let ``chat_yell fixture decodes yell body`` () =
+        EntityRegistry.reset()
+        let snap = ReplayHelpers.ingestFixture (FixturePaths.chatYell())
+        Assert.Contains(
+            snap.ChatMessages,
+            fun c -> c.Mode = "Yell" && c.Speaker = "Alice" && c.Message = "Hello from yell")
 
     [<Fact>]
     let ``item_drop fixture records found and won loot`` () =

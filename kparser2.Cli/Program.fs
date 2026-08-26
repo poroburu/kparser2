@@ -318,13 +318,52 @@ let private runRecord (output: string) (durationMs: int) =
 
     printfn "Recorded %d packets to %s" count output
 
-let private runAnalyticsSnapshot (path: string) (asJson: bool) (assertCombat: bool) (minBattles: int option) (assertNames: bool) =
+let private jsonOptions = JsonSerializerOptions(WriteIndented = true)
+
+let private chatParityRows (snap: AnalyticsSnapshotDto) =
+    snap.ChatMessages
+    |> Seq.filter (fun m ->
+        String.IsNullOrWhiteSpace m.Direction
+        || m.Direction.Equals("incoming", StringComparison.OrdinalIgnoreCase))
+    |> Seq.map (fun m ->
+        let speaker =
+            if String.IsNullOrWhiteSpace m.Speaker then
+                "System"
+            else
+                m.Speaker
+
+        {| speaker = speaker
+           mode = m.Mode
+           message = m.Message |})
+    |> Seq.toList
+
+let private runAnalyticsSnapshot
+    (path: string)
+    (asJson: bool)
+    (parityChat: bool)
+    (output: string option)
+    (assertCombat: bool)
+    (minBattles: int option)
+    (assertNames: bool)
+    (assertChat: bool)
+    (minChat: int option)
+    =
     use session = PacketSessionFactory.fromReplayDefault path
     session.WaitForReplayComplete()
     let snap = (session :> IAnalyticsSession).GetSnapshot()
 
-    if asJson then
-        printJson snap
+    let jsonText =
+        if parityChat then
+            JsonSerializer.Serialize(chatParityRows snap, jsonOptions)
+        else
+            JsonSerializer.Serialize(snap, jsonOptions)
+
+    match output with
+    | Some outPath -> File.WriteAllText(outPath, jsonText)
+    | None -> ()
+
+    if parityChat || asJson then
+        printfn "%s" jsonText
     else
         let fSnap = AnalyticsDtoMapping.fromSnapshotDto snap
         let offense = AnalyticsQueries.offenseSummary fSnap MobFilter.defaultFilter
@@ -351,9 +390,16 @@ let private runAnalyticsSnapshot (path: string) (asJson: bool) (assertCombat: bo
             for row in offense do
                 printfn "  %s: %d (%d hits)" row.Label row.Total row.Count
 
-    if assertCombat || minBattles.IsSome || assertNames then
-        let fSnap = AnalyticsDtoMapping.fromSnapshotDto snap
+    let fSnap = AnalyticsDtoMapping.fromSnapshotDto snap
+    let mutable ok = true
 
+    if assertChat || minChat.IsSome then
+        let report = AnalyticsValidate.validateChat fSnap (defaultArg minChat 1)
+
+        if not (AnalyticsValidate.printReport report) then
+            ok <- false
+
+    if assertCombat || minBattles.IsSome || assertNames then
         let report =
             if assertNames then
                 AnalyticsValidate.validateNames fSnap
@@ -363,7 +409,10 @@ let private runAnalyticsSnapshot (path: string) (asJson: bool) (assertCombat: bo
                 AnalyticsValidate.validateCombat fSnap
 
         if not (AnalyticsValidate.printReport report) then
-            failwith "Combat validation failed"
+            ok <- false
+
+    if not ok then
+        failwith "Snapshot validation failed"
 
     snap
 
@@ -538,7 +587,7 @@ let main argv =
         printfn "  kparser2.cli report <queryId> <file.ndjson> [--live]"
         printfn "  kparser2.cli export-items [--sql <path>] [--output <path>]"
         printfn "  kparser2.cli export-actions [--sql <path>] [--output <path>]"
-        printfn "  kparser2.cli analytics snapshot <file.ndjson> [--json] [--assert-combat] [--assert-names] [--min-battles N]"
+        printfn "  kparser2.cli analytics snapshot <file.ndjson> [--json] [--parity-chat] [-o|--output out.json] [--assert-combat] [--assert-chat] [--assert-names] [--min-battles N] [--min-chat N]"
         printfn "  kparser2.cli export report <file.ndjson> -o <file.kparse2.json>"
         printfn "  kparser2.cli import report <file.kparse2.json> [--validate]"
         printfn "  kparser2.cli import packetviewer [--full path.log | --incoming in.log [--outgoing out.log]] -o capture.ndjson [--session-id name]"
@@ -656,9 +705,13 @@ let main argv =
             | "analytics" when argv.Length >= 3 && argv.[1].ToLowerInvariant() = "snapshot" ->
                 let path = argv.[2]
                 let mutable asJson = false
+                let mutable parityChat = false
+                let mutable output = None
                 let mutable assertCombat = false
                 let mutable assertNames = false
+                let mutable assertChat = false
                 let mutable minBattles = None
+                let mutable minChat = None
                 let mutable i = 3
 
                 while i < argv.Length do
@@ -666,8 +719,17 @@ let main argv =
                     | "--json" ->
                         asJson <- true
                         i <- i + 1
+                    | "--parity-chat" ->
+                        parityChat <- true
+                        i <- i + 1
+                    | arg when (arg = "-o" || arg = "--output") && i + 1 < argv.Length ->
+                        output <- Some argv.[i + 1]
+                        i <- i + 2
                     | "--assert-combat" ->
                         assertCombat <- true
+                        i <- i + 1
+                    | "--assert-chat" ->
+                        assertChat <- true
                         i <- i + 1
                     | "--assert-names" ->
                         assertNames <- true
@@ -676,9 +738,15 @@ let main argv =
                         minBattles <- Some(Int32.Parse argv.[i + 1])
                         assertCombat <- true
                         i <- i + 2
+                    | "--min-chat" when i + 1 < argv.Length ->
+                        minChat <- Some(Int32.Parse argv.[i + 1])
+                        assertChat <- true
+                        i <- i + 2
                     | _ -> i <- i + 1
 
-                runAnalyticsSnapshot path asJson assertCombat minBattles assertNames |> ignore
+                runAnalyticsSnapshot path asJson parityChat output assertCombat minBattles assertNames assertChat minChat
+                |> ignore
+
                 0
             | "export" when argv.Length >= 4 && argv.[1].ToLowerInvariant() = "report" ->
                 let path = argv.[2]

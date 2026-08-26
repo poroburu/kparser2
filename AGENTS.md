@@ -40,6 +40,7 @@ dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.
 
 # Analytics snapshot (waits for replay completion; no 500 ms race)
 dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- analytics snapshot capture.ndjson
+dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- analytics snapshot capture.ndjson --parity-chat -o chat.json --assert-chat
 
 # Regenerate synthetic fixtures with valid packet bytes
 powershell -File C:\Users\porob\git\kdev\kparser2\scripts\generate-fixtures.ps1
@@ -87,6 +88,7 @@ Packet payloads include the **4-byte world header**; decoder field offsets start
 | `fixtures/sessions/chat_xp.ndjson` | MsgBasic XP + EXP chain + system chat |
 | `fixtures/sessions/combat_kill_xp.ndjson` | kill + XP + chain attribution |
 | `fixtures/sessions/chat_self_say.ndjson` | outgoing say + tell bootstrap |
+| `fixtures/sessions/chat_yell.ndjson` | yell (0x17 kind 0x1A) |
 | `fixtures/sessions/combat_melee_hits.ndjson` | 0x28 melee hits (0x14/0x19/0x1C) |
 | `fixtures/sessions/combat_misses.ndjson` | melee misses (0x15/0x1D) |
 | `fixtures/sessions/combat_ranged.ndjson` | ranged hit + miss |
@@ -135,17 +137,19 @@ kparser can dump the same ChatLine fixtures the unit tests use, without the WinF
 
 ```powershell
 powershell -File C:\Users\porob\git\kdev\kparser\scripts\snapshot.ps1 snapshot `
-  C:\Users\porob\git\kdev\kparser\fixtures\chatlines\test_player_hit_mob.txt --json
+  C:\Users\porob\git\kdev\kparser\fixtures\chatlines\chat_yell.txt --parity-chat -o kparser-chat.json
 ```
 
-Compare `parity.interactions` (by `actorName` / `targetName`, not IDs) with kparser2:
+Compare `parity.chat` (speaker / mode / body) with kparser2 incoming chat:
 
 ```powershell
 dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- analytics snapshot `
-  C:\Users\porob\git\kdev\kparser2\fixtures\sessions\combat_melee_hits.ndjson --json
+  C:\Users\porob\git\kdev\kparser2\fixtures\sessions\chat_yell.ndjson --parity-chat -o k2-yell.json
+
+powershell -File C:\Users\porob\git\kdev\kparser2\scripts\compare-chat-parity.ps1 kparser-chat.json k2-yell.json
 ```
 
-Schema: [kparser/docs/snapshot-schema.md](../kparser/docs/snapshot-schema.md). kparser `actionType` is Melee/Ranged/Spell; kparser2 `HarmType` uses the same labels. kparser `success` uses `hit` / `miss` / `parry` / `shadow-absorb` / `no-effect`.
+Combat still diffs `parity.interactions` by **name** (not IDs). Schema: [kparser/docs/snapshot-schema.md](../kparser/docs/snapshot-schema.md). kparser `actionType` is Melee/Ranged/Spell; kparser2 `HarmType` uses the same labels. kparser `success` uses `hit` / `miss` / `parry` / `shadow-absorb` / `no-effect`. Chat `message` is body-only; kparser native `chat[]` keeps the full line.
 
 Reference captures (local, not committed): `C:\Users\porob\git\kdev\ffxi-captures\` — NDJSON recordings and retail unpacks for VieweD + CLI decode oracles. Promote small slices into `fixtures/sessions/` for golden tests.
 
