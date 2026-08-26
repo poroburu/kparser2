@@ -191,6 +191,9 @@ module MsgBasicCatalog =
     let AttackHits = 1
     let AttackMisses = 15
     let TargOutOfRange = 4
+    let UnableToSeeTarg = 5
+    let LoseSight = 36
+    let CannotSee = 217
     let TargetRecoversHPSimple = 24
     let MagicDmg = 2
     let MagicNoEffect = 75
@@ -240,6 +243,9 @@ module MsgBasicCatalog =
     let private isCheckEvasionDefense n =
         n >= CheckHighEvaDef && n <= CheckLowEvaDef
 
+    let private isTargetingBlocked n =
+        n = TargOutOfRange || n = UnableToSeeTarg || n = LoseSight || n = CannotSee
+
     /// 0x28 BattleResult.message uses xi.msg.basic, not kparser chatline ParseCodes.
     let tryClassifyAction messageId =
         match messageId with
@@ -249,7 +255,7 @@ module MsgBasicCatalog =
         | n when n = MagicNoEffect || n = MagicFail -> Some(InteractionType.Aid, None, Some AidType.Enhance)
         | n when n = MagicDmg -> Some(InteractionType.Harm, Some HarmType.Spell, None)
         | n when n = MagicEnfeebIs || n = MagicEnfeeb -> Some(InteractionType.Harm, Some HarmType.Enfeeble, None)
-        | n when n = TargOutOfRange -> Some(InteractionType.Unknown, None, None)
+        | n when isTargetingBlocked n -> Some(InteractionType.Unknown, None, None)
         | n when
             n = IsStatus
             || n = IsNoLongerStatus
@@ -270,7 +276,7 @@ module MsgBasicCatalog =
         | n when n = ExperiencePointsGained || n = ExpChain -> InteractionType.Unknown, None, None
         | n when n = AttackHits -> InteractionType.Harm, Some HarmType.Melee, None
         | n when n = AttackMisses -> InteractionType.Harm, Some HarmType.Melee, None
-        | n when n = TargOutOfRange -> InteractionType.Unknown, None, None
+        | n when isTargetingBlocked n -> InteractionType.Unknown, None, None
         | n when
             n = IsStatus
             || n = IsNoLongerStatus
@@ -297,6 +303,9 @@ module MsgBasicCatalog =
         | 1 -> "Attack Hits"
         | 15 -> "Attack Misses"
         | 4 -> "Out Of Range"
+        | 5 -> "Unable To See Target"
+        | 36 -> "Lose Sight"
+        | 217 -> "Cannot See"
         | 203 -> "Is Status"
         | 204 -> "No Longer Status"
         | 205 -> "Gains Effect"

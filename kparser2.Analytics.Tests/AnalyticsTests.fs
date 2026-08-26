@@ -626,10 +626,10 @@ module AnalyticsTests =
         Assert.Equal("Casting Interrupted", MsgBasicCatalog.messageLabel MsgBasicCatalog.IsInterrupted)
         Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.IsInterrupted)
         Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.NotEnoughMp)
-        Assert.Equal("Out Of Range", MsgBasicCatalog.messageLabel MsgBasicCatalog.TargOutOfRange)
+        Assert.Equal("Unable To See Target", MsgBasicCatalog.messageLabel MsgBasicCatalog.UnableToSeeTarg)
         Assert.Equal(
             InteractionType.Unknown,
-            (MsgBasicCatalog.classify MsgBasicCatalog.TargOutOfRange 4 |> fun (t, _, _) -> t)
+            (MsgBasicCatalog.classify MsgBasicCatalog.UnableToSeeTarg 4 |> fun (t, _, _) -> t)
         )
         Assert.Equal("Unable To Use Job Ability", MsgBasicCatalog.messageLabel MsgBasicCatalog.UnableToUseJa2)
         Assert.Equal("Time Left", MsgBasicCatalog.messageLabel MsgBasicCatalog.TimeLeft)
