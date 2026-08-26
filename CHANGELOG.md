@@ -2,6 +2,12 @@
 
 All notable changes to kparser2 are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Removed
+
+- Stub `data/mob_xp.json`, `MobXpLookup`, and `scripts/export-mob-xp.ps1`. Exclude 0 XP and experience-report base XP use session awards (kparser chain reverse).
+
 ## [0.1.0-rc.1] - 2026-06-17
 
 First pre-release of the packet-native FFXI parser and analytics tool for the kpacket2 stack.
@@ -14,12 +20,12 @@ First pre-release of the packet-native FFXI parser and analytics tool for the kp
 - **Entity registry** from 0x00A login, 0x00D/0x00E spawns, 0x00DF vitals, 0x0068/0x00DD updates; zone lookup from 0x00A / 0x00DF
 - **Analytics:** fight segmentation, offense/defense/recovery/deaths, buffs, skillchains, job-specific queries, XP parsing
 - **WPF UI:** packet monitor, chat, combat, item drops, and full analytics tab catalog (Windows / .NET 8)
-- **CLI:** `replay`, `decode`, `record`, `probe`, `watch`, `hello`, `stats`, `analytics snapshot`, `report`, `export report`, `import report`, `import packetviewer`, lookup exporters (`export-items`, `export-actions`, `export-zones`, `export-mob-xp`)
+- **CLI:** `replay`, `decode`, `record`, `probe`, `watch`, `hello`, `stats`, `analytics snapshot`, `report`, `export report`, `import report`, `import packetviewer`, lookup exporters (`export-items`, `export-actions`, `export-zones`)
 - **CLI validation flags:** `analytics snapshot --assert-combat`, `--assert-names`, `--min-battles N`
 - **Report interchange:** `.kparse2.json` schema v1 with `kparser2_version` stamped from assembly semver ([docs/report-schema.md](docs/report-schema.md))
 - **Golden fixtures:** 27 NDJSON sessions under `fixtures/sessions/` including `bcmn30_petrifying_pair`, `bst_camp_multi`, `bst_loot_name`, and synthetic combat parity suite
 - **kparser parity:** ParseCodes alignment tests (Tier 1–3), InteractionParity, FixtureReplayParity
-- **Data lookups:** `data/items.json`, `actions.json`, `zones.json`, `mob_xp.json` generated from LandSandBoat SQL
+- **Data lookups:** `data/items.json`, `actions.json`, `zones.json` generated from LandSandBoat SQL
 - **Version stamping:** `Directory.Build.props` semver (`0.1.0-rc.1`) in published binaries and report exports
 - **Documentation:** README, CONTRIBUTING, CREDITS, RELEASING, COMPATIBILITY, AGENTS guides
 - **CI:** GitHub Actions build + test workflow (`Category!=Integration`)

@@ -25,7 +25,6 @@
     <None Include="..\data\items.json" Link="data\items.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\data\actions.json" Link="data\actions.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\data\spells.json" Link="data\spells.json" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\data\mob_xp.json" Link="data\mob_xp.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- dotnet watch: F# hot reload is unsupported; watch .fs sources for rebuild-on-change -->

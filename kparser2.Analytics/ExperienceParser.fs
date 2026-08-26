@@ -1,8 +1,35 @@
 namespace kparser2.Analytics
 
+open System
 open System.Text.RegularExpressions
 
 module ExperienceParser =
+    /// Reverse kparser chain bonuses to the unchained award (ceil(xp / factor)).
+    let withoutChain experience chain =
+        if experience <= 0 then
+            0
+        elif chain <= 0 then
+            experience
+        else
+            let factor =
+                match chain with
+                | 1 -> 1.20
+                | 2 -> 1.25
+                | 3 -> 1.30
+                | 4 -> 1.40
+                | _ -> 1.50
+
+            int (Math.Ceiling(float experience / factor))
+
+    let minBaseXp (awards: (int * int) seq) =
+        awards
+        |> Seq.map (fun (xp, chain) -> withoutChain xp chain)
+        |> Seq.filter (fun xp -> xp > 0)
+        |> List.ofSeq
+        |> function
+            | [] -> 0
+            | xs -> List.min xs
+
     let private expPoints =
         Regex(@"^(?<name>.+?) gains (?<xp>\d+) experience points\.?$", RegexOptions.IgnoreCase)
 

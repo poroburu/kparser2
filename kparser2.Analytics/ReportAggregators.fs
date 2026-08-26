@@ -5,7 +5,7 @@ open kparser2.Decoders
 
 module ReportAggregators =
     let private matchesMob (filter: MobFilter) (battle: Battle) =
-        if filter.ExcludeZeroXp && not (MobXpLookup.hasXp battle.EnemyName) then
+        if filter.ExcludeZeroXp && battle.ExperiencePoints <= 0 then
             false
         else
             match filter.SelectedBattleId with
