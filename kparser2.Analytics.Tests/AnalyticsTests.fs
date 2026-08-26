@@ -37,6 +37,7 @@ module private FixturePaths =
     let combatTpDrain () = find "combat_tp_drain.ndjson"
     let combatEnfeeble () = find "combat_enfeeble.ndjson"
     let combatBuff () = find "combat_buff.ndjson"
+    let combatMagicLive () = find "combat_magic_live.ndjson"
     let petrifyingPair () = find "bcmn30_petrifying_pair.ndjson"
     let bstLootName () = find "bst_loot_name.ndjson"
     let bstCampMulti () = find "bst_camp_multi.ndjson"
@@ -745,3 +746,14 @@ module FixtureReplayParityTests =
         EntityRegistry.reset()
         let snap = ReplayHelpers.ingestFixture (FixturePaths.combatBuff())
         Assert.True(snap.Interactions |> List.exists (fun i -> i.InteractionType = InteractionType.Aid && i.AidType = Some AidType.Enhance))
+
+    [<Fact>]
+    let ``combat_magic_live classifies MsgBasic cure and buff`` () =
+        EntityRegistry.reset()
+        let snap = ReplayHelpers.ingestFixture (FixturePaths.combatMagicLive())
+        Assert.True(
+            snap.Interactions
+            |> List.exists (fun i -> i.MessageId = 7 && i.AidType = Some AidType.Recovery))
+        Assert.True(
+            snap.Interactions
+            |> List.exists (fun i -> i.MessageId = 230 && i.AidType = Some AidType.Enhance))

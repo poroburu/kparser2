@@ -1,6 +1,17 @@
 namespace kparser2.Analytics
 
 module BattleMessageCatalog =
+    /// 0x28 cmd_no start packets (XiPackets GP_SERV_COMMAND_BATTLE2). Not damage.
+    let isActionStartCommand commandNo =
+        match commandNo with
+        | 7 // skill start
+        | 8 // magic start
+        | 9 // item start
+        | 10 // ability start
+        | 12 -> // ranged start
+            true
+        | _ -> false
+
     let private harmFromCommand (commandNo: int) (miss: int) (value: int) =
         if miss <> 0 && value = 0 then
             InteractionType.Harm,
@@ -29,7 +40,9 @@ module BattleMessageCatalog =
             InteractionType.Unknown, None, None
 
     let classifyActionEffect (commandNo: int) (messageId: int) (miss: int) (value: int) =
-        if messageId = 0xBB && value > 0 then
+        if isActionStartCommand commandNo then
+            InteractionType.Unknown, None, None
+        elif messageId = 0xBB && value > 0 then
             InteractionType.Harm, Some HarmType.Other, None
         elif messageId > 0 then
             let resolvedId = ParseCodesTables.resolveAlternateMessageId messageId
@@ -65,7 +78,10 @@ module BattleMessageCatalog =
                         None
 
                 interactionType, harmType, aidType
-            | None -> harmFromCommand commandNo miss value
+            | None ->
+                match MsgBasicCatalog.tryClassifyAction messageId with
+                | Some classified -> classified
+                | None -> harmFromCommand commandNo miss value
         else
             harmFromCommand commandNo miss value
 
@@ -86,7 +102,7 @@ module BattleMessageCatalog =
         | n -> $"state-{n}"
 
     let successLabelForEffect (messageId: int) (miss: int) (value: int) =
-        if value = 0 && (messageId = 0x44 || messageId = 0x43 || messageId = 0x3B || messageId = 0x45) then
+        if value = 0 && (messageId = 0x44 || messageId = 0x43 || messageId = 0x3B || messageId = 0x45 || messageId = MsgBasicCatalog.MagicNoEffect || messageId = MsgBasicCatalog.MagicFail) then
             "no-effect"
         elif value = 0 && messageId = 0x69 then
             "anticipate"
@@ -96,15 +112,18 @@ module BattleMessageCatalog =
             successLabel miss
 
     let actionName commandNo commandArg messageId =
-        match ActionLookup.tryGetName commandArg with
-        | Some name -> name
-        | None ->
-            match ActionLookup.tryGetName commandNo with
+        if commandNo = 4 then
+            SpellLookup.tryGetName commandArg |> Option.defaultValue $"spell-{commandArg}"
+        else
+            match ActionLookup.tryGetName commandArg with
             | Some name -> name
             | None ->
-                match messageId with
-                | 0 -> $"cmd-{commandNo}"
-                | id -> $"msg-{id}"
+                match ActionLookup.tryGetName commandNo with
+                | Some name -> name
+                | None ->
+                    match messageId with
+                    | 0 -> $"cmd-{commandNo}"
+                    | id -> $"msg-{id}"
 
     let defensiveBuffNames =
         Set.ofList
@@ -133,7 +152,10 @@ module BattleMessageCatalog =
               "Migawari"
               "Fan Dance"
               "Third Eye"
-              "Seigan" ]
+              "Seigan"
+              "Blaze Spikes"
+              "Ice Spikes"
+              "Shock Spikes" ]
 
     let isDefensiveBuff (actionName: string) =
         defensiveBuffNames.Contains actionName

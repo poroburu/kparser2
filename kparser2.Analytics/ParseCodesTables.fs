@@ -191,6 +191,23 @@ module MsgBasicCatalog =
     let AttackHits = 1
     let AttackMisses = 15
     let TargetRecoversHPSimple = 24
+    let MagicDmg = 2
+    let MagicNoEffect = 75
+    let MagicFail = 114
+    let MagicGainEffect = 230
+    let MagicEnfeebIs = 236
+    let MagicEnfeeb = 237
+
+    /// 0x28 BattleResult.message uses xi.msg.basic, not kparser chatline ParseCodes.
+    let tryClassifyAction messageId =
+        match messageId with
+        | n when n = MagicRecoversHP || n = TargetRecoversHPSimple ->
+            Some(InteractionType.Aid, None, Some AidType.Recovery)
+        | n when n = MagicGainEffect -> Some(InteractionType.Aid, None, Some AidType.Enhance)
+        | n when n = MagicNoEffect || n = MagicFail -> Some(InteractionType.Aid, None, Some AidType.Enhance)
+        | n when n = MagicDmg -> Some(InteractionType.Harm, Some HarmType.Spell, None)
+        | n when n = MagicEnfeebIs || n = MagicEnfeeb -> Some(InteractionType.Harm, Some HarmType.Enfeeble, None)
+        | _ -> None
 
     let classify (messageNum: int) (messageType: int) =
         match messageNum with

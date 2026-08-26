@@ -62,29 +62,32 @@ module InteractionBuilder =
         |> List.collect (fun target ->
             target.Effects
             |> List.choose (fun effect ->
-                let interactionType, harmType, aidType =
-                    BattleMessageCatalog.classifyActionEffect action.CommandNo effect.MessageId effect.Miss effect.Value
-
-                if interactionType = InteractionType.Unknown && effect.Value = 0 && effect.Miss = 0 then
+                if BattleMessageCatalog.isActionStartCommand action.CommandNo then
                     None
                 else
-                    Some(
-                        buildInteraction
-                            timestampMs
-                            battleId
-                            action.ActorId
-                            target.TargetId
-                            interactionType
-                            harmType
-                            aidType
-                            (BattleMessageCatalog.actionName action.CommandNo (int action.CommandArg) effect.MessageId)
-                            effect.Value
-                            (BattleMessageCatalog.successLabelForEffect effect.MessageId effect.Miss effect.Value)
-                            action.CommandNo
-                            effect.MessageId
-                            effect.HasProc
-                            effect.ProcValue
-                    )))
+                    let interactionType, harmType, aidType =
+                        BattleMessageCatalog.classifyActionEffect action.CommandNo effect.MessageId effect.Miss effect.Value
+
+                    if interactionType = InteractionType.Unknown && effect.Value = 0 && effect.Miss = 0 then
+                        None
+                    else
+                        Some(
+                            buildInteraction
+                                timestampMs
+                                battleId
+                                action.ActorId
+                                target.TargetId
+                                interactionType
+                                harmType
+                                aidType
+                                (BattleMessageCatalog.actionName action.CommandNo (int action.CommandArg) effect.MessageId)
+                                effect.Value
+                                (BattleMessageCatalog.successLabelForEffect effect.MessageId effect.Miss effect.Value)
+                                action.CommandNo
+                                effect.MessageId
+                                effect.HasProc
+                                effect.ProcValue
+                        )))
 
     let fromCombatMessage (timestampMs: int64) (battleId: int option) (message: CombatMessageDecoded) =
         let interactionType, harmType, aidType =

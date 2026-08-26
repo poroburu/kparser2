@@ -3,6 +3,7 @@ namespace kparser2.Analytics.Tests
 open Xunit
 open kparser2.Analytics
 open kparser2.Decoders
+open kparser2.Decoders.Tests
 
 [<Collection("EntityRegistry")>]
 module InteractionParityTests =
@@ -140,3 +141,51 @@ module InteractionParityTests =
         Assert.Equal(InteractionType.Aid, i.InteractionType)
         Assert.Equal(Some AidType.Enhance, i.AidType)
         Assert.Equal(InteractionCategory.Enhance, i.Category)
+
+    [<Fact>]
+    let ``live MAGIC_RECOVERS_HP cmd 4 is recovery even at zero HP`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer playerId "Motenten"
+
+        match Battle0x28.decode (Fixtures.combatActionPacketEx playerId playerId 4 1u 0 7 0) with
+        | None -> failwith "Expected battle action decode"
+        | Some action ->
+            let rows = InteractionBuilder.fromCombatAction 1000L None action
+            let i = List.head rows
+            Assert.Equal(InteractionType.Aid, i.InteractionType)
+            Assert.Equal(Some AidType.Recovery, i.AidType)
+            Assert.Equal("Cure", i.ActionName)
+            Assert.Equal(0, i.Value)
+
+    [<Fact>]
+    let ``live MAGIC_GAIN_EFFECT cmd 4 names Protect and Blaze Spikes`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer playerId "Motenten"
+
+        let protect =
+            match Battle0x28.decode (Fixtures.combatActionPacketEx playerId playerId 4 43u 0 230 0) with
+            | None -> failwith "Expected Protect decode"
+            | Some action -> InteractionBuilder.fromCombatAction 1000L None action |> List.head
+
+        let spikes =
+            match Battle0x28.decode (Fixtures.combatActionPacketEx playerId playerId 4 249u 0 230 0) with
+            | None -> failwith "Expected Blaze Spikes decode"
+            | Some action -> InteractionBuilder.fromCombatAction 1000L None action |> List.head
+
+        Assert.Equal(InteractionType.Aid, protect.InteractionType)
+        Assert.Equal(Some AidType.Enhance, protect.AidType)
+        Assert.Equal("Protect", protect.ActionName)
+        Assert.True(BattleMessageCatalog.isDefensiveBuff protect.ActionName)
+        Assert.Equal("Blaze Spikes", spikes.ActionName)
+        Assert.True(BattleMessageCatalog.isDefensiveBuff spikes.ActionName)
+
+    [<Fact>]
+    let ``magic start cmd 8 does not emit an interaction`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer playerId "Motenten"
+
+        match Battle0x28.decode (Fixtures.combatActionPacket playerId playerId 8 549 327 0) with
+        | None -> failwith "Expected battle action decode"
+        | Some action ->
+            let rows = InteractionBuilder.fromCombatAction 1000L None action
+            Assert.True(List.isEmpty rows)

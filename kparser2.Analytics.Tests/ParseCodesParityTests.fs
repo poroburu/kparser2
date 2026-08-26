@@ -66,6 +66,10 @@ type ParseCodesParityTests() =
             yield ParseCodesParityTests.row "region_enfeeble" 4 0x39 0 0 InteractionType.Harm (Some HarmType.Enfeeble) None "hit"
             yield ParseCodesParityTests.row "region_buff" 4 0x38 0 0 InteractionType.Aid None (Some AidType.Enhance) "hit"
             yield ParseCodesParityTests.row "region_curing" 4 0x17 0 350 InteractionType.Aid None (Some AidType.Recovery) "hit"
+            // Live 0x28 BattleResult.message (xi.msg.basic), not kparser chatline ParseCodes.
+            yield ParseCodesParityTests.row "live_magic_recovers_hp" 4 7 0 0 InteractionType.Aid None (Some AidType.Recovery) "hit"
+            yield ParseCodesParityTests.row "live_magic_gain_effect" 4 230 0 0 InteractionType.Aid None (Some AidType.Enhance) "hit"
+            yield ParseCodesParityTests.row "live_magic_no_effect" 4 75 0 0 InteractionType.Aid None (Some AidType.Enhance) "no-effect"
             yield ParseCodesParityTests.row "region_ja" 13 0x68 0 80 InteractionType.Harm (Some HarmType.Ability) None "hit"
             yield ParseCodesParityTests.row "region_death_player" 0 0x26 0 0 InteractionType.Death None None "hit"
             yield ParseCodesParityTests.row "region_prepare_spell" 4 0x32 0 0 InteractionType.Unknown None None "hit"
@@ -106,3 +110,23 @@ type ParseCodesParityTests() =
     member _.``parity row count covers kparser active scenarios`` () =
         let rows = ParseCodesParityTests.ParityRows |> Seq.length
         Assert.True(rows >= 34, $"Expected at least 34 parity rows, got {rows}")
+
+    [<Fact>]
+    member _.``0x28 magic start cmd 8 is not weaponskill damage`` () =
+        // Live HorizonXI: cmd_no 8 + cmd_arg `cabl` (1818386787) + message 327 + value 549.
+        // XiPackets: Magic (Start). kparser chatlines never see this packet.
+        let interactionType, harmType, aidType =
+            BattleMessageCatalog.classifyActionEffect 8 327 0 549
+
+        Assert.True(BattleMessageCatalog.isActionStartCommand 8)
+        Assert.Equal(InteractionType.Unknown, interactionType)
+        Assert.Equal(None, harmType)
+        Assert.Equal(None, aidType)
+
+    [<Fact>]
+    member _.``0x28 white-magic start fourcc is not an action id`` () =
+        // Live: cmd_arg 1752654179 = `cawh` (XiPackets white-magic start).
+        let interactionType, _, _ =
+            BattleMessageCatalog.classifyActionEffect 8 327 0 43
+
+        Assert.Equal(InteractionType.Unknown, interactionType)
