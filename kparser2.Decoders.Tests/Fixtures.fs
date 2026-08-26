@@ -18,11 +18,17 @@ module Fixtures =
 
         bytes
 
-    let chatPacket (speaker: string) (message: string) (kind: byte) =
+    let chatPacketBytes (speaker: string) (messageBytes: byte[]) (kind: byte) (zoneId: uint16) =
         let header = [| 0x20uy; 0uy; 0x17uy; 0uy |]
         let nameBytes = padName speaker
-        let messageBytes = Encoding.UTF8.GetBytes(message)
-        Array.concat [ header; [| kind; 0uy; 0uy; 0uy |]; nameBytes; messageBytes; [| 0uy |] ]
+        let zone = BitConverter.GetBytes(zoneId)
+        Array.concat [ header; [| kind; 0uy; zone.[0]; zone.[1] |]; nameBytes; messageBytes; [| 0uy |] ]
+
+    let chatPacketWithZone (speaker: string) (message: string) (kind: byte) (zoneId: uint16) =
+        chatPacketBytes speaker (Encoding.UTF8.GetBytes(message)) kind zoneId
+
+    let chatPacket (speaker: string) (message: string) (kind: byte) =
+        chatPacketWithZone speaker message kind 0us
 
     let outgoingChatPacket (message: string) (kind: byte) =
         let header = [| 0x10uy; 0uy; 0xB5uy; 0uy |]
@@ -170,10 +176,11 @@ module Fixtures =
 
             byte value)
 
-    let combatActionPacket
+    let combatActionPacketEx
         (actorId: uint32)
         (targetId: uint32)
         (commandNo: int)
+        (commandArg: uint32)
         (damage: int)
         (messageId: int)
         (miss: int)
@@ -188,7 +195,7 @@ module Fixtures =
         addBits 1u 6
         addBits 0u 4
         addBits (uint32 commandNo) 4
-        addBits 0u 32
+        addBits commandArg 32
         addBits 0u 32
         addBits targetId 32
         addBits 1u 4
@@ -205,6 +212,16 @@ module Fixtures =
 
         let payloadBytes = bitsToBytes bits
         Array.concat [ [| 0x20uy; 0uy; 0x28uy; 0uy; byte payloadBytes.Length |]; payloadBytes ]
+
+    let combatActionPacket
+        (actorId: uint32)
+        (targetId: uint32)
+        (commandNo: int)
+        (damage: int)
+        (messageId: int)
+        (miss: int)
+        =
+        combatActionPacketEx actorId targetId commandNo 0u damage messageId miss
 
     /// Default melee hit fixture (actor=1, target=2, damage=42).
     let battle2Packet () =

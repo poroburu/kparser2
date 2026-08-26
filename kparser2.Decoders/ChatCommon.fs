@@ -1,5 +1,9 @@
 namespace kparser2.Decoders
 
+open System
+open System.Text
+open System.Text.RegularExpressions
+
 module ChatCommon =
     let modeNames =
         Map.ofList
@@ -29,8 +33,9 @@ module ChatCommon =
               0x1B, "Linkshell2"
               0x1C, "Linkshell2"
               0x1D, "Standard"
-              0x1E, "Unity"
-              0x1F, "Unity"
+              0x1E, "Linkshell3"
+              0x1F, "Linkshell3"
+              0x20, "Standard"
               0x21, "Unity"
               0x22, "Assist"
               0x23, "Assist" ]
@@ -49,8 +54,53 @@ module ChatCommon =
 
     let isSayCopyKind kind = sayCopyKinds.Contains kind
 
+    let isGmAttr attr = (attr &&& 0x01) <> 0
+
+    /// Expand FFXI Mes bytes: 0xFD auto-translate tokens and 0xEF 0x27/0x28 markers.
+    /// Live HorizonXI yells use 6-byte FD … FD resource wrappers (VieweD FFXIEncoding).
+    let decodeChatText (bytes: byte[]) =
+        if bytes = null || bytes.Length = 0 then
+            ""
+        else
+            let literal = ResizeArray<byte>()
+            let sb = StringBuilder()
+
+            let flush () =
+                if literal.Count > 0 then
+                    sb.Append(Encoding.UTF8.GetString(literal.ToArray())) |> ignore
+                    literal.Clear()
+
+            let mutable i = 0
+
+            while i < bytes.Length do
+                if bytes.[i] = 0xFDuy && i + 5 < bytes.Length && bytes.[i + 5] = 0xFDuy then
+                    flush ()
+
+                    let resourceId =
+                        (uint32 bytes.[i + 1] <<< 24)
+                        ||| (uint32 bytes.[i + 2] <<< 16)
+                        ||| (uint32 bytes.[i + 3] <<< 8)
+                        ||| uint32 bytes.[i + 4]
+
+                    sb.Append(sprintf "[%08X]" resourceId) |> ignore
+                    i <- i + 6
+                elif
+                    bytes.[i] = 0xEFuy
+                    && i + 1 < bytes.Length
+                    && bytes.[i + 1] >= 0x27uy
+                    && bytes.[i + 1] <= 0x28uy
+                then
+                    flush ()
+                    i <- i + 2
+                else
+                    literal.Add(bytes.[i])
+                    i <- i + 1
+
+            flush ()
+            sb.ToString().Trim()
+
     let tryParseTellTarget (message: string) =
-        let m = System.Text.RegularExpressions.Regex("^>>(?<name>[A-Za-z0-9_]{3,16})\\b").Match(message)
+        let m = Regex("^>>(?<name>[A-Za-z0-9_]{3,16})\\b").Match(message)
 
         if m.Success then
             Some m.Groups.["name"].Value

@@ -19,6 +19,42 @@ module DecoderTests =
             Assert.False chat.IsGm
 
     [<Fact>]
+    let ``Chat0x17 yell carries zone in Data and Kind 0x1A`` () =
+        let data = Fixtures.chatPacketWithZone "Wish" "SMN or WHM LFG Sagelord Elimination" 0x1Auy 50us
+
+        match Chat0x17.decode data with
+        | None -> failwith "Expected yell decode"
+        | Some chat ->
+            Assert.Equal("Yell", chat.Mode)
+            Assert.Equal(0x1A, chat.ModeId)
+            Assert.Equal("Wish", chat.Speaker)
+            Assert.Equal("SMN or WHM LFG Sagelord Elimination", chat.Message)
+            Assert.Equal(Some 50, chat.ZoneId)
+
+    [<Fact>]
+    let ``Chat0x17 replaces 0xFD auto-translate tokens`` () =
+        let token = [| 0xFDuy; 0x02uy; 0x02uy; 0x12uy; 0x06uy; 0xFDuy |]
+        let suffix = System.Text.Encoding.ASCII.GetBytes(" /t")
+        let data = Fixtures.chatPacketBytes "Alastar" (Array.append token suffix) 0x1Auy 50us
+
+        match Chat0x17.decode data with
+        | None -> failwith "Expected auto-translate decode"
+        | Some chat ->
+            Assert.Equal("Yell", chat.Mode)
+            Assert.Equal("Alastar", chat.Speaker)
+            Assert.Equal("[02021206] /t", chat.Message)
+
+    [<Fact>]
+    let ``ChatCommon maps LS3 and Standard kinds from XiPackets`` () =
+        Assert.Equal("Linkshell3", ChatCommon.modeLabel 0x1E)
+        Assert.Equal("Linkshell3", ChatCommon.modeLabel 0x1F)
+        Assert.Equal("Standard", ChatCommon.modeLabel 0x20)
+        Assert.Equal("Unity", ChatCommon.modeLabel 0x21)
+        Assert.True(ChatCommon.isNamelessSelfKind 0x1F)
+        Assert.False(ChatCommon.isGmAttr 0x08)
+        Assert.True(ChatCommon.isGmAttr 0x01)
+
+    [<Fact>]
     let ``Chat0xB5 decodes outgoing say`` () =
         let data = Fixtures.outgoingChatPacket "Hello from me" 0x00uy
 

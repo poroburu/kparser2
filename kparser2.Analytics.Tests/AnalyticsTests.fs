@@ -26,6 +26,7 @@ module private FixturePaths =
     let combatKillXp () = find "combat_kill_xp.ndjson"
     let chatSelfSay () = find "chat_self_say.ndjson"
     let chatYell () = find "chat_yell.ndjson"
+    let chatYellLive () = find "chat_yell_live.ndjson"
     let sample () = find "sample.ndjson"
     let login () = find "login.ndjson"
     let itemDrop () = find "item_drop.ndjson"
@@ -677,6 +678,23 @@ module FixtureReplayParityTests =
         Assert.Contains(
             snap.ChatMessages,
             fun c -> c.Mode = "Yell" && c.Speaker = "Alice" && c.Message = "Hello from yell")
+
+    [<Fact>]
+    let ``chat_yell_live fixture decodes HorizonXI yell layout`` () =
+        EntityRegistry.reset()
+        let snap = ReplayHelpers.ingestFixture (FixturePaths.chatYellLive())
+        Assert.Contains(
+            snap.ChatMessages,
+            fun c -> c.Mode = "Yell" && c.Speaker = "Wish" && c.Message = "SMN or WHM LFG Sagelord Elimination")
+        Assert.Contains(
+            snap.ChatMessages,
+            fun c -> c.Mode = "Yell" && c.Speaker = "Alastar" && c.Message = "golden salvage [02021206] /t")
+        Assert.Contains(
+            snap.ChatMessages,
+            fun c ->
+                c.Mode = "Yell"
+                && c.Speaker = "Sadatane"
+                && c.Message.Contains("BCNM(Windurst)"))
 
     [<Fact>]
     let ``item_drop fixture records found and won loot`` () =
