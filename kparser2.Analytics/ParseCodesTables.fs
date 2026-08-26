@@ -196,6 +196,7 @@ module MsgBasicCatalog =
     let CannotSee = 217
     let TargetRecoversHPSimple = 24
     let MagicDmg = 2
+    let MagicBurstDamage = 252
     let MagicNoEffect = 75
     let MagicFail = 114
     let MagicGainEffect = 230
@@ -253,7 +254,7 @@ module MsgBasicCatalog =
             Some(InteractionType.Aid, None, Some AidType.Recovery)
         | n when n = MagicGainEffect -> Some(InteractionType.Aid, None, Some AidType.Enhance)
         | n when n = MagicNoEffect || n = MagicFail -> Some(InteractionType.Aid, None, Some AidType.Enhance)
-        | n when n = MagicDmg -> Some(InteractionType.Harm, Some HarmType.Spell, None)
+        | n when n = MagicDmg || n = MagicBurstDamage -> Some(InteractionType.Harm, Some HarmType.Spell, None)
         | n when n = MagicEnfeebIs || n = MagicEnfeeb -> Some(InteractionType.Harm, Some HarmType.Enfeeble, None)
         | n when isTargetingBlocked n -> Some(InteractionType.Unknown, None, None)
         | n when
@@ -275,6 +276,7 @@ module MsgBasicCatalog =
             InteractionType.Aid, None, Some AidType.Recovery
         | n when n = ExperiencePointsGained || n = ExpChain -> InteractionType.Unknown, None, None
         | n when n = AttackHits -> InteractionType.Harm, Some HarmType.Melee, None
+        | n when n = MagicDmg || n = MagicBurstDamage -> InteractionType.Harm, Some HarmType.Spell, None
         | n when n = AttackMisses -> InteractionType.Harm, Some HarmType.Melee, None
         | n when isTargetingBlocked n -> InteractionType.Unknown, None, None
         | n when
@@ -301,6 +303,7 @@ module MsgBasicCatalog =
         | 20 -> "Falls to Ground"
         | 7 -> "Magic Recovers HP"
         | 1 -> "Attack Hits"
+        | 252 -> "Magic Burst"
         | 15 -> "Attack Misses"
         | 4 -> "Out Of Range"
         | 5 -> "Unable To See Target"
