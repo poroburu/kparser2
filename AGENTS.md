@@ -44,6 +44,9 @@ dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.
 dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- analytics snapshot capture.ndjson --assert-settled
 dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- analytics snapshot capture.ndjson --assert-settled-code unclassified_message-236
 
+# Checkpoint cool-off — exit 0 (HEAT unchanged) means skip snapshot
+powershell -File C:\Users\porob\git\kdev\kparser2\scripts\opcode-heat.ps1 -Path capture.ndjson
+
 # Regenerate synthetic fixtures with valid packet bytes
 powershell -File C:\Users\porob\git\kdev\kparser2\scripts\generate-fixtures.ps1
 
@@ -249,13 +252,35 @@ The long-running job is **`kparser2.cli record`** (last-green exe). Cursor auto-
 Do:
 
 - `record … --checkpoint-ms 120000` and `notify_on_output` on `record checkpoint:` / `recording stopped:`
-- Reconcile + `--assert-settled` when a checkpoint line appears
+- On checkpoint, run `scripts/opcode-heat.ps1` on the live NDJSON (FileShare read). **`HEAT unchanged` (exit 0): skip reconcile and `--assert-settled`.** Fingerprint is **shape**, not volume: extra `0x0015` / entity spam, extra known yells of the same Kind, extra `0x28` of an already-seen `commandNo`, and extra `0x00D2` rows do not count.
+- Reconcile + `--assert-settled` only when heat **changed**, on first checkpoint, or on `recording stopped:`
 - Optional `watch --analytics` only if you need live plugin health and it is not a synthetic prompt injector
 
 Do not:
 
 - `Start-Sleep`; `echo AGENT_LOOP_WAKE_… {"prompt":"…"}`
 - A second timer whose only job is to inject a follow-up prompt
+- Re-rank a town idle slice because packet count grew
+- Infer chocobo digging from town zone names (Rabao is not a dig zone)
+
+### Heat vs cool
+
+Ranked `--assert-settled` only moves when these families appear or their **shape** changes (new `0x17` Kind, new `0x000B` LogoutState). Volume of the same family does not.
+
+| Heat (re-rank) | Opcodes | Notes |
+|----------------|---------|--------|
+| Combat finish | S2C `0x0028`, `0x0029` | `start_as_harm`, `unclassified_message`, `unknown_kind` |
+| New chat Kind | S2C `0x0017` Kind byte @4 | Known Yell/`Standard` spam is cool |
+| Zone-in / real logout | S2C `0x000A`; `0x000B` state 1/8/9 | State **2** is zone handoff — keep recording |
+| Loot rows | S2C `0x00D2` / `0x00D3` | Decoded; unnamed pool is deferred |
+| Chocobo dig | S2C `0x002F`, C2S `0x0063` | Only in `server/scripts/globals/hobbies/chocobo_digging/logic.lua` `diggingZoneList` (not towns) |
+
+| Cool (do not wake a snapshot) | Opcodes |
+|-------------------------------|---------|
+| Position | C2S `0x0015` |
+| Nearby entities | S2C `0x000D`, `0x000E`, `0x00DF` |
+| Zone-in inventory / quests / equip | S2C `0x0020`, `0x001D`, `0x0050`, `0x0051`, `0x0056` |
+| Delivery box / mailbox | S2C `0x004B`, C2S `0x004D` (not in DecoderRegistry; not a settled rank) |
 
 ### Last-green ingest
 
