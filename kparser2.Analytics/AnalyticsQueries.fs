@@ -21,7 +21,7 @@ type QueryRow = { Label: string; Value: string; Count: int; Total: int }
 
 module AnalyticsQueries =
     let private matchesMob (filter: MobFilter) (battle: Battle) =
-        if filter.ExcludeZeroXp && not (MobXpLookup.hasXp battle.EnemyName) then
+        if filter.ExcludeZeroXp && battle.ExperiencePoints <= 0 then
             false
         else
             match filter.SelectedBattleId with
@@ -293,6 +293,9 @@ module AnalyticsQueries =
 
     let mobs (snap: AnalyticsSnapshot) =
         snap.Battles
-        |> List.map (fun b -> b.EnemyName)
-        |> List.distinct
-        |> List.map (fun name -> { Label = name; Value = "mob"; Count = 1; Total = MobXpLookup.tryGetXp name |> Option.defaultValue 0 })
+        |> List.groupBy (fun b -> b.EnemyName)
+        |> List.map (fun (name, rows) ->
+            { Label = name
+              Value = "mob"
+              Count = 1
+              Total = ExperienceParser.minBaseXp (rows |> List.map (fun b -> b.ExperiencePoints, b.ExperienceChain)) })

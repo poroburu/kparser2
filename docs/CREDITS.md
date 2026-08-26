@@ -40,7 +40,6 @@ Generated JSON under `data/` comes from **LandSandBoat** SQL (GPL-3.0):
 | `data/items.json` | `item_basic.sql` |
 | `data/actions.json` | `skills.sql` / action tables (see `scripts/export-actions.ps1`) |
 | `data/zones.json` | `zone_settings.sql` |
-| `data/mob_xp.json` | mob XP tables (see `scripts/export-mob-xp.ps1`) |
 
 | | |
 |---|---|

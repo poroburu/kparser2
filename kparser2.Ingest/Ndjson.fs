@@ -40,6 +40,12 @@ module Ndjson =
         with _ ->
             None
 
+    let tryPlayerName (path: string) =
+        match tryReadSessionHeader path with
+        | Some header when not (String.IsNullOrWhiteSpace header.player_name) ->
+            Some header.player_name
+        | _ -> None
+
     let writeSessionHeader (writer: TextWriter) (playerName: string option) (recordStartMs: int64) =
         let header =
             { ``type`` = sessionHeaderType
@@ -82,4 +88,4 @@ module Ndjson =
                     else
                         Some(decode line)
                 with _ ->
-                    Some(decode line))
+                    None)

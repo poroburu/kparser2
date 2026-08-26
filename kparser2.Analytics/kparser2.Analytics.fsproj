@@ -8,7 +8,7 @@
   <ItemGroup>
     <Compile Include="Models.fs" />
     <Compile Include="ActionLookup.fs" />
-    <Compile Include="MobXpLookup.fs" />
+    <Compile Include="SpellLookup.fs" />
     <Compile Include="ParseCodesTables.fs" />
     <Compile Include="ExperienceParser.fs" />
     <Compile Include="BattleMessageCatalog.fs" />
@@ -17,6 +17,7 @@
     <Compile Include="FightSegmenter.fs" />
     <Compile Include="CombatEntityInference.fs" />
     <Compile Include="ChatIngest.fs" />
+    <Compile Include="SettledDivergence.fs" />
     <Compile Include="AnalyticsQueries.fs" />
     <Compile Include="AnalyticsReport.fs" />
     <Compile Include="ReportTemplates.fs" />
@@ -35,7 +36,7 @@
 
   <ItemGroup>
     <None Include="..\data\actions.json" Link="data\actions.json" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\data\mob_xp.json" Link="data\mob_xp.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\data\spells.json" Link="data\spells.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

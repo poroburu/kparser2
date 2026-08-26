@@ -184,22 +184,162 @@ module ParseCodesTables =
 /// LandSandBoat MsgBasic values for 0x29 GP_SERV_COMMAND_BATTLE_MESSAGE.
 module MsgBasicCatalog =
     let ExperiencePointsGained = 8
+    // Windower BtlMess 9; live Horizon 0x002D Data = new level. Not limit points (371).
+    let AttainsLevel = 9
     let MagicRecoversHP = 7
     let DefeatsTarget = 6
     let FallsToGround = 20
     let ExpChain = 253
     let AttackHits = 1
     let AttackMisses = 15
+    let TargOutOfRange = 4
+    let UnableToSeeTarg = 5
+    let LoseSight = 36
+    let CannotSee = 217
     let TargetRecoversHPSimple = 24
+    let MagicDmg = 2
+    let MagicBurstDamage = 252
+    // xi.msg.basic drain cluster; live Horizon 0x28 cmd 4 used MAGIC_DRAIN_MP (228).
+    let SkillRecoversMp = 224
+    let SkillDrainMp = 225
+    let SkillDrainTp = 226
+    let MagicDrainHp = 227
+    let MagicDrainMp = 228
+    let MagicNoEffect = 75
+    let MagicFail = 114
+    let MagicGainEffect = 230
+    let DisappearNum = 231
+    let MagicEnfeebIs = 236
+    let MagicEnfeeb = 237
+    // Live Horizon 0x28 cmd 4: status-remove finish (xi.msg.basic MAGIC_REMOVE_EFFECT / MAGIC_ERASE).
+    let MagicRemoveEffect = 83
+    let JaRemoveEffect = 123
+    let SkillErase = 159
+    let JaRemoveEffect2 = 321
+    let MagicErase = 341
+    let MagicRemoveEffect2 = 571
+    // xi.msg.basic status region (LandSandBoat scripts/enum/msg.lua); live Horizon 0x29 used 206.
+    let IsStatus = 203
+    let IsNoLongerStatus = 204
+    let GainsEffectOfStatus = 205
+    let StatusWearsOff = 206
+    // Cast interrupted / cannot-cast cluster; live Horizon 0x29 used 16 next to magic cmd 8/4.
+    let IsInterrupted = 16
+    let MagicUnableToCast = 17
+    let MagicUnableToCast2 = 18
+    let NotEnoughMp = 34
+    let NoNinjaTools = 35
+    let MagicCannotCast = 47
+    let MagicCannotBeCast = 48
+    let UnableToCastSpells = 49
+    // Job-ability / pet-call blocked; live camp used 88 and 337 next to Call Beast.
+    let UnableToUseJa = 87
+    let UnableToUseJa2 = 88
+    let TimeLeft = 202
+    let NoJugPetItem = 337
+    let MustHaveFood = 347
+    // /check evasion-defense lines; Windower BtlMess 170-178, LSB enum has a hole here. Live camp used 176-178.
+    let CheckHighEvaDef = 170
+    let CheckLowEvaDef = 178
+
+    let private isCastInterruptedOrBlocked n =
+        n = IsInterrupted
+        || n = MagicUnableToCast
+        || n = MagicUnableToCast2
+        || n = NotEnoughMp
+        || n = NoNinjaTools
+        || n = MagicCannotCast
+        || n = MagicCannotBeCast
+        || n = UnableToCastSpells
+
+    let private isActionBlocked n =
+        isCastInterruptedOrBlocked n
+        || n = UnableToUseJa
+        || n = UnableToUseJa2
+        || n = NoJugPetItem
+        || n = MustHaveFood
+
+    let private isCheckEvasionDefense n =
+        n >= CheckHighEvaDef && n <= CheckLowEvaDef
+
+    let TooFarAway = 78
+    let TooFarAway2 = 328
+    let CannotAttackTarget = 446
+
+    let private isTargetingBlocked n =
+        n = TargOutOfRange
+        || n = UnableToSeeTarg
+        || n = LoseSight
+        || n = CannotSee
+        || n = TooFarAway
+        || n = TooFarAway2
+        || n = CannotAttackTarget
+
+    let private isMagicDrain n =
+        n = MagicDrainHp || n = MagicDrainMp
+
+    let private isSkillDrain n =
+        n = SkillDrainMp || n = SkillDrainTp
+
+    let private isStatusErase n =
+        n = MagicRemoveEffect
+        || n = JaRemoveEffect
+        || n = SkillErase
+        || n = JaRemoveEffect2
+        || n = MagicErase
+        || n = MagicRemoveEffect2
+        || n = DisappearNum
+
+    /// 0x28 BattleResult.message uses xi.msg.basic, not kparser chatline ParseCodes.
+    let tryClassifyAction messageId =
+        match messageId with
+        | n when n = MagicRecoversHP || n = TargetRecoversHPSimple || n = SkillRecoversMp ->
+            Some(InteractionType.Aid, None, Some AidType.Recovery)
+        | n when n = MagicGainEffect || isStatusErase n ->
+            Some(InteractionType.Aid, None, Some AidType.Enhance)
+        | n when n = MagicNoEffect || n = MagicFail -> Some(InteractionType.Aid, None, Some AidType.Enhance)
+        | n when n = MagicDmg || n = MagicBurstDamage || isMagicDrain n ->
+            Some(InteractionType.Harm, Some HarmType.Spell, None)
+        | n when isSkillDrain n -> Some(InteractionType.Harm, Some HarmType.Ability, None)
+        | n when n = MagicEnfeebIs || n = MagicEnfeeb -> Some(InteractionType.Harm, Some HarmType.Enfeeble, None)
+        | n when isTargetingBlocked n -> Some(InteractionType.Unknown, None, None)
+        | n when
+            n = IsStatus
+            || n = IsNoLongerStatus
+            || n = GainsEffectOfStatus
+            || n = StatusWearsOff
+            ->
+            Some(InteractionType.Aid, None, Some AidType.Enhance)
+        | n when n = TimeLeft -> Some(InteractionType.Unknown, None, None)
+        | n when isActionBlocked n -> Some(InteractionType.Unknown, None, None)
+        | n when isCheckEvasionDefense n -> Some(InteractionType.Unknown, None, None)
+        | _ -> None
 
     let classify (messageNum: int) (messageType: int) =
         match messageNum with
         | n when n = DefeatsTarget || n = FallsToGround -> InteractionType.Death, None, None
-        | n when n = MagicRecoversHP || n = TargetRecoversHPSimple ->
+        | n when n = MagicRecoversHP || n = TargetRecoversHPSimple || n = SkillRecoversMp ->
             InteractionType.Aid, None, Some AidType.Recovery
-        | n when n = ExperiencePointsGained || n = ExpChain -> InteractionType.Unknown, None, None
+        | n when n = ExperiencePointsGained || n = ExpChain || n = AttainsLevel ->
+            InteractionType.Unknown, None, None
         | n when n = AttackHits -> InteractionType.Harm, Some HarmType.Melee, None
+        | n when n = MagicDmg || n = MagicBurstDamage || isMagicDrain n ->
+            InteractionType.Harm, Some HarmType.Spell, None
+        | n when isSkillDrain n -> InteractionType.Harm, Some HarmType.Ability, None
+        | n when n = MagicGainEffect || isStatusErase n ->
+            InteractionType.Aid, None, Some AidType.Enhance
         | n when n = AttackMisses -> InteractionType.Harm, Some HarmType.Melee, None
+        | n when isTargetingBlocked n -> InteractionType.Unknown, None, None
+        | n when
+            n = IsStatus
+            || n = IsNoLongerStatus
+            || n = GainsEffectOfStatus
+            || n = StatusWearsOff
+            ->
+            InteractionType.Aid, None, Some AidType.Enhance
+        | n when n = TimeLeft -> InteractionType.Unknown, None, None
+        | n when isActionBlocked n -> InteractionType.Unknown, None, None
+        | n when isCheckEvasionDefense n -> InteractionType.Unknown, None, None
         | _ when messageType >= 4 -> InteractionType.Aid, None, Some AidType.Enhance
         | _ -> InteractionType.Unknown, None, None
 
@@ -209,10 +349,57 @@ module MsgBasicCatalog =
     let messageLabel messageNum =
         match messageNum with
         | 8 -> "Experience Points"
+        | 9 -> "Attains Level"
         | 253 -> "EXP Chain"
         | 6 -> "Defeats Target"
         | 20 -> "Falls to Ground"
         | 7 -> "Magic Recovers HP"
         | 1 -> "Attack Hits"
+        | 252 -> "Magic Burst"
+        | 83 -> "Magic Remove Effect"
+        | 123 -> "Ability Remove Effect"
+        | 159 -> "Skill Erase"
+        | 231 -> "Effects Disappear"
+        | 321 -> "Ability Remove Effect"
+        | 341 -> "Magic Erase"
+        | 571 -> "Magic Remove Effect"
+        | 78 -> "Too Far Away"
+        | 328 -> "Too Far Away"
+        | 446 -> "Cannot Attack Target"
+        | 224 -> "Skill Recovers MP"
+        | 225 -> "Skill Drain MP"
+        | 226 -> "Skill Drain TP"
+        | 227 -> "Magic Drain HP"
+        | 228 -> "Magic Drain MP"
         | 15 -> "Attack Misses"
+        | 4 -> "Out Of Range"
+        | 5 -> "Unable To See Target"
+        | 36 -> "Lose Sight"
+        | 217 -> "Cannot See"
+        | 203 -> "Is Status"
+        | 204 -> "No Longer Status"
+        | 205 -> "Gains Effect"
+        | 206 -> "Status Wears Off"
+        | 16 -> "Casting Interrupted"
+        | 17
+        | 18 -> "Unable To Cast"
+        | 34 -> "Not Enough MP"
+        | 35 -> "No Ninja Tools"
+        | 47
+        | 48 -> "Cannot Cast"
+        | 49 -> "Unable To Cast Spells"
+        | 87
+        | 88 -> "Unable To Use Job Ability"
+        | 202 -> "Time Left"
+        | 337 -> "No Jug Pet Item"
+        | 347 -> "Must Have Pet Food"
+        | 170 -> "Check High Evasion And Defense"
+        | 171 -> "Check High Evasion"
+        | 172 -> "Check High Evasion Low Defense"
+        | 173 -> "Check High Defense"
+        | 174 -> "Check"
+        | 175 -> "Check Low Defense"
+        | 176 -> "Check Low Evasion High Defense"
+        | 177 -> "Check Low Evasion"
+        | 178 -> "Check Low Evasion And Defense"
         | n -> $"MsgBasic-{n}"

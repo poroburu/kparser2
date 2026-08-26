@@ -1,5 +1,6 @@
 namespace kparser2.Decoders.Tests
 
+open System
 open kparser2.Decoders
 open kparser2.Protocol
 open Xunit
@@ -17,6 +18,42 @@ module DecoderTests =
             Assert.Equal("Alice", chat.Speaker)
             Assert.Equal("Hello world", chat.Message)
             Assert.False chat.IsGm
+
+    [<Fact>]
+    let ``Chat0x17 yell carries zone in Data and Kind 0x1A`` () =
+        let data = Fixtures.chatPacketWithZone "Wish" "SMN or WHM LFG Sagelord Elimination" 0x1Auy 50us
+
+        match Chat0x17.decode data with
+        | None -> failwith "Expected yell decode"
+        | Some chat ->
+            Assert.Equal("Yell", chat.Mode)
+            Assert.Equal(0x1A, chat.ModeId)
+            Assert.Equal("Wish", chat.Speaker)
+            Assert.Equal("SMN or WHM LFG Sagelord Elimination", chat.Message)
+            Assert.Equal(Some 50, chat.ZoneId)
+
+    [<Fact>]
+    let ``Chat0x17 replaces 0xFD auto-translate tokens`` () =
+        let token = [| 0xFDuy; 0x02uy; 0x02uy; 0x12uy; 0x06uy; 0xFDuy |]
+        let suffix = System.Text.Encoding.ASCII.GetBytes(" /t")
+        let data = Fixtures.chatPacketBytes "Alastar" (Array.append token suffix) 0x1Auy 50us
+
+        match Chat0x17.decode data with
+        | None -> failwith "Expected auto-translate decode"
+        | Some chat ->
+            Assert.Equal("Yell", chat.Mode)
+            Assert.Equal("Alastar", chat.Speaker)
+            Assert.Equal("[02021206] /t", chat.Message)
+
+    [<Fact>]
+    let ``ChatCommon maps LS3 and Standard kinds from XiPackets`` () =
+        Assert.Equal("Linkshell3", ChatCommon.modeLabel 0x1E)
+        Assert.Equal("Linkshell3", ChatCommon.modeLabel 0x1F)
+        Assert.Equal("Standard", ChatCommon.modeLabel 0x20)
+        Assert.Equal("Unity", ChatCommon.modeLabel 0x21)
+        Assert.True(ChatCommon.isNamelessSelfKind 0x1F)
+        Assert.False(ChatCommon.isGmAttr 0x08)
+        Assert.True(ChatCommon.isGmAttr 0x01)
 
     [<Fact>]
     let ``Chat0xB5 decodes outgoing say`` () =
@@ -198,6 +235,44 @@ module DecoderTests =
             Assert.Equal(100u, message.CasterId)
             Assert.Equal(200u, message.TargetId)
             Assert.Equal(0x0033us, message.MessageNum)
+
+    [<Fact>]
+    let ``Battle0x2D decodes live XP message`` () =
+        let data = Convert.FromBase64String("LQ6eI20VAABtFQAAHgQeBIUAAAAAAAAACAAAAA==")
+
+        match Battle0x2D.decode data with
+        | None -> failwith "Expected battle message2 decode"
+        | Some message ->
+            Assert.Equal(5485u, message.CasterId)
+            Assert.Equal(5485u, message.TargetId)
+            Assert.Equal(8us, message.MessageNum)
+            Assert.Equal(133u, message.Param1)
+            Assert.Equal(0u, message.Param2)
+
+    [<Fact>]
+    let ``DecoderRegistry routes 0x002D to CombatMessage`` () =
+        let evt =
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x002Dus
+              PacketName = "GP_SERV_COMMAND_BATTLE_MESSAGE2"
+              Size = 28u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = Fixtures.battleMessage2Packet 100u 100u 8us 150u 0u }
+
+        let result = DecoderRegistry.decode evt
+        Assert.Contains(
+            result.Events,
+            function
+            | DecoderEvent.CombatMessage m -> m.MessageNum = 8us && m.Param1 = 150u
+            | _ -> false
+        )
 
     [<Fact>]
     let ``Battle0x28 decodes action packet`` () =
@@ -412,6 +487,51 @@ module DecoderTests =
               Data = Fixtures.groupAttrPacket 0x950F5u 140us }
 
         Assert.Equal(Some "Poroburu", EntityRegistry.localPlayerName())
+
+    [<Fact>]
+    let ``incoming 0x0037 server status UniqueNo is the local player`` () =
+        EntityRegistry.reset()
+        EntityRegistry.registerLocalPlayerName "Porobururu"
+
+        EntityRegistry.observe
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x0037us
+              PacketName = "GP_SERV_COMMAND_SERVERSTATUS"
+              Size = 96u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = Fixtures.serverStatusPacket 20149u }
+
+        Assert.Equal(Some 20149u, EntityRegistry.tryLocalPlayerId())
+        Assert.Equal(Some "Porobururu", EntityRegistry.localPlayerName())
+        Assert.Equal("Porobururu", EntityRegistry.formatEntity 20149u)
+
+    [<Fact>]
+    let ``outgoing 0x0037 item-use is not treated as local player status`` () =
+        EntityRegistry.reset()
+
+        EntityRegistry.observe
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Outgoing
+              PacketType = "world_c2s"
+              PacketId = 0x0037us
+              PacketName = "GP_CLI_COMMAND_ITEM_USE"
+              Size = 20u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = Fixtures.serverStatusPacket 20149u }
+
+        Assert.Equal(None, EntityRegistry.tryLocalPlayerId())
 
     [<Fact>]
     let ``loot roll registers local player name from 0xD3`` () =

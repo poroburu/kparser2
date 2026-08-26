@@ -2,6 +2,17 @@
 
 Steps to publish a versioned GitHub release with Windows binaries.
 
+## Branch topology
+
+GitFlow trunks plus [Conventional Branch 1.1.0](https://conventionalbranch.org/) names:
+
+- Integration work lands on **`develop`** (PR target).
+- Cut **`release/vX.Y.Z`** from `develop` (dots allowed in the version description).
+- Merge that release branch into **`main`**, tag, then merge `main` back into `develop` if the release commit is not already there.
+- Production-only fixes: **`hotfix/...`** from `main`, then merge back into `develop`.
+
+Do not tag or push a release from a `cursor/` session branch. Scan agents never open PRs against `main`.
+
 ## Versioning
 
 Use [Semantic Versioning](https://semver.org/):
@@ -38,7 +49,7 @@ dotnet run -c Release --project kparser2.Cli/kparser2.Cli.fsproj -- analytics sn
 ## Build publish artifacts
 
 ```powershell
-$ver = "0.1.0-rc.1"
+$ver = "0.1.0-rc.2"
 $out = "dist/v$ver"
 New-Item -ItemType Directory -Force -Path $out | Out-Null
 
@@ -66,12 +77,23 @@ Compress-Archive -Path "$out/kparser2-cli-win-x64/*" -DestinationPath "$out/kpar
 
 ## Tag and GitHub release
 
+On **`develop`**, branch `release/v$ver`, bump version and changelog, then PR into **`main`**:
+
 ```powershell
+git checkout develop
+git pull
+git checkout -b "release/v$ver"
 git add CHANGELOG.md Directory.Build.props LICENSE README.md CONTRIBUTING.md docs/
-git commit -m "Release v$ver"
+git commit -m "chore: release v$ver"
+git push -u origin "release/v$ver"
+# Open a PR: release/v$ver → main. After merge:
+git checkout main
+git pull
 git tag -a "v$ver" -m "kparser2 v$ver"
-git push origin main
 git push origin "v$ver"
+git checkout develop
+git merge --no-ff main
+git push origin develop
 ```
 
 Create the release (requires [GitHub CLI](https://cli.github.com/)). Tag **kpacket2** before kparser2 when releasing a paired RC:

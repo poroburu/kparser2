@@ -133,6 +133,21 @@ let private runReplay (path: string) (opcodeFilter: int option) (asJson: bool) =
 
     stats
 
+let private tryPluginEcho (text: string) =
+    try
+        use client = new CommandClient("tcp://localhost:5556")
+
+        match client.Echo(text) with
+        | Some resp ->
+            printfn "plugin echo: %s" resp
+            true
+        | None ->
+            printfn "plugin echo skipped: kpacket :5556 not reachable"
+            false
+    with ex ->
+        printfn "plugin echo failed: %s" ex.Message
+        false
+
 let private runStats (path: string option) =
     match path with
     | Some p -> runReplay p None false |> ignore
@@ -158,6 +173,7 @@ let private runProbe () =
             "command socket (:5556): OK  session_uuid=%s version=%s"
             h.session_uuid
             h.version
+        tryPluginEcho "kparser2 probe: live path OK" |> ignore
 
     match ConnectionProbe.playerName() with
     | Some name -> printfn "player_name=%s" name
@@ -277,54 +293,172 @@ let private runReport (queryId: string) (path: string) (live: bool) =
 
         0
 
-let private runRecord (output: string) (durationMs: int) =
+let private runRecord (output: string) (durationMs: int) (prompt: string option) (idleMs: int) (checkpointMs: int) =
     ConnectionProbe.tryBootstrapLocalPlayerName ()
     use source = LivePacketSource("tcp://localhost:5555") :> IPacketSource
     use writer = new StreamWriter(output)
+    writer.AutoFlush <- true
 
     let recordStartMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
     let playerName = ConnectionProbe.playerName()
 
     Ndjson.writeSessionHeader writer playerName recordStartMs
 
+    let secs = max 1 (durationMs / 1000)
+    tryPluginEcho $"Recording started ({secs}s)" |> ignore
+
+    match prompt with
+    | Some p when not (String.IsNullOrWhiteSpace p) -> tryPluginEcho p |> ignore
+    | _ -> ()
+
     let deadline = DateTime.UtcNow.AddMilliseconds(float durationMs)
     let mutable count = 0
+    let mutable initialUuid = ConnectionProbe.sessionUuid () |> Option.defaultValue ""
+    let mutable helloMisses = 0
+    let mutable lastPublished = ConnectionProbe.publishedCount ()
+    let mutable lastProgressUtc = DateTime.UtcNow
+    let mutable poll = 0
+    let mutable stopReason: RecordWatch.StopReason option = None
+    let mutable lastCheckpointUtc = DateTime.UtcNow
 
-    while DateTime.UtcNow < deadline do
-        let mutable evt = Unchecked.defaultof<PacketEvent>
+    let considerUuid candidate =
+        if String.IsNullOrWhiteSpace candidate then
+            ()
+        elif String.IsNullOrWhiteSpace initialUuid then
+            initialUuid <- candidate
+        else
+            match RecordWatch.trySessionStop initialUuid candidate with
+            | Some reason -> stopReason <- Some reason
+            | None -> ()
 
-        if source.Packets.WaitToReadAsync().AsTask().Wait(100) && source.Packets.TryRead(&evt) then
-            let meta =
-                JsonSerializer.Serialize(
-                    {| timestamp = evt.Timestamp
-                       direction = PacketEvent.directionToString evt.Direction
-                       packet_type = evt.PacketType
-                       packet_id = evt.PacketId
-                       packet_name = evt.PacketName
-                       size = evt.Size
-                       metadata =
-                        {| injected = evt.Injected
-                           blocked = evt.Blocked
-                           chunk_size = 0
-                           session_id = evt.SessionUuid
-                           sync_count = 0 |}
-                       version = evt.Version
-                       session_uuid = evt.SessionUuid
-                       message_id = evt.MessageId |}
-                )
+    while DateTime.UtcNow < deadline && stopReason.IsNone do
+        poll <- poll + 1
 
-            Ndjson.writeLine writer evt.Topic meta evt.Data
-            count <- count + 1
+        if poll % 10 = 0 then
+            match ConnectionProbe.helloInfo () with
+            | None ->
+                helloMisses <- helloMisses + 1
+
+                if helloMisses >= 3 then
+                    stopReason <- Some RecordWatch.StopReason.PluginOffline
+            | Some hello ->
+                helloMisses <- 0
+                considerUuid hello.session_uuid
+
+            if stopReason.IsNone then
+                let published = ConnectionProbe.publishedCount ()
+
+                match
+                    RecordWatch.tryStallStop idleMs count published lastPublished lastProgressUtc DateTime.UtcNow
+                with
+                | Some reason -> stopReason <- Some reason
+                | None ->
+                    if published <> lastPublished then
+                        lastPublished <- published
+                        lastProgressUtc <- DateTime.UtcNow
+
+        if stopReason.IsNone then
+            let mutable evt = Unchecked.defaultof<PacketEvent>
+
+            if source.Packets.WaitToReadAsync().AsTask().Wait(100) && source.Packets.TryRead(&evt) then
+                considerUuid evt.SessionUuid
+
+                if stopReason.IsNone then
+                    let meta =
+                        JsonSerializer.Serialize(
+                            {| timestamp = evt.Timestamp
+                               direction = PacketEvent.directionToString evt.Direction
+                               packet_type = evt.PacketType
+                               packet_id = evt.PacketId
+                               packet_name = evt.PacketName
+                               size = evt.Size
+                               metadata =
+                                {| injected = evt.Injected
+                                   blocked = evt.Blocked
+                                   chunk_size = 0
+                                   session_id = evt.SessionUuid
+                                   sync_count = 0 |}
+                               version = evt.Version
+                               session_uuid = evt.SessionUuid
+                               message_id = evt.MessageId |}
+                        )
+
+                    Ndjson.writeLine writer evt.Topic meta evt.Data
+                    count <- count + 1
+                    lastProgressUtc <- DateTime.UtcNow
+
+                    match RecordWatch.tryLogoutStop evt.PacketId evt.Direction evt.Data with
+                    | Some reason -> stopReason <- Some reason
+                    | None -> ()
+
+        if
+            checkpointMs > 0
+            && stopReason.IsNone
+            && (DateTime.UtcNow - lastCheckpointUtc).TotalMilliseconds >= float checkpointMs
+        then
+            printfn "record checkpoint: packets=%d" count
+            lastCheckpointUtc <- DateTime.UtcNow
+
+    writer.Flush ()
+
+    match stopReason with
+    | Some reason -> printfn "recording stopped: %s" (RecordWatch.label reason)
+    | None -> ()
 
     printfn "Recorded %d packets to %s" count output
 
-let private runAnalyticsSnapshot (path: string) (asJson: bool) (assertCombat: bool) (minBattles: int option) (assertNames: bool) =
+    if ConnectionProbe.isPluginReachable () then
+        tryPluginEcho $"Recording complete ({count} packets)" |> ignore
+
+let private jsonOptions = JsonSerializerOptions(WriteIndented = true)
+
+let private chatParityRows (snap: AnalyticsSnapshotDto) =
+    snap.ChatMessages
+    |> Seq.filter (fun m ->
+        String.IsNullOrWhiteSpace m.Direction
+        || m.Direction.Equals("incoming", StringComparison.OrdinalIgnoreCase))
+    |> Seq.map (fun m ->
+        let speaker =
+            if String.IsNullOrWhiteSpace m.Speaker then
+                "System"
+            else
+                m.Speaker
+
+        {| speaker = speaker
+           mode = m.Mode
+           message = m.Message |})
+    |> Seq.toList
+
+let private runAnalyticsSnapshot
+    (path: string)
+    (asJson: bool)
+    (parityChat: bool)
+    (output: string option)
+    (assertCombat: bool)
+    (minBattles: int option)
+    (assertNames: bool)
+    (assertChat: bool)
+    (minChat: int option)
+    (assertSettled: bool)
+    (settledCode: string option)
+    (skipCodes: Set<string>)
+    =
     use session = PacketSessionFactory.fromReplayDefault path
     session.WaitForReplayComplete()
     let snap = (session :> IAnalyticsSession).GetSnapshot()
 
-    if asJson then
-        printJson snap
+    let jsonText =
+        if parityChat then
+            JsonSerializer.Serialize(chatParityRows snap, jsonOptions)
+        else
+            JsonSerializer.Serialize(snap, jsonOptions)
+
+    match output with
+    | Some outPath -> File.WriteAllText(outPath, jsonText)
+    | None -> ()
+
+    if parityChat || asJson then
+        printfn "%s" jsonText
     else
         let fSnap = AnalyticsDtoMapping.fromSnapshotDto snap
         let offense = AnalyticsQueries.offenseSummary fSnap MobFilter.defaultFilter
@@ -351,9 +485,16 @@ let private runAnalyticsSnapshot (path: string) (asJson: bool) (assertCombat: bo
             for row in offense do
                 printfn "  %s: %d (%d hits)" row.Label row.Total row.Count
 
-    if assertCombat || minBattles.IsSome || assertNames then
-        let fSnap = AnalyticsDtoMapping.fromSnapshotDto snap
+    let fSnap = AnalyticsDtoMapping.fromSnapshotDto snap
+    let mutable ok = true
 
+    if assertChat || minChat.IsSome then
+        let report = AnalyticsValidate.validateChat fSnap (defaultArg minChat 1)
+
+        if not (AnalyticsValidate.printReport report) then
+            ok <- false
+
+    if assertCombat || minBattles.IsSome || assertNames then
         let report =
             if assertNames then
                 AnalyticsValidate.validateNames fSnap
@@ -363,7 +504,16 @@ let private runAnalyticsSnapshot (path: string) (asJson: bool) (assertCombat: bo
                 AnalyticsValidate.validateCombat fSnap
 
         if not (AnalyticsValidate.printReport report) then
-            failwith "Combat validation failed"
+            ok <- false
+
+    if assertSettled || settledCode.IsSome then
+        let report = SettledDivergence.evaluate fSnap skipCodes
+
+        if not (SettledDivergence.printReport report settledCode) then
+            ok <- false
+
+    if not ok then
+        failwith "Snapshot validation failed"
 
     snap
 
@@ -460,10 +610,9 @@ let private runImportValidate (path: string) (assertCombat: bool) (minBattles: i
     EntityRegistry.reset()
     InteractionBuilder.reset()
 
-    match Ndjson.tryReadSessionHeader path with
-    | Some header when not (String.IsNullOrWhiteSpace header.player_name) ->
-        EntityRegistry.registerLocalPlayerName header.player_name
-    | _ -> ()
+    match Ndjson.tryPlayerName path with
+    | Some name -> EntityRegistry.registerLocalPlayerName name
+    | None -> ()
 
     ConnectionProbe.tryBootstrapLocalPlayerName ()
 
@@ -532,13 +681,15 @@ let main argv =
         printfn "  kparser2.cli stats [--replay <file.ndjson>]"
         printfn "  kparser2.cli hello"
         printfn "  kparser2.cli probe"
+        printfn "  kparser2.cli echo <text>"
         printfn "  kparser2.cli watch [--duration-ms 30000] [--interval-ms 2000] [--analytics]"
-        printfn "  kparser2.cli record <file.ndjson> [--duration-ms 5000]"
+        printfn "  kparser2.cli record <file.ndjson> [--duration-ms 5000] [--idle-ms 180000] [--checkpoint-ms 0] [--prompt text]"
         printfn "  kparser2.cli decode <file.ndjson> [--filter 0x17] [--json]"
         printfn "  kparser2.cli report <queryId> <file.ndjson> [--live]"
         printfn "  kparser2.cli export-items [--sql <path>] [--output <path>]"
         printfn "  kparser2.cli export-actions [--sql <path>] [--output <path>]"
-        printfn "  kparser2.cli analytics snapshot <file.ndjson> [--json] [--assert-combat] [--assert-names] [--min-battles N]"
+        printfn "  kparser2.cli export-spells [--sql <path>] [--output <path>]"
+        printfn "  kparser2.cli analytics snapshot <file.ndjson> [--json] [--parity-chat] [-o|--output out.json] [--assert-combat] [--assert-chat] [--assert-names] [--min-battles N] [--min-chat N] [--assert-settled] [--assert-settled-code CODE] [--skip-code CODE]"
         printfn "  kparser2.cli export report <file.ndjson> -o <file.kparse2.json>"
         printfn "  kparser2.cli import report <file.kparse2.json> [--validate]"
         printfn "  kparser2.cli import packetviewer [--full path.log | --incoming in.log [--outgoing out.log]] -o capture.ndjson [--session-id name]"
@@ -583,6 +734,10 @@ let main argv =
             | "hello" ->
                 runHello ()
                 0
+            | "echo" when argv.Length >= 2 ->
+                let text = String.Join(" ", argv.[1..])
+
+                if tryPluginEcho text then 0 else 1
             | "probe" ->
                 runProbe ()
                 0
@@ -609,6 +764,9 @@ let main argv =
             | "record" when argv.Length >= 2 ->
                 let output = argv.[1]
                 let mutable duration = 5000
+                let mutable idleMs = 180_000
+                let mutable checkpointMs = 0
+                let mutable prompt = None
                 let mutable i = 2
 
                 while i < argv.Length do
@@ -616,9 +774,18 @@ let main argv =
                     | "--duration-ms" when i + 1 < argv.Length ->
                         duration <- Int32.Parse argv.[i + 1]
                         i <- i + 2
+                    | "--idle-ms" when i + 1 < argv.Length ->
+                        idleMs <- Int32.Parse argv.[i + 1]
+                        i <- i + 2
+                    | "--checkpoint-ms" when i + 1 < argv.Length ->
+                        checkpointMs <- Int32.Parse argv.[i + 1]
+                        i <- i + 2
+                    | "--prompt" when i + 1 < argv.Length ->
+                        prompt <- Some argv.[i + 1]
+                        i <- i + 2
                     | _ -> i <- i + 1
 
-                runRecord output duration
+                runRecord output duration prompt idleMs checkpointMs
                 0
             | "report" when argv.Length >= 3 ->
                 let queryId = argv.[1]
@@ -656,9 +823,16 @@ let main argv =
             | "analytics" when argv.Length >= 3 && argv.[1].ToLowerInvariant() = "snapshot" ->
                 let path = argv.[2]
                 let mutable asJson = false
+                let mutable parityChat = false
+                let mutable output = None
                 let mutable assertCombat = false
                 let mutable assertNames = false
+                let mutable assertChat = false
                 let mutable minBattles = None
+                let mutable minChat = None
+                let mutable assertSettled = false
+                let mutable settledCode = None
+                let mutable skipCodes = Set.empty
                 let mutable i = 3
 
                 while i < argv.Length do
@@ -666,8 +840,17 @@ let main argv =
                     | "--json" ->
                         asJson <- true
                         i <- i + 1
+                    | "--parity-chat" ->
+                        parityChat <- true
+                        i <- i + 1
+                    | arg when (arg = "-o" || arg = "--output") && i + 1 < argv.Length ->
+                        output <- Some argv.[i + 1]
+                        i <- i + 2
                     | "--assert-combat" ->
                         assertCombat <- true
+                        i <- i + 1
+                    | "--assert-chat" ->
+                        assertChat <- true
                         i <- i + 1
                     | "--assert-names" ->
                         assertNames <- true
@@ -676,9 +859,36 @@ let main argv =
                         minBattles <- Some(Int32.Parse argv.[i + 1])
                         assertCombat <- true
                         i <- i + 2
+                    | "--min-chat" when i + 1 < argv.Length ->
+                        minChat <- Some(Int32.Parse argv.[i + 1])
+                        assertChat <- true
+                        i <- i + 2
+                    | "--assert-settled" ->
+                        assertSettled <- true
+                        i <- i + 1
+                    | "--assert-settled-code" when i + 1 < argv.Length ->
+                        settledCode <- Some argv.[i + 1]
+                        i <- i + 2
+                    | "--skip-code" when i + 1 < argv.Length ->
+                        skipCodes <- skipCodes.Add argv.[i + 1]
+                        i <- i + 2
                     | _ -> i <- i + 1
 
-                runAnalyticsSnapshot path asJson assertCombat minBattles assertNames |> ignore
+                runAnalyticsSnapshot
+                    path
+                    asJson
+                    parityChat
+                    output
+                    assertCombat
+                    minBattles
+                    assertNames
+                    assertChat
+                    minChat
+                    assertSettled
+                    settledCode
+                    skipCodes
+                |> ignore
+
                 0
             | "export" when argv.Length >= 4 && argv.[1].ToLowerInvariant() = "report" ->
                 let path = argv.[2]
@@ -840,6 +1050,48 @@ let main argv =
                         0
                     else
                         eprintfn "export-actions failed with exit code %d" proc.ExitCode
+                        1
+            | "export-spells" ->
+                let mutable sqlPath =
+                    Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "server", "sql", "spell_list.sql"))
+
+                let mutable outputPath =
+                    Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "spells.json"))
+
+                let mutable i = 1
+
+                while i < argv.Length do
+                    match argv.[i] with
+                    | "--sql" when i + 1 < argv.Length ->
+                        sqlPath <- argv.[i + 1]
+                        i <- i + 2
+                    | "--output" when i + 1 < argv.Length ->
+                        outputPath <- argv.[i + 1]
+                        i <- i + 2
+                    | _ -> i <- i + 1
+
+                let scriptPath =
+                    Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "scripts", "export-spells.ps1"))
+
+                if not (File.Exists scriptPath) then
+                    eprintfn "export-spells script not found: %s" scriptPath
+                    1
+                else
+                    let psi =
+                        ProcessStartInfo(
+                            FileName = "powershell",
+                            Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{scriptPath}\" -SqlPath \"{sqlPath}\" -OutputPath \"{outputPath}\"",
+                            UseShellExecute = false
+                        )
+
+                    use proc = Process.Start(psi)
+                    proc.WaitForExit()
+
+                    if proc.ExitCode = 0 then
+                        printfn "Exported spells to %s" outputPath
+                        0
+                    else
+                        eprintfn "export-spells failed with exit code %d" proc.ExitCode
                         1
             | "export-zones" ->
                 let mutable sqlPath =

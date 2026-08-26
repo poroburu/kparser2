@@ -1,8 +1,35 @@
 namespace kparser2.Analytics
 
+open System
 open System.Text.RegularExpressions
 
 module ExperienceParser =
+    /// Reverse kparser chain bonuses to the unchained award (ceil(xp / factor)).
+    let withoutChain experience chain =
+        if experience <= 0 then
+            0
+        elif chain <= 0 then
+            experience
+        else
+            let factor =
+                match chain with
+                | 1 -> 1.20
+                | 2 -> 1.25
+                | 3 -> 1.30
+                | 4 -> 1.40
+                | _ -> 1.50
+
+            int (Math.Ceiling(float experience / factor))
+
+    let minBaseXp (awards: (int * int) seq) =
+        awards
+        |> Seq.map (fun (xp, chain) -> withoutChain xp chain)
+        |> Seq.filter (fun xp -> xp > 0)
+        |> List.ofSeq
+        |> function
+            | [] -> 0
+            | xs -> List.min xs
+
     let private expPoints =
         Regex(@"^(?<name>.+?) gains (?<xp>\d+) experience points\.?$", RegexOptions.IgnoreCase)
 
@@ -43,15 +70,30 @@ module ExperienceParser =
                 | _ -> None
 
     let tryParseBattleMessage (messageNum: int) (param1: uint32) (param2: uint32) =
+        // 0x29 synthetic fixtures put XP in Data2 (param2). Live 0x002D puts XP in Data (param1), Data2=0.
+        let xpAmount =
+            if param2 <> 0u then
+                int param2
+            else
+                int param1
+
         match messageNum with
         | n when n = MsgBasicCatalog.ExperiencePointsGained ->
             Some
-                { Points = int param2
+                { Points = xpAmount
                   Chain = 0
                   ActorName = None }
         | n when n = MsgBasicCatalog.ExpChain ->
+            // Live 0x002D: Data=XP, Data2=chain (1-10). Windower 253 is chain + XP.
+            // 0x29 fixtures put chain in Param1 and XP in Param2 (Param2 often > 10).
+            let chain, points =
+                if param2 >= 1u && param2 <= 10u && param1 > param2 then
+                    int param2, int param1
+                else
+                    int param1, (if param2 <> 0u then int param2 else 0)
+
             Some
-                { Points = int param2
-                  Chain = int param1
+                { Points = points
+                  Chain = chain
                   ActorName = None }
         | _ -> None

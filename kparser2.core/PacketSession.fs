@@ -11,7 +11,7 @@ open kparser2.Decoders
 open kparser2.Ingest
 open kparser2.Protocol
 
-type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int) =
+type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int, ?replayPath: string) =
     let maxEntries = defaultArg maxEntries 5000
     let store = PacketStore(maxEntries)
     let packetSubject = new Subject<PacketRowDto>()
@@ -28,9 +28,15 @@ type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int) 
     let mutable knownPluginSession: string option = None
 
     do
+        // PacketStore resets EntityRegistry; apply fillers only after that.
         match liveSource with
         | Some _ -> ConnectionProbe.tryBootstrapLocalPlayerName ()
-        | None -> ()
+        | None ->
+            match replayPath with
+            | Some path ->
+                Ndjson.tryPlayerName path
+                |> Option.iter EntityRegistry.registerLocalPlayerName
+            | None -> ()
 
     let analyticsGate = obj ()
     let mutable analyticsDirty = false
@@ -212,12 +218,6 @@ type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int) 
                 cts.Dispose()
 
 module PacketSessionFactory =
-    let private bootstrapSessionNames (path: string) =
-        match Ndjson.tryReadSessionHeader path with
-        | Some header when not (String.IsNullOrWhiteSpace header.player_name) ->
-            EntityRegistry.registerLocalPlayerName header.player_name
-        | _ -> ()
-
     let fromLive(subEndpoint: string) =
         new PacketSession(LivePacketSource(subEndpoint) :> IPacketSource, $"live:{subEndpoint}")
 
@@ -225,8 +225,10 @@ module PacketSessionFactory =
         fromLive "tcp://localhost:5555"
 
     let fromReplay(path: string, speed: float) =
-        bootstrapSessionNames path
-        new PacketSession(ReplayPacketSource(path, speed = speed) :> IPacketSource, $"replay:{path}")
+        new PacketSession(
+            ReplayPacketSource(path, speed = speed) :> IPacketSource,
+            $"replay:{path}",
+            replayPath = path)
 
     let fromReplayDefault(path: string) =
         fromReplay (path, 0.0)

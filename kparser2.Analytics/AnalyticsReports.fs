@@ -115,11 +115,11 @@ module ChatReport =
                     DateTimeOffset.FromUnixTimeMilliseconds(msg.TimestampMs + snap.SessionStartMs).LocalDateTime.ToString("T")
 
                 let prefix = $"[{time}] "
-                let text = if msg.IsLocalPlayer then msg.Message else msg.Message
+                let labeled = $"[{msg.Mode}] {msg.Speaker}: {msg.Message}"
 
                 report
                 |> ReportBuilder.appendStyled prefix false false ReportColors.purple
-                |> ReportBuilder.appendStyled (text + "\n") false false (modeColor msg.Mode))
+                |> ReportBuilder.appendStyled (labeled + "\n") false false (modeColor msg.Mode))
             ReportBuilder.empty
 
 module FightsReport =
@@ -758,7 +758,8 @@ module ExperienceReport =
             |> List.filter (fun b -> b.Killed)
             |> List.groupBy (fun b -> b.EnemyName)
             |> List.map (fun (name, rows) ->
-                let baseXp = MobXpLookup.tryGetXp name |> Option.defaultValue 0
+                let baseXp =
+                    ExperienceParser.minBaseXp (rows |> List.map (fun b -> b.ExperiencePoints, b.ExperienceChain))
                 let gainedXp =
                     if rows.Length > 0 then
                         rows |> List.averageBy (fun b -> float b.ExperiencePoints) |> int

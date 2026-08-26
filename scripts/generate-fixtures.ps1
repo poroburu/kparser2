@@ -174,6 +174,12 @@ $loginLines = @(
 )
 Set-Content -Path (Join-Path $OutputDir "login.ndjson") -Value $loginLines -Encoding UTF8
 
+$yellChat = New-ChatPacket "Alice" "Hello from yell" 0x1A
+$chatYellLines = @(
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0017" (New-Meta 0x17 "GP_SERV_COMMAND_CHAT_STD" $yellChat.Length 1) $yellChat)
+)
+Set-Content -Path (Join-Path $OutputDir "chat_yell.ndjson") -Value $chatYellLines -Encoding UTF8
+
 $d2 = New-TrophyListPacket 4172 1
 $d3 = New-TrophySolutionPacket 0 1 "Winner"
 $dropLines = @(

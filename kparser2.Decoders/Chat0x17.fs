@@ -14,18 +14,19 @@ module Chat0x17 =
                 let attr, reader = BinaryReader.u8 reader
                 let zoneId, reader = BinaryReader.u16 reader
                 let speaker, reader = BinaryReader.fixedString reader 15
-                let message, reader = BinaryReader.nullTerminatedString reader
+                let mesBytes, reader = BinaryReader.nullTerminatedBytes reader
 
                 let message =
-                    if String.IsNullOrWhiteSpace message && BinaryReader.remaining reader > 0 then
+                    let decoded = ChatCommon.decodeChatText mesBytes
+
+                    if String.IsNullOrWhiteSpace decoded && BinaryReader.remaining reader > 0 then
                         let start = reader.Offset
 
                         data.[start .. data.Length - 1]
                         |> Array.takeWhile (fun b -> b <> 0uy)
-                        |> fun bytes -> System.Text.Encoding.UTF8.GetString bytes
-                        |> fun text -> text.Trim()
+                        |> ChatCommon.decodeChatText
                     else
-                        message
+                        decoded
 
                 if String.IsNullOrWhiteSpace message && String.IsNullOrWhiteSpace speaker then
                     None
@@ -39,7 +40,7 @@ module Chat0x17 =
                     Some
                         { Mode = ChatCommon.modeLabel kind
                           ModeId = kind
-                          IsGm = attr <> 0
+                          IsGm = ChatCommon.isGmAttr attr
                           Speaker = speakerLabel
                           Message = message
                           ZoneId =

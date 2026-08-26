@@ -36,6 +36,8 @@ type CommandClient(reqEndpoint: string) =
 
     member this.Hello() = this.SendCommand("hello", {| |})
 
+    member this.Echo(text: string) = this.SendCommand("echo", {| text = text |})
+
     interface IDisposable with
         member _.Dispose() = ()
 

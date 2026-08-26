@@ -56,7 +56,7 @@ module BinaryReader =
 
         (text.Trim(), { r with Offset = r.Offset + length })
 
-    let nullTerminatedString (reader: BinaryReader) =
+    let nullTerminatedBytes (reader: BinaryReader) =
         let start = reader.Offset
 
         let idx =
@@ -73,15 +73,17 @@ module BinaryReader =
             else
                 Array.empty
 
-        let text = Encoding.UTF8.GetString bytes
-
         let nextOffset =
             if idx < reader.Data.Length then
                 idx + 1
             else
                 reader.Data.Length
 
-        (text.Trim(), { reader with Offset = nextOffset })
+        (bytes, { reader with Offset = nextOffset })
+
+    let nullTerminatedString (reader: BinaryReader) =
+        let bytes, next = nullTerminatedBytes reader
+        (Encoding.UTF8.GetString(bytes).Trim(), next)
 
     let readAt (data: byte[]) (offset: int) (size: int) =
         if offset + size > data.Length then

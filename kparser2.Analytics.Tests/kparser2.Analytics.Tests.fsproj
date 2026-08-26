@@ -18,6 +18,8 @@
     <Compile Include="..\kparser2.Decoders.Tests\Fixtures.fs" Link="Fixtures.fs" />
     <Compile Include="EntityRegistryCollection.fs" />
     <Compile Include="InteractionTestHelpers.fs" />
+    <Compile Include="RecordWatchTests.fs" />
+    <Compile Include="SettledDivergenceTests.fs" />
     <Compile Include="ParseCodesParityTests.fs" />
     <Compile Include="InteractionParityTests.fs" />
     <Compile Include="AnalyticsTests.fs" />
@@ -35,7 +37,7 @@
     <None Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\fixtures\sessions\**\*" Link="fixtures\sessions\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\data\actions.json" Link="data\actions.json" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\data\mob_xp.json" Link="data\mob_xp.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\data\spells.json" Link="data\spells.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

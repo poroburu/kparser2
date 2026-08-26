@@ -29,12 +29,16 @@ module DecoderRegistry =
             | _ -> []
 
         let combatMessage =
-            if evt.PacketId = 0x0029us then
+            match evt.PacketId with
+            | 0x0029us ->
                 Battle0x29.decode evt.Data
                 |> Option.map (fun m -> DecoderEvent.CombatMessage m)
                 |> Option.toList
-            else
-                []
+            | 0x002Dus ->
+                Battle0x2D.decode evt.Data
+                |> Option.map (fun m -> DecoderEvent.CombatMessage m)
+                |> Option.toList
+            | _ -> []
 
         let combatActions =
             if evt.PacketId = 0x0028us then

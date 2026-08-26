@@ -12,6 +12,7 @@
     <Compile Include="ReportServices.fs" />
     <Compile Include="PacketStore.fs" />
     <Compile Include="ConnectionProbe.fs" />
+    <Compile Include="RecordWatch.fs" />
     <Compile Include="PacketSession.fs" />
   </ItemGroup>
 

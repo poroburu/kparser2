@@ -114,6 +114,23 @@ module AnalyticsValidate =
                     :: issues }
         | _ -> baseReport
 
+    let validateChat (snap: AnalyticsSnapshot) (minChat: int) =
+        let incoming =
+            snap.ChatMessages
+            |> List.filter (fun c ->
+                String.IsNullOrWhiteSpace c.Direction
+                || c.Direction.Equals("incoming", StringComparison.OrdinalIgnoreCase))
+
+        if incoming.Length < minChat then
+            { Ok = false
+              Issues =
+                [ issue
+                      "insufficient_chat"
+                      $"expected at least {minChat} incoming chat row(s), got {incoming.Length}" ] }
+        else
+            { Ok = true
+              Issues = [] }
+
     let printReport (report: ValidationReport) =
         if report.Ok then
             printfn "validate=OK"

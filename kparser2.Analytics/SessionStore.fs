@@ -111,6 +111,13 @@ module SessionStore =
         else
             c
 
+    let private resolveInteractionForSnapshot (i: Interaction) =
+        { i with
+            ActorName = EntityRegistry.formatEntity i.ActorId
+            TargetName = EntityRegistry.formatEntity i.TargetId
+            IsLocalPlayerActor = EntityRegistry.isLocalPlayer i.ActorId
+            IsLocalPlayerTarget = EntityRegistry.isLocalPlayer i.TargetId }
+
     let private trackMsgBasicXp (store: T) timestampMs points =
         if points > 0 then
             store.RecentMsgBasicXp <- (timestampMs, points) :: store.RecentMsgBasicXp |> List.truncate 8
@@ -270,19 +277,6 @@ module SessionStore =
                     :: store.LootRecords
             | _ -> ()
 
-        if evt.PacketId = 0x0037us && evt.Data.Length >= 12 then
-            let itemId = BitConverter.ToUInt16(evt.Data, 8) |> int
-            let actorId = BitConverter.ToUInt32(evt.Data, 4)
-
-            store.ItemUses <-
-                { TimestampMs = ts
-                  ActorId = actorId
-                  ActorName = EntityRegistry.formatEntity actorId
-                  ItemId = itemId
-                  ItemName = ItemLookup.tryGetName itemId |> Option.defaultValue $"Item {itemId}"
-                  Quantity = 1 }
-                :: store.ItemUses
-
         backfillPlaceholderSpeakers store
 
     let snapshot (store: T) =
@@ -290,7 +284,7 @@ module SessionStore =
           ZoneName = store.ZoneName
           Combatants = store.Combatants.Values |> Seq.toList
           Battles = store.Battles
-          Interactions = store.Interactions |> List.rev
+          Interactions = store.Interactions |> List.rev |> List.map resolveInteractionForSnapshot
           ChatMessages = store.ChatMessages |> List.rev |> List.map resolveChatForSnapshot
           LootRecords = store.LootRecords |> List.rev
           ItemUses = store.ItemUses |> List.rev
