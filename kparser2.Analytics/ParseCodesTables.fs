@@ -197,6 +197,12 @@ module MsgBasicCatalog =
     let TargetRecoversHPSimple = 24
     let MagicDmg = 2
     let MagicBurstDamage = 252
+    // xi.msg.basic drain cluster; live Horizon 0x28 cmd 4 used MAGIC_DRAIN_MP (228).
+    let SkillRecoversMp = 224
+    let SkillDrainMp = 225
+    let SkillDrainTp = 226
+    let MagicDrainHp = 227
+    let MagicDrainMp = 228
     let MagicNoEffect = 75
     let MagicFail = 114
     let MagicGainEffect = 230
@@ -249,14 +255,22 @@ module MsgBasicCatalog =
     let private isTargetingBlocked n =
         n = TargOutOfRange || n = UnableToSeeTarg || n = LoseSight || n = CannotSee
 
+    let private isMagicDrain n =
+        n = MagicDrainHp || n = MagicDrainMp
+
+    let private isSkillDrain n =
+        n = SkillDrainMp || n = SkillDrainTp
+
     /// 0x28 BattleResult.message uses xi.msg.basic, not kparser chatline ParseCodes.
     let tryClassifyAction messageId =
         match messageId with
-        | n when n = MagicRecoversHP || n = TargetRecoversHPSimple ->
+        | n when n = MagicRecoversHP || n = TargetRecoversHPSimple || n = SkillRecoversMp ->
             Some(InteractionType.Aid, None, Some AidType.Recovery)
         | n when n = MagicGainEffect -> Some(InteractionType.Aid, None, Some AidType.Enhance)
         | n when n = MagicNoEffect || n = MagicFail -> Some(InteractionType.Aid, None, Some AidType.Enhance)
-        | n when n = MagicDmg || n = MagicBurstDamage -> Some(InteractionType.Harm, Some HarmType.Spell, None)
+        | n when n = MagicDmg || n = MagicBurstDamage || isMagicDrain n ->
+            Some(InteractionType.Harm, Some HarmType.Spell, None)
+        | n when isSkillDrain n -> Some(InteractionType.Harm, Some HarmType.Ability, None)
         | n when n = MagicEnfeebIs || n = MagicEnfeeb -> Some(InteractionType.Harm, Some HarmType.Enfeeble, None)
         | n when isTargetingBlocked n -> Some(InteractionType.Unknown, None, None)
         | n when
@@ -274,11 +288,13 @@ module MsgBasicCatalog =
     let classify (messageNum: int) (messageType: int) =
         match messageNum with
         | n when n = DefeatsTarget || n = FallsToGround -> InteractionType.Death, None, None
-        | n when n = MagicRecoversHP || n = TargetRecoversHPSimple ->
+        | n when n = MagicRecoversHP || n = TargetRecoversHPSimple || n = SkillRecoversMp ->
             InteractionType.Aid, None, Some AidType.Recovery
         | n when n = ExperiencePointsGained || n = ExpChain -> InteractionType.Unknown, None, None
         | n when n = AttackHits -> InteractionType.Harm, Some HarmType.Melee, None
-        | n when n = MagicDmg || n = MagicBurstDamage -> InteractionType.Harm, Some HarmType.Spell, None
+        | n when n = MagicDmg || n = MagicBurstDamage || isMagicDrain n ->
+            InteractionType.Harm, Some HarmType.Spell, None
+        | n when isSkillDrain n -> InteractionType.Harm, Some HarmType.Ability, None
         | n when n = AttackMisses -> InteractionType.Harm, Some HarmType.Melee, None
         | n when isTargetingBlocked n -> InteractionType.Unknown, None, None
         | n when
@@ -306,6 +322,11 @@ module MsgBasicCatalog =
         | 7 -> "Magic Recovers HP"
         | 1 -> "Attack Hits"
         | 252 -> "Magic Burst"
+        | 224 -> "Skill Recovers MP"
+        | 225 -> "Skill Drain MP"
+        | 226 -> "Skill Drain TP"
+        | 227 -> "Magic Drain HP"
+        | 228 -> "Magic Drain MP"
         | 15 -> "Attack Misses"
         | 4 -> "Out Of Range"
         | 5 -> "Unable To See Target"
