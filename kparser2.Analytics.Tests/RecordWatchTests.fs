@@ -32,8 +32,36 @@ module RecordWatchTests =
         Assert.Equal(None, RecordWatch.tryStallStop 180_000 5 10L 10L t0 (t0.AddSeconds 10.0))
         Assert.Equal(Some RecordWatch.StopReason.PacketStall, RecordWatch.tryStallStop 180_000 5 10L 10L t0 (t0.AddMinutes 3.0))
 
+    let private logoutPacket (state: byte) (nextZoneIp: uint32) =
+        let data = Array.zeroCreate 28
+        data.[0] <- 0x0Buy
+        data.[1] <- 0x0Euy
+        data.[4] <- state
+        BitConverter.GetBytes(nextZoneIp).CopyTo(data, 8)
+        data
+
     [<Fact>]
-    let ``logout is incoming 0x000B only`` () =
-        Assert.True(RecordWatch.isLogoutPacket 0x000Bus PacketDirection.Incoming)
-        Assert.False(RecordWatch.isLogoutPacket 0x000Bus PacketDirection.Outgoing)
-        Assert.False(RecordWatch.isLogoutPacket 0x0017us PacketDirection.Incoming)
+    let ``zone change 0x000B does not stop the capture`` () =
+        // Live Horizon slice: LogoutState=2, Iwasaki = next-zone IPP.
+        let zone = logoutPacket 2uy 1923044674u
+        Assert.Equal(Some RecordWatch.LogoutState.ZoneChange, RecordWatch.LogoutState.read zone)
+        Assert.Equal(None, RecordWatch.tryLogoutStop 0x000Bus PacketDirection.Incoming zone)
+        Assert.Equal(None, RecordWatch.tryLogoutStop 0x000Bus PacketDirection.Incoming (logoutPacket 4uy 0u))
+
+    [<Fact>]
+    let ``logout 0x000B stops only for session-ending states`` () =
+        Assert.Equal(
+            Some RecordWatch.StopReason.Logout,
+            RecordWatch.tryLogoutStop 0x000Bus PacketDirection.Incoming (logoutPacket 1uy 0u)
+        )
+        Assert.Equal(
+            Some RecordWatch.StopReason.Logout,
+            RecordWatch.tryLogoutStop 0x000Bus PacketDirection.Incoming (logoutPacket 8uy 0u)
+        )
+        Assert.Equal(
+            Some RecordWatch.StopReason.Logout,
+            RecordWatch.tryLogoutStop 0x000Bus PacketDirection.Incoming (logoutPacket 9uy 0u)
+        )
+        Assert.Equal(None, RecordWatch.tryLogoutStop 0x000Bus PacketDirection.Outgoing (logoutPacket 1uy 0u))
+        Assert.Equal(None, RecordWatch.tryLogoutStop 0x0017us PacketDirection.Incoming (logoutPacket 1uy 0u))
+        Assert.Equal(None, RecordWatch.tryLogoutStop 0x000Bus PacketDirection.Incoming Array.empty)

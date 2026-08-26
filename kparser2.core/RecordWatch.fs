@@ -50,5 +50,34 @@ module RecordWatch =
         else
             None
 
-    let isLogoutPacket (packetId: uint16) (direction: PacketDirection) =
-        packetId = 0x000Bus && direction = PacketDirection.Incoming
+    /// XiPackets / LSB `GP_GAME_LOGOUT_STATE`. Wire slot is 4 bytes; value is a uint8.
+    /// 0x000B is also the zone-server handoff (ZONECHANGE=2), not only `/logout`.
+    module LogoutState =
+        let Logout = 1
+        let ZoneChange = 2
+        let Cancel = 4
+        let Timeout = 8
+        let GmLogout = 9
+
+        let read (data: byte[]) =
+            if isNull data || data.Length < 5 then
+                None
+            else
+                Some(int data.[4])
+
+        let endsCapture =
+            function
+            | 1
+            | 8
+            | 9 -> true
+            | _ -> false
+
+    /// True only for incoming 0x000B that actually leaves the character session.
+    /// Zone change, mog house, and logout-cancel keep recording.
+    let tryLogoutStop (packetId: uint16) (direction: PacketDirection) (data: byte[]) =
+        if packetId <> 0x000Bus || direction <> PacketDirection.Incoming then
+            None
+        else
+            match LogoutState.read data with
+            | Some state when LogoutState.endsCapture state -> Some Logout
+            | _ -> None

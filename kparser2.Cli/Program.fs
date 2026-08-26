@@ -387,8 +387,9 @@ let private runRecord (output: string) (durationMs: int) (prompt: string option)
                     count <- count + 1
                     lastProgressUtc <- DateTime.UtcNow
 
-                    if RecordWatch.isLogoutPacket evt.PacketId evt.Direction then
-                        stopReason <- Some RecordWatch.StopReason.Logout
+                    match RecordWatch.tryLogoutStop evt.PacketId evt.Direction evt.Data with
+                    | Some reason -> stopReason <- Some reason
+                    | None -> ()
 
         if
             checkpointMs > 0

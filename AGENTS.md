@@ -158,7 +158,7 @@ These fixture dumps do not load kpacket. They only prove both CLIs agree on **co
 
 Long-running parity: observe (`watch` / `record` under `ffxi-captures/ndjson/`). When one pattern fails to reconcile, implement that event in kparser2 only. Prompt in-game with `kparser2.cli echo`, not a Cursor checklist.
 
-**Disconnect:** `record` stops on `:5556` hello failure (3 missed 1s polls), `session_uuid` change, incoming `0x000B`, or `--idle-ms` stall after packets (default 180s; `0` disables). It does not append across sessions. Copy complete lines with `scripts/reconcile-capture.ps1`. Do not treat a truncated last line or a magic start without finish as a decoder bug. Wait with `scripts/wait-kpacket-session.ps1 -PreviousUuid <old>`, then `record` a **new** path. If the user ends the parity run, do not start another recorder.
+**Disconnect:** `record` stops on `:5556` hello failure (3 missed 1s polls), `session_uuid` change, incoming `0x000B` with `LogoutState` LOGOUT/TIMEOUT/GMLOGOUT (`1`/`8`/`9`), or `--idle-ms` stall after packets (default 180s; `0` disables). Incoming `0x000B` **ZONECHANGE** (`2`) is a zone-server handoff (next IP/port in `Iwasaki`), not `/logout` — keep recording the same file. It does not append across real session ends. Copy complete lines with `scripts/reconcile-capture.ps1`. Do not treat a truncated last line or a magic start without finish as a decoder bug. After a real stop, wait with `scripts/wait-kpacket-session.ps1 -PreviousUuid <old>`, then `record` a **new** path. If the user ends the parity run, do not start another recorder.
 
 ### Promote a fixture
 
