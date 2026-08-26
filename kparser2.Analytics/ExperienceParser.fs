@@ -57,8 +57,16 @@ module ExperienceParser =
                   Chain = 0
                   ActorName = None }
         | n when n = MsgBasicCatalog.ExpChain ->
+            // Live 0x002D: Data=XP, Data2=chain (1-10). Windower 253 is chain + XP.
+            // 0x29 fixtures put chain in Param1 and XP in Param2 (Param2 often > 10).
+            let chain, points =
+                if param2 >= 1u && param2 <= 10u && param1 > param2 then
+                    int param2, int param1
+                else
+                    int param1, (if param2 <> 0u then int param2 else 0)
+
             Some
-                { Points = xpAmount
-                  Chain = int param1
+                { Points = points
+                  Chain = chain
                   ActorName = None }
         | _ -> None

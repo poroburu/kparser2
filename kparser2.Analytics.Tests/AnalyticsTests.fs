@@ -657,6 +657,9 @@ module AnalyticsTests =
         Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.SkillDrainMp)
         Assert.Equal("Magic Erase", MsgBasicCatalog.messageLabel MsgBasicCatalog.MagicErase)
         Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicErase)
+        Assert.Equal("Magic Remove Effect", MsgBasicCatalog.messageLabel MsgBasicCatalog.MagicRemoveEffect)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicRemoveEffect)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.JaRemoveEffect)
         Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.TooFarAway)
         Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.CannotAttackTarget)
 
@@ -731,6 +734,86 @@ module AnalyticsTests =
         SessionStore.ingest store evt (DecoderRegistry.decode evt)
         let snap = SessionStore.snapshot store
         Assert.Contains(snap.ExperienceRecords, fun r -> r.ExperiencePoints = 133)
+
+    [<Fact>]
+    let ``experience parser reads live 0x002D EXP chain Data as XP`` () =
+        match ExperienceParser.tryParseBattleMessage 253 222u 1u with
+        | Some parsed ->
+            Assert.Equal(222, parsed.Points)
+            Assert.Equal(1, parsed.Chain)
+        | None -> failwith "Expected EXP chain parse"
+
+    [<Fact>]
+    let ``experience parser reads 0x29 fixture EXP chain Param1 as chain`` () =
+        match ExperienceParser.tryParseBattleMessage 253 3u 180u with
+        | Some parsed ->
+            Assert.Equal(180, parsed.Points)
+            Assert.Equal(3, parsed.Chain)
+        | None -> failwith "Expected fixture EXP chain parse"
+
+    [<Fact>]
+    let ``0x002D EXP chain records XP from Data and chain from Data2`` () =
+        EntityRegistry.reset()
+        InteractionBuilder.reset()
+        let store = SessionStore.create()
+        let data = Fixtures.battleMessage2Packet 20149u 20149u 253us 222u 1u
+        let evt =
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x002Dus
+              PacketName = "GP_SERV_COMMAND_BATTLE_MESSAGE2"
+              Size = 28u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = data }
+
+        EntityRegistry.observe evt
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        let snap = SessionStore.snapshot store
+        Assert.Contains(snap.ExperienceRecords, fun r -> r.ExperiencePoints = 222 && r.Chain = 1)
+        Assert.Contains(
+            snap.Interactions,
+            fun i -> i.MessageId = 253 && i.Value = 222 && i.ActionName = "EXP Chain"
+        )
+
+    [<Fact>]
+    let ``0x002D attains-level is not parsed as experience`` () =
+        Assert.Equal(None, ExperienceParser.tryParseBattleMessage 9 56u 0u)
+        Assert.Equal("Attains Level", MsgBasicCatalog.messageLabel MsgBasicCatalog.AttainsLevel)
+        Assert.Equal(InteractionType.Unknown, (MsgBasicCatalog.classify 9 0 |> fun (t, _, _) -> t))
+
+        EntityRegistry.reset()
+        InteractionBuilder.reset()
+        let store = SessionStore.create()
+        let data = Fixtures.battleMessage2Packet 20149u 17584273u 9us 56u 0u
+        let evt =
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x002Dus
+              PacketName = "GP_SERV_COMMAND_BATTLE_MESSAGE2"
+              Size = 28u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = data }
+
+        EntityRegistry.observe evt
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        let snap = SessionStore.snapshot store
+        Assert.Empty(snap.ExperienceRecords)
+        Assert.Contains(
+            snap.Interactions,
+            fun i -> i.MessageId = 9 && i.ActionName = "Attains Level" && i.Value = 56
+        )
 
     [<Fact>]
     let ``combat_recovery includes aid interactions`` () =

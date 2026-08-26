@@ -184,6 +184,8 @@ module ParseCodesTables =
 /// LandSandBoat MsgBasic values for 0x29 GP_SERV_COMMAND_BATTLE_MESSAGE.
 module MsgBasicCatalog =
     let ExperiencePointsGained = 8
+    // Windower BtlMess 9; live Horizon 0x002D Data = new level. Not limit points (371).
+    let AttainsLevel = 9
     let MagicRecoversHP = 7
     let DefeatsTarget = 6
     let FallsToGround = 20
@@ -209,8 +211,13 @@ module MsgBasicCatalog =
     let DisappearNum = 231
     let MagicEnfeebIs = 236
     let MagicEnfeeb = 237
-    // Live Horizon 0x28 cmd 4: Erase finish (xi.msg.basic MAGIC_ERASE).
+    // Live Horizon 0x28 cmd 4: status-remove finish (xi.msg.basic MAGIC_REMOVE_EFFECT / MAGIC_ERASE).
+    let MagicRemoveEffect = 83
+    let JaRemoveEffect = 123
+    let SkillErase = 159
+    let JaRemoveEffect2 = 321
     let MagicErase = 341
+    let MagicRemoveEffect2 = 571
     // xi.msg.basic status region (LandSandBoat scripts/enum/msg.lua); live Horizon 0x29 used 206.
     let IsStatus = 203
     let IsNoLongerStatus = 204
@@ -274,12 +281,21 @@ module MsgBasicCatalog =
     let private isSkillDrain n =
         n = SkillDrainMp || n = SkillDrainTp
 
+    let private isStatusErase n =
+        n = MagicRemoveEffect
+        || n = JaRemoveEffect
+        || n = SkillErase
+        || n = JaRemoveEffect2
+        || n = MagicErase
+        || n = MagicRemoveEffect2
+        || n = DisappearNum
+
     /// 0x28 BattleResult.message uses xi.msg.basic, not kparser chatline ParseCodes.
     let tryClassifyAction messageId =
         match messageId with
         | n when n = MagicRecoversHP || n = TargetRecoversHPSimple || n = SkillRecoversMp ->
             Some(InteractionType.Aid, None, Some AidType.Recovery)
-        | n when n = MagicGainEffect || n = MagicErase || n = DisappearNum ->
+        | n when n = MagicGainEffect || isStatusErase n ->
             Some(InteractionType.Aid, None, Some AidType.Enhance)
         | n when n = MagicNoEffect || n = MagicFail -> Some(InteractionType.Aid, None, Some AidType.Enhance)
         | n when n = MagicDmg || n = MagicBurstDamage || isMagicDrain n ->
@@ -304,12 +320,13 @@ module MsgBasicCatalog =
         | n when n = DefeatsTarget || n = FallsToGround -> InteractionType.Death, None, None
         | n when n = MagicRecoversHP || n = TargetRecoversHPSimple || n = SkillRecoversMp ->
             InteractionType.Aid, None, Some AidType.Recovery
-        | n when n = ExperiencePointsGained || n = ExpChain -> InteractionType.Unknown, None, None
+        | n when n = ExperiencePointsGained || n = ExpChain || n = AttainsLevel ->
+            InteractionType.Unknown, None, None
         | n when n = AttackHits -> InteractionType.Harm, Some HarmType.Melee, None
         | n when n = MagicDmg || n = MagicBurstDamage || isMagicDrain n ->
             InteractionType.Harm, Some HarmType.Spell, None
         | n when isSkillDrain n -> InteractionType.Harm, Some HarmType.Ability, None
-        | n when n = MagicGainEffect || n = MagicErase || n = DisappearNum ->
+        | n when n = MagicGainEffect || isStatusErase n ->
             InteractionType.Aid, None, Some AidType.Enhance
         | n when n = AttackMisses -> InteractionType.Harm, Some HarmType.Melee, None
         | n when isTargetingBlocked n -> InteractionType.Unknown, None, None
@@ -332,14 +349,20 @@ module MsgBasicCatalog =
     let messageLabel messageNum =
         match messageNum with
         | 8 -> "Experience Points"
+        | 9 -> "Attains Level"
         | 253 -> "EXP Chain"
         | 6 -> "Defeats Target"
         | 20 -> "Falls to Ground"
         | 7 -> "Magic Recovers HP"
         | 1 -> "Attack Hits"
         | 252 -> "Magic Burst"
+        | 83 -> "Magic Remove Effect"
+        | 123 -> "Ability Remove Effect"
+        | 159 -> "Skill Erase"
         | 231 -> "Effects Disappear"
+        | 321 -> "Ability Remove Effect"
         | 341 -> "Magic Erase"
+        | 571 -> "Magic Remove Effect"
         | 78 -> "Too Far Away"
         | 328 -> "Too Far Away"
         | 446 -> "Cannot Attack Target"

@@ -74,6 +74,8 @@ type ParseCodesParityTests() =
             yield ParseCodesParityTests.row "live_magic_drain_hp" 4 227 0 40 InteractionType.Harm (Some HarmType.Spell) None "hit"
             yield ParseCodesParityTests.row "live_skill_drain_mp" 13 225 0 30 InteractionType.Harm (Some HarmType.Ability) None "hit"
             yield ParseCodesParityTests.row "live_magic_erase" 4 341 0 0 InteractionType.Aid None (Some AidType.Enhance) "hit"
+            yield ParseCodesParityTests.row "live_magic_remove_effect" 4 83 0 0 InteractionType.Aid None (Some AidType.Enhance) "hit"
+            yield ParseCodesParityTests.row "live_ja_remove_effect" 13 123 0 0 InteractionType.Aid None (Some AidType.Enhance) "hit"
             yield ParseCodesParityTests.row "region_ja" 13 0x68 0 80 InteractionType.Harm (Some HarmType.Ability) None "hit"
             yield ParseCodesParityTests.row "region_death_player" 0 0x26 0 0 InteractionType.Death None None "hit"
             yield ParseCodesParityTests.row "region_prepare_spell" 4 0x32 0 0 InteractionType.Unknown None None "hit"
