@@ -18,6 +18,7 @@
     <Compile Include="Trophy0xD2.fs" />
     <Compile Include="Trophy0xD3.fs" />
     <Compile Include="Battle0x29.fs" />
+    <Compile Include="Battle0x2D.fs" />
     <Compile Include="Battle0x28.fs" />
     <Compile Include="DecoderRegistry.fs" />
   </ItemGroup>

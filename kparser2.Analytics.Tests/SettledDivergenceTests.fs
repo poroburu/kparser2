@@ -17,6 +17,7 @@ module private SettledHelpers =
 
     let ingestFixture path =
         EntityRegistry.reset ()
+        Ndjson.tryPlayerName path |> Option.iter EntityRegistry.registerLocalPlayerName
         let store = SessionStore.create ()
 
         for topic, metaJson, data in Ndjson.readAll path do
@@ -301,3 +302,20 @@ module SelfChatSettleTests =
 
         let report = SettledDivergence.evaluate snap Set.empty
         Assert.True(SettledHelpers.hasCode report "nameless_self_unnamed")
+
+    [<Fact>]
+    let ``ingestFixture applies ndjson session header player name`` () =
+        let path = Path.Combine(Path.GetTempPath(), sprintf "kparser2-header-%s.ndjson" (Guid.NewGuid().ToString("N")))
+
+        try
+            File.WriteAllText(
+                path,
+                """{"type":"kparser2.session","player_name":"Porobururu","record_start_ms":1}
+"""
+            )
+
+            let _snap = SettledHelpers.ingestFixture path
+            Assert.Equal(Some "Porobururu", EntityRegistry.localPlayerName ())
+        finally
+            if File.Exists path then
+                File.Delete path

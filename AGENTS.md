@@ -44,6 +44,9 @@ dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.
 dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- analytics snapshot capture.ndjson --assert-settled
 dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- analytics snapshot capture.ndjson --assert-settled-code unclassified_message-236
 
+# Checkpoint cool-off — exit 0 (HEAT unchanged) means skip snapshot
+powershell -File C:\Users\porob\git\kdev\kparser2\scripts\opcode-heat.ps1 -Path capture.ndjson
+
 # Regenerate synthetic fixtures with valid packet bytes
 powershell -File C:\Users\porob\git\kdev\kparser2\scripts\generate-fixtures.ps1
 
@@ -51,7 +54,7 @@ powershell -File C:\Users\porob\git\kdev\kparser2\scripts\generate-fixtures.ps1
 dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- probe
 
 # Long BST camp session (20 min record + post-session oracles)
-dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- record C:\Users\porob\git\kdev\ffxi-captures\ndjson\bst_leveling.ndjson --duration-ms 1200000 --idle-ms 180000
+dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- record C:\Users\porob\git\kdev\ffxi-captures\ndjson\bst_leveling.ndjson --duration-ms 1200000 --idle-ms 180000 --checkpoint-ms 120000
 dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- watch --analytics --duration-ms 300000 --interval-ms 5000
 dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- analytics snapshot capture.ndjson --assert-combat --min-battles 2
 dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- report fights capture.ndjson
@@ -158,7 +161,7 @@ These fixture dumps do not load kpacket. They only prove both CLIs agree on **co
 
 Long-running parity: observe (`watch` / `record` under `ffxi-captures/ndjson/`). When one pattern fails to reconcile, implement that event in kparser2 only. Prompt in-game with `kparser2.cli echo`, not a Cursor checklist.
 
-**Disconnect:** `record` stops on `:5556` hello failure (3 missed 1s polls), `session_uuid` change, incoming `0x000B`, or `--idle-ms` stall after packets (default 180s; `0` disables). It does not append across sessions. Copy complete lines with `scripts/reconcile-capture.ps1`. Do not treat a truncated last line or a magic start without finish as a decoder bug. Wait with `scripts/wait-kpacket-session.ps1 -PreviousUuid <old>`, then `record` a **new** path. If the user ends the parity run, do not start another recorder.
+**Disconnect:** `record` stops on `:5556` hello failure (3 missed 1s polls), `session_uuid` change, incoming `0x000B` with `LogoutState` LOGOUT/TIMEOUT/GMLOGOUT (`1`/`8`/`9`), or `--idle-ms` stall after packets (default 180s; `0` disables). Incoming `0x000B` **ZONECHANGE** (`2`) is a zone-server handoff (next IP/port in `Iwasaki`), not `/logout` — keep recording the same file. It does not append across real session ends. Copy complete lines with `scripts/reconcile-capture.ps1`. Do not treat a truncated last line or a magic start without finish as a decoder bug. After a real stop, wait with `scripts/wait-kpacket-session.ps1 -PreviousUuid <old>`, then `record` a **new** path. If the user ends the parity run, do not start another recorder.
 
 ### Promote a fixture
 
@@ -235,12 +238,50 @@ Docs: [docs/parity-inequalities.md](docs/parity-inequalities.md), [docs/metadata
 Horizon loaded, `/load kpacket`. New **Agent** chat (not Plan):
 
 ```
-Parity scan while I play. Record last-green kparser2 CLI to ffxi-captures/ndjson (or attach if a recorder is already writing). Poll analytics snapshot --assert-settled after settle. Rank gaps; skip deferred/spiral/open-PR codes. Classify each ticket with parity-inequalities.md (kparser-only / kparser2-missing / kparser2-extra / deferred) before coding. Lookup XiPackets, VieweD, server/scripts/enum/msg.lua — never edit those pins or kparser. Bootstrap may port a whole message family; later leftover ids. Prove with --assert-settled-code (targeted code gone; leftovers OK) plus dotnet test --filter Category!=Integration after freeze, not on every packet. Commit green work on cursor/session-<yyyymmdd-hhmm> from develop; open a draft PR into develop — never into main. Do not ask me to cast. Stop recording if I say stop or the plugin goes away.
+Parity scan while I play. Record last-green kparser2 CLI to ffxi-captures/ndjson with --checkpoint-ms 120000 (or attach if a recorder is already writing). Notify on `record checkpoint:` and `recording stopped:` from that process — do not start a Sleep / AGENT_LOOP_WAKE shell. On each checkpoint, reconcile and analytics snapshot --assert-settled. Rank gaps; skip deferred/spiral/open-PR codes. Classify each ticket with parity-inequalities.md (kparser-only / kparser2-missing / kparser2-extra / deferred) before coding. Lookup XiPackets, VieweD, server/scripts/enum/msg.lua — never edit those pins or kparser. Bootstrap may port a whole message family; later leftover ids. Prove with --assert-settled-code (targeted code gone; leftovers OK) plus dotnet test --filter Category!=Integration after freeze, not on every packet. Commit green work on cursor/session-<yyyymmdd-hhmm> from develop; open a draft PR into develop — never into main. Do not ask me to cast. Stop recording if I say stop or the plugin goes away.
 ```
 
 ### Paste this (fork / crowd)
 
 Same play rules. You do **not** share `ffxi-captures`. Search GitHub kparser2 issues/PRs for the divergence `code` first. Fork, one family or leftover id, scoped prove, PR **into `develop`**. No push to `main`, no kdev pin bump. Redact live player names on public fixtures; never commit a full session dump.
+
+### Scan ticks (no agent sleeper)
+
+The long-running job is **`kparser2.cli record`** (last-green exe). Cursor auto-review treats a second `Start-Sleep` + `AGENT_LOOP_WAKE {"prompt":...}` shell as an unattended agent workflow and will block it. Do not use Cursor `/loop` that way during a scan.
+
+Do:
+
+- `record … --checkpoint-ms 120000` and `notify_on_output` on `record checkpoint:` / `recording stopped:`
+- On checkpoint, run `scripts/opcode-heat.ps1` on the live NDJSON (FileShare read). **`HEAT unchanged` (exit 0): skip reconcile and `--assert-settled`.** Fingerprint is **shape**, not volume: extra `0x0015` / entity spam, extra known yells of the same Kind, extra `0x28` of an already-seen `commandNo`, and extra `0x00D2` rows do not count.
+- Reconcile + `--assert-settled` only when heat **changed**, on first checkpoint, or on `recording stopped:`
+- Optional `watch --analytics` only if you need live plugin health and it is not a synthetic prompt injector
+
+Do not:
+
+- `Start-Sleep`; `echo AGENT_LOOP_WAKE_… {"prompt":"…"}`
+- A second timer whose only job is to inject a follow-up prompt
+- Re-rank a town idle slice because packet count grew
+- Infer chocobo digging from town zone names (Rabao is not a dig zone)
+
+### Heat vs cool
+
+Ranked `--assert-settled` only moves when these families appear or their **shape** changes (new `0x17` Kind, new `0x000B` LogoutState). Volume of the same family does not.
+
+| Heat (re-rank) | Opcodes | Notes |
+|----------------|---------|--------|
+| Combat finish | S2C `0x0028`, `0x0029` | Heat fingerprints `0x28` **commandNo** and `0x29` MessageNum, **not** `0x28` finish `message`. A new cmd-4 id on an already-seen command does not wake heat; it waits for another shape change or `recording stopped:` |
+| XP / limit | S2C `0x002D` MessageNum | Extra XP of an already-seen id is cool |
+| New chat Kind | S2C `0x0017` Kind byte @4 | Known Yell/`Standard` spam is cool |
+| Zone-in / real logout | S2C `0x000A`; `0x000B` state 1/8/9 | State **2** is zone handoff — keep recording |
+| Loot rows | S2C `0x00D2` / `0x00D3` | Decoded; unnamed pool is deferred |
+| Chocobo dig | S2C `0x002F`, C2S `0x0063` | Only in `server/scripts/globals/hobbies/chocobo_digging/logic.lua` `diggingZoneList` (not towns) |
+
+| Cool (do not wake a snapshot) | Opcodes |
+|-------------------------------|---------|
+| Position | C2S `0x0015` |
+| Nearby entities | S2C `0x000D`, `0x000E`, `0x00DF` |
+| Zone-in inventory / quests / equip | S2C `0x0020`, `0x001D`, `0x0050`, `0x0051`, `0x0056` |
+| Delivery box / mailbox | S2C `0x004B`, C2S `0x004D` (not in DecoderRegistry; not a settled rank) |
 
 ### Last-green ingest
 

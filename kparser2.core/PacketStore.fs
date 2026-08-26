@@ -13,6 +13,7 @@ type PacketStore(maxEntries: int) =
     let lootEvents = Queue<LootEventDto>()
     let combatEvents = Queue<CombatEventDto>()
     let analyticsStore =
+        // PacketSession bootstraps hello / NDJSON player_name after this reset.
         EntityRegistry.reset ()
         SessionStore.create ()
     let mutable totalPackets = 0L

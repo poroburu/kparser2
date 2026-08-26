@@ -3,6 +3,7 @@ namespace kparser2.Decoders
 open System
 open System.Collections.Generic
 open System.Text
+open kparser2.Protocol
 
 module EntityRegistry =
     type EntityKind =
@@ -16,7 +17,8 @@ module EntityRegistry =
     let private kinds = Dictionary<uint32, EntityKind>()
     let private jobs = Dictionary<uint32, string>()
 
-    // localPlayerId is UniqueNo from 0x00DF / outgoing 0x001A, not world spawn id from 0x00E.
+    // localPlayerId is UniqueNo from 0x00A / 0x00DF / S2C 0x0037@36 / outgoing 0x001A,
+    // not world spawn id from 0x00E.
     let mutable private localPlayerId: uint32 option = None
     let mutable private pendingLocalPlayerName: string option = None
     let mutable private zoneId: int option = None
@@ -235,6 +237,15 @@ module EntityRegistry =
 
             if zoneNo <> 0us then
                 setZoneId (int zoneNo)
+
+        // S2C 0x0037 is GP_SERV_COMMAND_SERVERSTATUS (local player). UniqueNo sits
+        // after the 4-byte header and 32-byte BufStatus. C2S 0x0037 is ITEM_USE.
+        | 0x0037us when evt.Direction = Incoming && evt.Data.Length >= 40 ->
+            let entityId = BitConverter.ToUInt32(evt.Data, 36)
+
+            if entityId <> 0u then
+                localPlayerId <- Some entityId
+                applyPendingLocalPlayerName ()
 
         | _ -> ()
 

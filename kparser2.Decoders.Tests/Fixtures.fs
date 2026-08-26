@@ -92,6 +92,14 @@ module Fixtures =
         BitConverter.GetBytes(zoneId).CopyTo(data, 26)
         data
 
+    /// S2C 0x0037 GP_SERV_COMMAND_SERVERSTATUS. UniqueNo is at offset 36
+    /// (4-byte header + 32-byte BufStatus). Horizon live packets are 96 bytes.
+    let serverStatusPacket (entityId: uint32) =
+        let data = Array.create 96 0uy
+        data.[2] <- 0x37uy
+        BitConverter.GetBytes(entityId).CopyTo(data, 36)
+        data
+
     let trophyListPacket (itemId: int) (quantity: int) (dropperId: uint32) =
         let data = Array.create 60 0uy
         data.[2] <- 0xD2uy
@@ -161,6 +169,23 @@ module Fixtures =
 
     let battleMessagePacketSimple (casterId: uint32) (targetId: uint32) (messageNum: uint16) =
         battleMessagePacket casterId targetId messageNum 0u 0u 0uy
+
+    /// GP_SERV_COMMAND_BATTLE_MESSAGE2 (0x002D): indices then Data/Data2.
+    let battleMessage2Packet
+        (casterId: uint32)
+        (targetId: uint32)
+        (messageNum: uint16)
+        (param1: uint32)
+        (param2: uint32)
+        =
+        let data = Array.create 28 0uy
+        data.[2] <- 0x2Duy
+        BitConverter.GetBytes(casterId).CopyTo(data, 4)
+        BitConverter.GetBytes(targetId).CopyTo(data, 8)
+        BitConverter.GetBytes(param1).CopyTo(data, 16)
+        BitConverter.GetBytes(param2).CopyTo(data, 20)
+        BitConverter.GetBytes(messageNum).CopyTo(data, 24)
+        data
 
     let private bitsToBytes (bits: ResizeArray<int>) =
         let byteCount = (bits.Count + 7) / 8

@@ -115,10 +115,10 @@ module InteractionBuilder =
             TargetName = EntityRegistry.formatEntity message.TargetId
             ActionName = actionName
             Value =
-                if MsgBasicCatalog.isExperienceMessage (int message.MessageNum) then
-                    int message.Param2
-                else
-                    int message.Param1
+                match ExperienceParser.tryParseBattleMessage (int message.MessageNum) message.Param1 message.Param2 with
+                | Some parsed when parsed.Points > 0 -> parsed.Points
+                | Some parsed -> parsed.Chain
+                | None -> int message.Param1
             Success = "message"
             CommandNo = 0
             MessageId = int message.MessageNum

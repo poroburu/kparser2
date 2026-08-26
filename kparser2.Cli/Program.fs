@@ -293,7 +293,7 @@ let private runReport (queryId: string) (path: string) (live: bool) =
 
         0
 
-let private runRecord (output: string) (durationMs: int) (prompt: string option) (idleMs: int) =
+let private runRecord (output: string) (durationMs: int) (prompt: string option) (idleMs: int) (checkpointMs: int) =
     ConnectionProbe.tryBootstrapLocalPlayerName ()
     use source = LivePacketSource("tcp://localhost:5555") :> IPacketSource
     use writer = new StreamWriter(output)
@@ -319,6 +319,7 @@ let private runRecord (output: string) (durationMs: int) (prompt: string option)
     let mutable lastProgressUtc = DateTime.UtcNow
     let mutable poll = 0
     let mutable stopReason: RecordWatch.StopReason option = None
+    let mutable lastCheckpointUtc = DateTime.UtcNow
 
     let considerUuid candidate =
         if String.IsNullOrWhiteSpace candidate then
@@ -386,8 +387,17 @@ let private runRecord (output: string) (durationMs: int) (prompt: string option)
                     count <- count + 1
                     lastProgressUtc <- DateTime.UtcNow
 
-                    if RecordWatch.isLogoutPacket evt.PacketId evt.Direction then
-                        stopReason <- Some RecordWatch.StopReason.Logout
+                    match RecordWatch.tryLogoutStop evt.PacketId evt.Direction evt.Data with
+                    | Some reason -> stopReason <- Some reason
+                    | None -> ()
+
+        if
+            checkpointMs > 0
+            && stopReason.IsNone
+            && (DateTime.UtcNow - lastCheckpointUtc).TotalMilliseconds >= float checkpointMs
+        then
+            printfn "record checkpoint: packets=%d" count
+            lastCheckpointUtc <- DateTime.UtcNow
 
     writer.Flush ()
 
@@ -600,10 +610,9 @@ let private runImportValidate (path: string) (assertCombat: bool) (minBattles: i
     EntityRegistry.reset()
     InteractionBuilder.reset()
 
-    match Ndjson.tryReadSessionHeader path with
-    | Some header when not (String.IsNullOrWhiteSpace header.player_name) ->
-        EntityRegistry.registerLocalPlayerName header.player_name
-    | _ -> ()
+    match Ndjson.tryPlayerName path with
+    | Some name -> EntityRegistry.registerLocalPlayerName name
+    | None -> ()
 
     ConnectionProbe.tryBootstrapLocalPlayerName ()
 
@@ -674,7 +683,7 @@ let main argv =
         printfn "  kparser2.cli probe"
         printfn "  kparser2.cli echo <text>"
         printfn "  kparser2.cli watch [--duration-ms 30000] [--interval-ms 2000] [--analytics]"
-        printfn "  kparser2.cli record <file.ndjson> [--duration-ms 5000] [--idle-ms 180000] [--prompt text]"
+        printfn "  kparser2.cli record <file.ndjson> [--duration-ms 5000] [--idle-ms 180000] [--checkpoint-ms 0] [--prompt text]"
         printfn "  kparser2.cli decode <file.ndjson> [--filter 0x17] [--json]"
         printfn "  kparser2.cli report <queryId> <file.ndjson> [--live]"
         printfn "  kparser2.cli export-items [--sql <path>] [--output <path>]"
@@ -756,6 +765,7 @@ let main argv =
                 let output = argv.[1]
                 let mutable duration = 5000
                 let mutable idleMs = 180_000
+                let mutable checkpointMs = 0
                 let mutable prompt = None
                 let mutable i = 2
 
@@ -767,12 +777,15 @@ let main argv =
                     | "--idle-ms" when i + 1 < argv.Length ->
                         idleMs <- Int32.Parse argv.[i + 1]
                         i <- i + 2
+                    | "--checkpoint-ms" when i + 1 < argv.Length ->
+                        checkpointMs <- Int32.Parse argv.[i + 1]
+                        i <- i + 2
                     | "--prompt" when i + 1 < argv.Length ->
                         prompt <- Some argv.[i + 1]
                         i <- i + 2
                     | _ -> i <- i + 1
 
-                runRecord output duration prompt idleMs
+                runRecord output duration prompt idleMs checkpointMs
                 0
             | "report" when argv.Length >= 3 ->
                 let queryId = argv.[1]

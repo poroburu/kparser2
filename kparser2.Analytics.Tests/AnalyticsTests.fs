@@ -50,6 +50,7 @@ module private ReplayHelpers =
 
     let ingestFixture path =
         EntityRegistry.reset()
+        Ndjson.tryPlayerName path |> Option.iter EntityRegistry.registerLocalPlayerName
         let store = SessionStore.create()
 
         for topic, metaJson, data in Ndjson.readAll path do
@@ -573,12 +574,246 @@ module AnalyticsTests =
         Assert.Equal(InteractionType.Death, interactionType)
 
     [<Fact>]
+    let ``MsgBasic classifies status wears off as enhance`` () =
+        let interactionType, _, aidType =
+            MsgBasicCatalog.classify MsgBasicCatalog.StatusWearsOff 0
+
+        Assert.Equal(InteractionType.Aid, interactionType)
+        Assert.Equal(Some AidType.Enhance, aidType)
+        Assert.Equal("Status Wears Off", MsgBasicCatalog.messageLabel MsgBasicCatalog.StatusWearsOff)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.StatusWearsOff)
+
+    [<Fact>]
+    let ``0x29 status wears off becomes an enhance interaction`` () =
+        EntityRegistry.reset()
+        InteractionBuilder.reset()
+        let store = SessionStore.create()
+        let data = Fixtures.battleMessagePacketSimple 20149u 20149u 206us
+        let evt =
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x0029us
+              PacketName = "GP_SERV_COMMAND_BATTLE_MESSAGE"
+              Size = 28u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = data }
+
+        EntityRegistry.observe evt
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        let snap = SessionStore.snapshot store
+        Assert.Contains(
+            snap.Interactions,
+            fun i ->
+                i.ActionName = "Status Wears Off"
+                && i.InteractionType = InteractionType.Aid
+                && i.MessageId = 206
+        )
+
+    [<Fact>]
+    let ``MsgBasic classifies casting interrupted as unknown not aid`` () =
+        let interactionType, harm, aid =
+            MsgBasicCatalog.classify MsgBasicCatalog.IsInterrupted 4
+
+        Assert.Equal(InteractionType.Unknown, interactionType)
+        Assert.Equal(None, harm)
+        Assert.Equal(None, aid)
+        Assert.Equal("Casting Interrupted", MsgBasicCatalog.messageLabel MsgBasicCatalog.IsInterrupted)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.IsInterrupted)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.NotEnoughMp)
+        Assert.Equal("Unable To See Target", MsgBasicCatalog.messageLabel MsgBasicCatalog.UnableToSeeTarg)
+        Assert.Equal(
+            InteractionType.Unknown,
+            (MsgBasicCatalog.classify MsgBasicCatalog.UnableToSeeTarg 4 |> fun (t, _, _) -> t)
+        )
+        Assert.Equal("Unable To Use Job Ability", MsgBasicCatalog.messageLabel MsgBasicCatalog.UnableToUseJa2)
+        Assert.Equal("Time Left", MsgBasicCatalog.messageLabel MsgBasicCatalog.TimeLeft)
+        Assert.Equal("No Jug Pet Item", MsgBasicCatalog.messageLabel MsgBasicCatalog.NoJugPetItem)
+        Assert.Equal("Must Have Pet Food", MsgBasicCatalog.messageLabel MsgBasicCatalog.MustHaveFood)
+        Assert.Equal(
+            InteractionType.Unknown,
+            (MsgBasicCatalog.classify MsgBasicCatalog.UnableToUseJa2 4 |> fun (t, _, _) -> t)
+        )
+        Assert.Equal(
+            InteractionType.Unknown,
+            (MsgBasicCatalog.classify MsgBasicCatalog.TimeLeft 4 |> fun (t, _, _) -> t)
+        )
+        Assert.Equal("Check Low Evasion High Defense", MsgBasicCatalog.messageLabel 176)
+        Assert.Equal("Check Low Evasion", MsgBasicCatalog.messageLabel 177)
+        Assert.Equal("Check Low Evasion And Defense", MsgBasicCatalog.messageLabel 178)
+        Assert.Equal(InteractionType.Unknown, (MsgBasicCatalog.classify 176 4 |> fun (t, _, _) -> t))
+        Assert.True(SettledDivergence.isMessageClassified 176)
+        Assert.Equal("Magic Burst", MsgBasicCatalog.messageLabel MsgBasicCatalog.MagicBurstDamage)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicBurstDamage)
+        Assert.Equal("Magic Drain MP", MsgBasicCatalog.messageLabel MsgBasicCatalog.MagicDrainMp)
+        Assert.Equal("Magic Drain HP", MsgBasicCatalog.messageLabel MsgBasicCatalog.MagicDrainHp)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicDrainMp)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicDrainHp)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.SkillDrainMp)
+        Assert.Equal("Magic Erase", MsgBasicCatalog.messageLabel MsgBasicCatalog.MagicErase)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicErase)
+        Assert.Equal("Magic Remove Effect", MsgBasicCatalog.messageLabel MsgBasicCatalog.MagicRemoveEffect)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicRemoveEffect)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.JaRemoveEffect)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.TooFarAway)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.CannotAttackTarget)
+
+    [<Fact>]
+    let ``0x29 casting interrupted is not classified as enhance`` () =
+        EntityRegistry.reset()
+        InteractionBuilder.reset()
+        let store = SessionStore.create()
+        let data = Fixtures.battleMessagePacketSimple 20149u 20149u 16us
+        let evt =
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x0029us
+              PacketName = "GP_SERV_COMMAND_BATTLE_MESSAGE"
+              Size = 28u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = data }
+
+        EntityRegistry.observe evt
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        let snap = SessionStore.snapshot store
+        Assert.Contains(
+            snap.Interactions,
+            fun i ->
+                i.ActionName = "Casting Interrupted"
+                && i.InteractionType = InteractionType.Unknown
+                && i.MessageId = 16
+        )
+
+    [<Fact>]
     let ``experience parser reads battle message`` () =
         match ExperienceParser.tryParseBattleMessage 8 0u 150u with
         | Some parsed ->
             Assert.Equal(150, parsed.Points)
             Assert.Equal(0, parsed.Chain)
         | None -> failwith "Expected XP parse"
+
+    [<Fact>]
+    let ``experience parser reads 0x002D XP in param1`` () =
+        match ExperienceParser.tryParseBattleMessage 8 133u 0u with
+        | Some parsed -> Assert.Equal(133, parsed.Points)
+        | None -> failwith "Expected XP parse from 0x002D Data"
+
+    [<Fact>]
+    let ``0x002D experience message records XP`` () =
+        EntityRegistry.reset()
+        InteractionBuilder.reset()
+        let store = SessionStore.create()
+        let data = Fixtures.battleMessage2Packet 20149u 20149u 8us 133u 0u
+        let evt =
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x002Dus
+              PacketName = "GP_SERV_COMMAND_BATTLE_MESSAGE2"
+              Size = 28u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = data }
+
+        EntityRegistry.observe evt
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        let snap = SessionStore.snapshot store
+        Assert.Contains(snap.ExperienceRecords, fun r -> r.ExperiencePoints = 133)
+
+    [<Fact>]
+    let ``experience parser reads live 0x002D EXP chain Data as XP`` () =
+        match ExperienceParser.tryParseBattleMessage 253 222u 1u with
+        | Some parsed ->
+            Assert.Equal(222, parsed.Points)
+            Assert.Equal(1, parsed.Chain)
+        | None -> failwith "Expected EXP chain parse"
+
+    [<Fact>]
+    let ``experience parser reads 0x29 fixture EXP chain Param1 as chain`` () =
+        match ExperienceParser.tryParseBattleMessage 253 3u 180u with
+        | Some parsed ->
+            Assert.Equal(180, parsed.Points)
+            Assert.Equal(3, parsed.Chain)
+        | None -> failwith "Expected fixture EXP chain parse"
+
+    [<Fact>]
+    let ``0x002D EXP chain records XP from Data and chain from Data2`` () =
+        EntityRegistry.reset()
+        InteractionBuilder.reset()
+        let store = SessionStore.create()
+        let data = Fixtures.battleMessage2Packet 20149u 20149u 253us 222u 1u
+        let evt =
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x002Dus
+              PacketName = "GP_SERV_COMMAND_BATTLE_MESSAGE2"
+              Size = 28u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = data }
+
+        EntityRegistry.observe evt
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        let snap = SessionStore.snapshot store
+        Assert.Contains(snap.ExperienceRecords, fun r -> r.ExperiencePoints = 222 && r.Chain = 1)
+        Assert.Contains(
+            snap.Interactions,
+            fun i -> i.MessageId = 253 && i.Value = 222 && i.ActionName = "EXP Chain"
+        )
+
+    [<Fact>]
+    let ``0x002D attains-level is not parsed as experience`` () =
+        Assert.Equal(None, ExperienceParser.tryParseBattleMessage 9 56u 0u)
+        Assert.Equal("Attains Level", MsgBasicCatalog.messageLabel MsgBasicCatalog.AttainsLevel)
+        Assert.Equal(InteractionType.Unknown, (MsgBasicCatalog.classify 9 0 |> fun (t, _, _) -> t))
+
+        EntityRegistry.reset()
+        InteractionBuilder.reset()
+        let store = SessionStore.create()
+        let data = Fixtures.battleMessage2Packet 20149u 17584273u 9us 56u 0u
+        let evt =
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x002Dus
+              PacketName = "GP_SERV_COMMAND_BATTLE_MESSAGE2"
+              Size = 28u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = data }
+
+        EntityRegistry.observe evt
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        let snap = SessionStore.snapshot store
+        Assert.Empty(snap.ExperienceRecords)
+        Assert.Contains(
+            snap.Interactions,
+            fun i -> i.MessageId = 9 && i.ActionName = "Attains Level" && i.Value = 56
+        )
 
     [<Fact>]
     let ``combat_recovery includes aid interactions`` () =
@@ -642,6 +877,93 @@ module AnalyticsTests =
         let snap = SessionStore.snapshot store
         Assert.Contains(snap.ChatMessages, fun c -> c.Mode = "Say" && c.Speaker = "Poroburu" && c.Message = "hello")
         Assert.Contains(snap.ChatMessages, fun c -> c.Mode = "Tell" && c.Speaker = "Poroburu")
+
+    [<Fact>]
+    let ``incoming 0x0037 server status is not recorded as an item use`` () =
+        EntityRegistry.reset()
+        EntityRegistry.registerLocalPlayerName "Porobururu"
+        let store = SessionStore.create()
+
+        let evt =
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x0037us
+              PacketName = "GP_SERV_COMMAND_SERVERSTATUS"
+              Size = 96u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = Fixtures.serverStatusPacket 20149u }
+
+        EntityRegistry.observe evt
+        SessionStore.ingest store evt DecoderResult.empty
+        let snap = SessionStore.snapshot store
+        Assert.Empty snap.ItemUses
+        Assert.Equal(Some 20149u, EntityRegistry.tryLocalPlayerId())
+        Assert.Equal("Porobururu", EntityRegistry.formatEntity 20149u)
+
+    [<Fact>]
+    let ``snapshot backfills interaction names after local player id is known`` () =
+        EntityRegistry.reset()
+        InteractionBuilder.reset()
+        let store = SessionStore.create()
+
+        store.Interactions <-
+            [ { Id = 0
+                BattleId = None
+                TimestampMs = 1L
+                InteractionType = InteractionType.Aid
+                HarmType = None
+                AidType = Some AidType.Recovery
+                Category = InteractionCategory.Recovery
+                DamageModifier = DamageModifier.Normal
+                ActorId = 20149u
+                TargetId = 20149u
+                ActorName = "Entity 20149"
+                TargetName = "Entity 20149"
+                ActionName = "Cure"
+                Value = 0
+                Success = "hit"
+                CommandNo = 4
+                MessageId = 7
+                IsProc = false
+                ProcValue = 0
+                IsLocalPlayerActor = false
+                IsLocalPlayerTarget = false } ]
+
+        EntityRegistry.registerLocalPlayerName "Porobururu"
+
+        EntityRegistry.observe
+            { Topic = "test"
+              Timestamp = 2UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x0037us
+              PacketName = "GP_SERV_COMMAND_SERVERSTATUS"
+              Size = 96u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 2UL
+              Data = Fixtures.serverStatusPacket 20149u }
+
+        let snap = SessionStore.snapshot store
+        Assert.Equal("Porobururu", snap.Interactions.Head.ActorName)
+        Assert.True(snap.Interactions.Head.IsLocalPlayerActor)
+
+    [<Fact>]
+    let ``session header name is reapplied after PacketStore reset`` () =
+        EntityRegistry.reset()
+        EntityRegistry.registerLocalPlayerName "Porobururu"
+        let _store = PacketStore(8)
+        Assert.Equal(None, EntityRegistry.localPlayerName())
+        EntityRegistry.registerLocalPlayerName "Porobururu"
+        Assert.Equal(Some "Porobururu", EntityRegistry.localPlayerName())
 
     [<Fact>]
     let ``chat_self_say fixture resolves outgoing say speaker`` () =
