@@ -269,7 +269,8 @@ Ranked `--assert-settled` only moves when these families appear or their **shape
 
 | Heat (re-rank) | Opcodes | Notes |
 |----------------|---------|--------|
-| Combat finish | S2C `0x0028`, `0x0029` | `start_as_harm`, `unclassified_message`, `unknown_kind` |
+| Combat finish | S2C `0x0028`, `0x0029` | Heat fingerprints `0x28` **commandNo** and `0x29` MessageNum, **not** `0x28` finish `message`. A new cmd-4 id on an already-seen command does not wake heat; it waits for another shape change or `recording stopped:` |
+| XP / limit | S2C `0x002D` MessageNum | Extra XP of an already-seen id is cool |
 | New chat Kind | S2C `0x0017` Kind byte @4 | Known Yell/`Standard` spam is cool |
 | Zone-in / real logout | S2C `0x000A`; `0x000B` state 1/8/9 | State **2** is zone handoff — keep recording |
 | Loot rows | S2C `0x00D2` / `0x00D3` | Decoded; unnamed pool is deferred |

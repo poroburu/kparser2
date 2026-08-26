@@ -1,5 +1,7 @@
 # kparser vs kparser2 inequalities
 
+This scan’s parity is **bitstream → interaction**, not English chatlog reconstruction. XiPackets `0x0028` `BattleResult.message` is the id the client uses to pick a DAT formatter and print the line (`CXiSchStatus::PutMessage`). Live NDJSON plus that layout plus `msg.lua` / BtlMess names the event. `--assert-settled` proves we **classified** the id; the lookup proves the label. kparser RAM lines and `report fights` on constructed Motenten fixtures are not this camp.
+
 Classify a dual-dump or live disagreement **before coding**. Do not edit kparser. Do not retarget kparser2 `HarmType` to kparser’s Damage/Enfeeble/Drain labels. Diff `parity.interactions` by **name**.
 
 | Bucket | Meaning | Agent action |
@@ -21,6 +23,7 @@ Classify a dual-dump or live disagreement **before coding**. Do not edit kparser
 | System lines vs `ChatMessages` | kparser `parity.chat` projects system; native `chat[]` may not |
 | Constructed dual-dump agreement | `generate-fixtures.ps1` proves CLI agreement, not Horizon layout |
 | kparser `HarmType` Damage/Enfeeble/Drain | kparser2 interaction harm is Melee/Ranged/Spell/… |
+| `kparser.cli` fights/offense / RAM attach | Snapshot is chatline-file only. `RamReader` is WinForms. Do not add those dumps as a parity gate |
 
 ## kparser2-missing (implement from live bytes)
 
@@ -48,5 +51,7 @@ Classify a dual-dump or live disagreement **before coding**. Do not edit kparser
 |------|-----|
 | `unnamed_entities` | Often missing `0x00E` name@0x34, not a classifier bug |
 | `melee_name_pairing` | Out of scan scope unless it is the ranked priority item |
+| `party_alliance_filter` | `0x00DD` names party members (alliance flags unused). Offense/defense include every nearby Player/Pet/Fellow |
+| `pet_owner_map` | Local jug only: `0x0068` owner=self + `0x00E` claimer=self. No owner→pet for alliance pets |
 
 Append a row when a session discovers a *structural* fact. Do not “fix” kparser so a dump matches.

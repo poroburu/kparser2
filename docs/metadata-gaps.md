@@ -10,7 +10,7 @@ Packet-native fields win. A filler is allowed only for a **named** gap until a p
 
 **Not fillers**
 
-- Live `0x28` `message` — use LandSandBoat `scripts/enum/msg.lua` (`xi.msg.basic`) after the id appears in the capture
+- Live `0x28` `message` — use LandSandBoat `scripts/enum/msg.lua` (`xi.msg.basic`) after the id appears in the capture. That id **is** the chat-line formatter; do not wait on a kparser RAM dump to classify it
 - Yell Kind `0x1A` — XiPackets `0x0017`
 - Magic start `cmd_no` 8 fourcc (`cawh` / `cabl` / …) — not a spell id; finish `cmd_no` 4 `cmd_arg` is the spell id
 
