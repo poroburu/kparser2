@@ -129,6 +129,24 @@ powershell -File C:\Users\porob\git\kdev\kparser2\scripts\generate-fixtures.ps1
 
 Parity matrix rows are named after kparser test methods (`TestPlayerHitMob`, `FailSelfBuff`, `region_enfeeble`, etc.). Mark a row done when Tier 1–3 tests pass for that scenario.
 
+### Dual dump (kparser vs kparser2)
+
+kparser can dump the same ChatLine fixtures the unit tests use, without the WinForms host or a `.sdf` file:
+
+```powershell
+powershell -File C:\Users\porob\git\kdev\kparser\scripts\snapshot.ps1 snapshot `
+  C:\Users\porob\git\kdev\kparser\fixtures\chatlines\test_player_hit_mob.txt --json
+```
+
+Compare `parity.interactions` (by `actorName` / `targetName`, not IDs) with kparser2:
+
+```powershell
+dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- analytics snapshot `
+  C:\Users\porob\git\kdev\kparser2\fixtures\sessions\combat_melee_hits.ndjson --json
+```
+
+Schema: [kparser/docs/snapshot-schema.md](../kparser/docs/snapshot-schema.md). kparser `actionType` is Melee/Ranged/Spell; kparser2 `HarmType` uses the same labels. kparser `success` uses `hit` / `miss` / `parry` / `shadow-absorb` / `no-effect`.
+
 Reference captures (local, not committed): `C:\Users\porob\git\kdev\ffxi-captures\` — NDJSON recordings and retail unpacks for VieweD + CLI decode oracles. Promote small slices into `fixtures/sessions/` for golden tests.
 
 Expected `decode sample.ndjson` output (non-JSON mode):
