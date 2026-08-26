@@ -634,6 +634,7 @@ module AnalyticsTests =
         Assert.Equal("Unable To Use Job Ability", MsgBasicCatalog.messageLabel MsgBasicCatalog.UnableToUseJa2)
         Assert.Equal("Time Left", MsgBasicCatalog.messageLabel MsgBasicCatalog.TimeLeft)
         Assert.Equal("No Jug Pet Item", MsgBasicCatalog.messageLabel MsgBasicCatalog.NoJugPetItem)
+        Assert.Equal("Must Have Pet Food", MsgBasicCatalog.messageLabel MsgBasicCatalog.MustHaveFood)
         Assert.Equal(
             InteractionType.Unknown,
             (MsgBasicCatalog.classify MsgBasicCatalog.UnableToUseJa2 4 |> fun (t, _, _) -> t)

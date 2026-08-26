@@ -221,6 +221,7 @@ module MsgBasicCatalog =
     let UnableToUseJa2 = 88
     let TimeLeft = 202
     let NoJugPetItem = 337
+    let MustHaveFood = 347
     // /check evasion-defense lines; Windower BtlMess 170-178, LSB enum has a hole here. Live camp used 176-178.
     let CheckHighEvaDef = 170
     let CheckLowEvaDef = 178
@@ -240,6 +241,7 @@ module MsgBasicCatalog =
         || n = UnableToUseJa
         || n = UnableToUseJa2
         || n = NoJugPetItem
+        || n = MustHaveFood
 
     let private isCheckEvasionDefense n =
         n >= CheckHighEvaDef && n <= CheckLowEvaDef
@@ -325,6 +327,7 @@ module MsgBasicCatalog =
         | 88 -> "Unable To Use Job Ability"
         | 202 -> "Time Left"
         | 337 -> "No Jug Pet Item"
+        | 347 -> "Must Have Pet Food"
         | 170 -> "Check High Evasion And Defense"
         | 171 -> "Check High Evasion"
         | 172 -> "Check High Evasion Low Defense"
