@@ -149,9 +149,19 @@ dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.
 powershell -File C:\Users\porob\git\kdev\kparser2\scripts\compare-chat-parity.ps1 kparser-chat.json k2-yell.json
 ```
 
-Combat still diffs `parity.interactions` by **name** (not IDs). Schema: [kparser/docs/snapshot-schema.md](../kparser/docs/snapshot-schema.md). kparser `actionType` is Melee/Ranged/Spell; kparser2 `HarmType` uses the same labels. kparser `success` uses `hit` / `miss` / `parry` / `shadow-absorb` / `no-effect`. Chat `message` is body-only; kparser native `chat[]` keeps the full line.
+These fixture dumps do not load kpacket. They only prove both CLIs agree on **constructed** bytes/text (`generate-fixtures.ps1`), not that HorizonXI sends that layout. Combat still diffs `parity.interactions` by **name** (not IDs). Schema: [kparser/docs/snapshot-schema.md](../kparser/docs/snapshot-schema.md). kparser `actionType` is Melee/Ranged/Spell; kparser2 `HarmType` uses the same labels. kparser `success` uses `hit` / `miss` / `parry` / `shadow-absorb` / `no-effect`. Chat `message` is body-only; kparser native `chat[]` keeps the full line.
 
-Reference captures (local, not committed): `C:\Users\porob\git\kdev\ffxi-captures\` — NDJSON recordings and retail unpacks for VieweD + CLI decode oracles. Promote small slices into `fixtures/sessions/` for golden tests.
+### Promote a fixture
+
+Oracle is **live bytes**, then VieweD, then a golden slice. Never the reverse (do not invent NDJSON to match a test).
+
+1. Record under `C:\Users\porob\git\kdev\ffxi-captures\ndjson\` (`kparser2.cli record … --duration-ms …`). Keep full captures there; they are not committed.
+2. Inspect: `decode --filter 0x17` / `--filter 0x28`, `analytics snapshot --parity-chat`, interaction rows. Open the same file in **VieweD** if opcode fields are ambiguous.
+3. If live disagrees with a synthetic fixture, **live wins**. Fix classifiers or replace the synthetic; do not edit the capture to match the generator.
+4. Copy a short slice into `fixtures/sessions/` and add a test only after that inspection.
+5. Optional second check: kparser RAM chatlines from the same session via `kparser.cli snapshot`. `kparser.cli` cannot attach to the process.
+
+Retail PacketViewer slices (`bcmn30_petrifying_pair`) already follow this gate.
 
 Expected `decode sample.ndjson` output (non-JSON mode):
 
@@ -195,9 +205,11 @@ data/zones.json          zone id → name (from server/sql/zone_settings.sql)
 
 ## Live session (only when task says `live`)
 
-1. Build kpacket2 plugin: `C:\Users\porob\git\kdev\kpacket2\build.ps1`
+Fixture replay (`analytics snapshot`, `--parity-chat`, `dotnet test`) does **not** need kpacket. Dual-dump against `fixtures/sessions/*.ndjson` is offline. Live ingest (`probe` / `record` / `watch`) needs the plugin publishing on `:5555`.
+
+1. Close HorizonXI, then rebuild/deploy: `C:\Users\porob\git\kdev\kpacket2\build.ps1` (Ashita 4.3 SDK; plugin must export `expDestroyPlugin`)
 2. Load in Ashita: `/load kpacket`
-3. Run `packet_monitor.exe` as oracle
+3. Confirm: `kparser2.cli probe` (or `packet_monitor.exe`)
 4. Record: `kparser2.cli record capture.ndjson --duration-ms 30000`
 5. Decode: `kparser2.cli decode capture.ndjson --json`
 6. Run kparser2 WPF with **Session → Use Live Feed**
