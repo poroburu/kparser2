@@ -631,6 +631,17 @@ module AnalyticsTests =
             InteractionType.Unknown,
             (MsgBasicCatalog.classify MsgBasicCatalog.TargOutOfRange 4 |> fun (t, _, _) -> t)
         )
+        Assert.Equal("Unable To Use Job Ability", MsgBasicCatalog.messageLabel MsgBasicCatalog.UnableToUseJa2)
+        Assert.Equal("Time Left", MsgBasicCatalog.messageLabel MsgBasicCatalog.TimeLeft)
+        Assert.Equal("No Jug Pet Item", MsgBasicCatalog.messageLabel MsgBasicCatalog.NoJugPetItem)
+        Assert.Equal(
+            InteractionType.Unknown,
+            (MsgBasicCatalog.classify MsgBasicCatalog.UnableToUseJa2 4 |> fun (t, _, _) -> t)
+        )
+        Assert.Equal(
+            InteractionType.Unknown,
+            (MsgBasicCatalog.classify MsgBasicCatalog.TimeLeft 4 |> fun (t, _, _) -> t)
+        )
 
     [<Fact>]
     let ``0x29 casting interrupted is not classified as enhance`` () =

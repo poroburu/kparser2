@@ -212,6 +212,11 @@ module MsgBasicCatalog =
     let MagicCannotCast = 47
     let MagicCannotBeCast = 48
     let UnableToCastSpells = 49
+    // Job-ability / pet-call blocked; live camp used 88 and 337 next to Call Beast.
+    let UnableToUseJa = 87
+    let UnableToUseJa2 = 88
+    let TimeLeft = 202
+    let NoJugPetItem = 337
 
     let private isCastInterruptedOrBlocked n =
         n = IsInterrupted
@@ -222,6 +227,12 @@ module MsgBasicCatalog =
         || n = MagicCannotCast
         || n = MagicCannotBeCast
         || n = UnableToCastSpells
+
+    let private isActionBlocked n =
+        isCastInterruptedOrBlocked n
+        || n = UnableToUseJa
+        || n = UnableToUseJa2
+        || n = NoJugPetItem
 
     /// 0x28 BattleResult.message uses xi.msg.basic, not kparser chatline ParseCodes.
     let tryClassifyAction messageId =
@@ -240,7 +251,8 @@ module MsgBasicCatalog =
             || n = StatusWearsOff
             ->
             Some(InteractionType.Aid, None, Some AidType.Enhance)
-        | n when isCastInterruptedOrBlocked n -> Some(InteractionType.Unknown, None, None)
+        | n when n = TimeLeft -> Some(InteractionType.Unknown, None, None)
+        | n when isActionBlocked n -> Some(InteractionType.Unknown, None, None)
         | _ -> None
 
     let classify (messageNum: int) (messageType: int) =
@@ -259,7 +271,8 @@ module MsgBasicCatalog =
             || n = StatusWearsOff
             ->
             InteractionType.Aid, None, Some AidType.Enhance
-        | n when isCastInterruptedOrBlocked n -> InteractionType.Unknown, None, None
+        | n when n = TimeLeft -> InteractionType.Unknown, None, None
+        | n when isActionBlocked n -> InteractionType.Unknown, None, None
         | _ when messageType >= 4 -> InteractionType.Aid, None, Some AidType.Enhance
         | _ -> InteractionType.Unknown, None, None
 
@@ -288,4 +301,8 @@ module MsgBasicCatalog =
         | 47
         | 48 -> "Cannot Cast"
         | 49 -> "Unable To Cast Spells"
+        | 87
+        | 88 -> "Unable To Use Job Ability"
+        | 202 -> "Time Left"
+        | 337 -> "No Jug Pet Item"
         | n -> $"MsgBasic-{n}"
