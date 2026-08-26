@@ -27,16 +27,31 @@ For RC releases use tags like `v0.1.0-rc.1` and pass `--prerelease` to `gh relea
 
 ## Pre-release checklist
 
+Constructed smokes (`sample`, `combat_basic`) prove the CLI boots. They do not prove a camp.
+
+Do **not** use `bcmn30_petrifying_pair` as the RC CLI gate. That file is a retail PacketViewer slice (first capture imported from `ffxi-captures`). It stays as an Integration regression (`Category=Integration`), not a stand-in for live Horizon yell, `0x002D` XP, or `0x28` finish classifiers.
+
 ```powershell
 cd C:\path\to\kparser2
 dotnet build kparser2.sln -c Release
 dotnet test kparser2.sln -c Release --no-build
 
-# Decoder oracle
+# Constructed smoke
 dotnet run -c Release --project kparser2.Cli/kparser2.Cli.fsproj -- decode fixtures/sessions/sample.ndjson
 dotnet run -c Release --project kparser2.Cli/kparser2.Cli.fsproj -- analytics snapshot fixtures/sessions/combat_basic.ndjson
-dotnet run -c Release --project kparser2.Cli/kparser2.Cli.fsproj -- analytics snapshot fixtures/sessions/bcmn30_petrifying_pair.ndjson --assert-combat --min-battles 1
+
+# Live Horizon slices (current RC surface)
+dotnet run -c Release --project kparser2.Cli/kparser2.Cli.fsproj -- analytics snapshot fixtures/sessions/chat_yell_live.ndjson --parity-chat --assert-chat
+dotnet run -c Release --project kparser2.Cli/kparser2.Cli.fsproj -- analytics snapshot fixtures/sessions/combat_magic_live.ndjson --assert-settled
+
+# Broader Horizon camp (multiple battles, XP, loot)
+dotnet run -c Release --project kparser2.Cli/kparser2.Cli.fsproj -- analytics snapshot fixtures/sessions/bst_camp_multi.ndjson --assert-combat --min-battles 2
+
+# Retail PacketViewer + camp regressions already in this filter
+dotnet test kparser2.sln -c Release --no-build --filter "Category=Integration"
 ```
+
+Optional: replay the latest file under `ffxi-captures/ndjson/` with `--assert-settled` (leftover codes are OK; do not require a clean camp).
 
 Optional live smoke (game + kpacket2):
 
