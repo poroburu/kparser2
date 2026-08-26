@@ -626,6 +626,11 @@ module AnalyticsTests =
         Assert.Equal("Casting Interrupted", MsgBasicCatalog.messageLabel MsgBasicCatalog.IsInterrupted)
         Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.IsInterrupted)
         Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.NotEnoughMp)
+        Assert.Equal("Out Of Range", MsgBasicCatalog.messageLabel MsgBasicCatalog.TargOutOfRange)
+        Assert.Equal(
+            InteractionType.Unknown,
+            (MsgBasicCatalog.classify MsgBasicCatalog.TargOutOfRange 4 |> fun (t, _, _) -> t)
+        )
 
     [<Fact>]
     let ``0x29 casting interrupted is not classified as enhance`` () =
