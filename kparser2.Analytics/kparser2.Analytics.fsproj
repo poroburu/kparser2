@@ -18,6 +18,7 @@
     <Compile Include="FightSegmenter.fs" />
     <Compile Include="CombatEntityInference.fs" />
     <Compile Include="ChatIngest.fs" />
+    <Compile Include="SettledDivergence.fs" />
     <Compile Include="AnalyticsQueries.fs" />
     <Compile Include="AnalyticsReport.fs" />
     <Compile Include="ReportTemplates.fs" />

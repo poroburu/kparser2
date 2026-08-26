@@ -265,8 +265,11 @@ module EntityRegistry =
 
     let localPlayerName () =
         match localPlayerId with
-        | Some id -> tryGetName id
-        | None -> None
+        | Some id ->
+            match tryGetName id with
+            | Some name -> Some name
+            | None -> pendingLocalPlayerName
+        | None -> pendingLocalPlayerName
 
     let tryLocalPlayerId () = localPlayerId
 

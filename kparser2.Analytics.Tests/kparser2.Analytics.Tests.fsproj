@@ -19,6 +19,7 @@
     <Compile Include="EntityRegistryCollection.fs" />
     <Compile Include="InteractionTestHelpers.fs" />
     <Compile Include="RecordWatchTests.fs" />
+    <Compile Include="SettledDivergenceTests.fs" />
     <Compile Include="ParseCodesParityTests.fs" />
     <Compile Include="InteractionParityTests.fs" />
     <Compile Include="AnalyticsTests.fs" />
