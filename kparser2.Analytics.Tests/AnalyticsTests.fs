@@ -616,6 +616,50 @@ module AnalyticsTests =
         )
 
     [<Fact>]
+    let ``MsgBasic classifies casting interrupted as unknown not aid`` () =
+        let interactionType, harm, aid =
+            MsgBasicCatalog.classify MsgBasicCatalog.IsInterrupted 4
+
+        Assert.Equal(InteractionType.Unknown, interactionType)
+        Assert.Equal(None, harm)
+        Assert.Equal(None, aid)
+        Assert.Equal("Casting Interrupted", MsgBasicCatalog.messageLabel MsgBasicCatalog.IsInterrupted)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.IsInterrupted)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.NotEnoughMp)
+
+    [<Fact>]
+    let ``0x29 casting interrupted is not classified as enhance`` () =
+        EntityRegistry.reset()
+        InteractionBuilder.reset()
+        let store = SessionStore.create()
+        let data = Fixtures.battleMessagePacketSimple 20149u 20149u 16us
+        let evt =
+            { Topic = "test"
+              Timestamp = 1UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x0029us
+              PacketName = "GP_SERV_COMMAND_BATTLE_MESSAGE"
+              Size = 28u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 1UL
+              Data = data }
+
+        EntityRegistry.observe evt
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        let snap = SessionStore.snapshot store
+        Assert.Contains(
+            snap.Interactions,
+            fun i ->
+                i.ActionName = "Casting Interrupted"
+                && i.InteractionType = InteractionType.Unknown
+                && i.MessageId = 16
+        )
+
+    [<Fact>]
     let ``experience parser reads battle message`` () =
         match ExperienceParser.tryParseBattleMessage 8 0u 150u with
         | Some parsed ->

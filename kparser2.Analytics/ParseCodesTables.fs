@@ -202,6 +202,25 @@ module MsgBasicCatalog =
     let IsNoLongerStatus = 204
     let GainsEffectOfStatus = 205
     let StatusWearsOff = 206
+    // Cast interrupted / cannot-cast cluster; live Horizon 0x29 used 16 next to magic cmd 8/4.
+    let IsInterrupted = 16
+    let MagicUnableToCast = 17
+    let MagicUnableToCast2 = 18
+    let NotEnoughMp = 34
+    let NoNinjaTools = 35
+    let MagicCannotCast = 47
+    let MagicCannotBeCast = 48
+    let UnableToCastSpells = 49
+
+    let private isCastInterruptedOrBlocked n =
+        n = IsInterrupted
+        || n = MagicUnableToCast
+        || n = MagicUnableToCast2
+        || n = NotEnoughMp
+        || n = NoNinjaTools
+        || n = MagicCannotCast
+        || n = MagicCannotBeCast
+        || n = UnableToCastSpells
 
     /// 0x28 BattleResult.message uses xi.msg.basic, not kparser chatline ParseCodes.
     let tryClassifyAction messageId =
@@ -219,6 +238,7 @@ module MsgBasicCatalog =
             || n = StatusWearsOff
             ->
             Some(InteractionType.Aid, None, Some AidType.Enhance)
+        | n when isCastInterruptedOrBlocked n -> Some(InteractionType.Unknown, None, None)
         | _ -> None
 
     let classify (messageNum: int) (messageType: int) =
@@ -236,6 +256,7 @@ module MsgBasicCatalog =
             || n = StatusWearsOff
             ->
             InteractionType.Aid, None, Some AidType.Enhance
+        | n when isCastInterruptedOrBlocked n -> InteractionType.Unknown, None, None
         | _ when messageType >= 4 -> InteractionType.Aid, None, Some AidType.Enhance
         | _ -> InteractionType.Unknown, None, None
 
@@ -255,4 +276,12 @@ module MsgBasicCatalog =
         | 204 -> "No Longer Status"
         | 205 -> "Gains Effect"
         | 206 -> "Status Wears Off"
+        | 16 -> "Casting Interrupted"
+        | 17
+        | 18 -> "Unable To Cast"
+        | 34 -> "Not Enough MP"
+        | 35 -> "No Ninja Tools"
+        | 47
+        | 48 -> "Cannot Cast"
+        | 49 -> "Unable To Cast Spells"
         | n -> $"MsgBasic-{n}"
