@@ -82,4 +82,4 @@ module Ndjson =
                     else
                         Some(decode line)
                 with _ ->
-                    Some(decode line))
+                    None)
