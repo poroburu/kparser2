@@ -22,19 +22,19 @@ public sealed class MobFilterService
 
     public void SetSelectedMob(string? mobName)
     {
-        Current = Clone(Current, selectedMobName: mobName);
+        Current = new MobFilterDto { GroupMobs = Current.GroupMobs, ExcludeZeroXp = Current.ExcludeZeroXp, SelectedMobName = mobName, SelectedBattleId = Current.SelectedBattleId, SelectedPlayerName = Current.SelectedPlayerName };
         FilterChanged?.Invoke();
     }
 
     public void SetSelectedBattle(int? battleId)
     {
-        Current = Clone(Current, selectedBattleId: battleId);
+        Current = new MobFilterDto { GroupMobs = Current.GroupMobs, ExcludeZeroXp = Current.ExcludeZeroXp, SelectedMobName = Current.SelectedMobName, SelectedBattleId = battleId, SelectedPlayerName = Current.SelectedPlayerName };
         FilterChanged?.Invoke();
     }
 
     public void SetSelectedPlayer(string? playerName)
     {
-        Current = Clone(Current, selectedPlayerName: playerName);
+        Current = new MobFilterDto { GroupMobs = Current.GroupMobs, ExcludeZeroXp = Current.ExcludeZeroXp, SelectedMobName = Current.SelectedMobName, SelectedBattleId = Current.SelectedBattleId, SelectedPlayerName = playerName };
         FilterChanged?.Invoke();
     }
 

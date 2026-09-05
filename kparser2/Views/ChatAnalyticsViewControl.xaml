@@ -8,11 +8,9 @@
             <TextBlock Text="Speaker:" VerticalAlignment="Center" Margin="0,0,4,0" />
             <ComboBox Width="160" ItemsSource="{Binding SpeakerOptions}" SelectedItem="{Binding SelectedSpeaker, Mode=TwoWay}" />
         </StackPanel>
-        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-            <FlowDocumentScrollViewer Document="{Binding ReportDocument}"
-                                      IsSelectionEnabled="True"
-                                      VerticalScrollBarVisibility="Disabled"
-                                      HorizontalScrollBarVisibility="Disabled" />
-        </ScrollViewer>
+        <FlowDocumentScrollViewer Document="{Binding ReportDocument}"
+                                  IsSelectionEnabled="True"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Auto" />
     </DockPanel>
 </UserControl>

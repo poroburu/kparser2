@@ -15,6 +15,14 @@ public sealed partial class QueryAnalyticsViewModel : ObservableObject, IDisposa
     private readonly IDisposable _analyticsSubscription;
     private readonly IDisposable? _filterSubscription;
     private int _refreshGeneration;
+    private bool _disposed;
+    private AnalyticsReportRequest? _request;
+
+    public void SetRequest(AnalyticsReportRequest request)
+    {
+        _request = request;
+        Refresh(_session.GetSnapshot());
+    }
 
     [ObservableProperty]
     private FlowDocument _reportDocument = new();
@@ -46,19 +54,26 @@ public sealed partial class QueryAnalyticsViewModel : ObservableObject, IDisposa
 
     private void Refresh(AnalyticsSnapshotDto snapshot)
     {
+        if (_disposed) return;
         var generation = Interlocked.Increment(ref _refreshGeneration);
         var filter = _mobFilter?.Current ?? new MobFilterDto();
         var queryId = _queryId;
 
-        Task.Run(() => AnalyticsReportService.format(queryId, snapshot, filter))
+        var request = _request ?? new AnalyticsReportRequest { QueryId = queryId, Filter = filter };
+        Task.Run(() => AnalyticsReportService.formatRequest(request, snapshot))
             .ContinueWith(
                 t =>
                 {
-                    if (t.IsFaulted || generation != Volatile.Read(ref _refreshGeneration))
+                    if (_disposed || generation != Volatile.Read(ref _refreshGeneration))
                     {
                         return;
                     }
 
+                    if (t.IsFaulted)
+                    {
+                        UiThread.RunBackground(() => { if (!_disposed) StatusText = "Report failed: " + t.Exception?.GetBaseException().Message; });
+                        return;
+                    }
                     var report = t.Result;
                     UiThread.RunBackground(() => ApplyReport(generation, report, snapshot));
                 },
@@ -67,17 +82,20 @@ public sealed partial class QueryAnalyticsViewModel : ObservableObject, IDisposa
 
     private void ApplyReport(int generation, AnalyticsReportDto report, AnalyticsSnapshotDto snapshot)
     {
-        if (generation != Volatile.Read(ref _refreshGeneration))
+        if (_disposed || generation != Volatile.Read(ref _refreshGeneration))
         {
             return;
         }
 
-        ReportDocument = AnalyticsReportRenderer.ToFlowDocument(report);
-        StatusText = $"{report.Spans.Count} spans | {snapshot.Interactions.Count} interactions | {snapshot.Battles.Count} fights";
+        if (string.Concat(report.Spans.Select(s => s.Text)) != new TextRange(ReportDocument.ContentStart, ReportDocument.ContentEnd).Text.TrimEnd('\r', '\n'))
+            ReportDocument = AnalyticsReportRenderer.ToFlowDocument(report);
+        StatusText = report.Spans.Count == 0 ? "No matching data in this capture." : "";
     }
 
     public void Dispose()
     {
+        _disposed = true;
+        Interlocked.Increment(ref _refreshGeneration);
         _analyticsSubscription.Dispose();
         _filterSubscription?.Dispose();
     }

@@ -11,9 +11,7 @@ public sealed class QueryAnalyticsView(string id, string title, string queryId, 
     public bool IsDebug => isDebug;
 
     public UserControl CreateView(IAnalyticsSession session) =>
-        combat
-            ? new CombatAnalyticsViewControl(session, queryId)
-            : new QueryAnalyticsViewControl(session, queryId);
+        new CombatAnalyticsViewControl(session, queryId, combat);
 }
 
 public sealed class ChatAnalyticsView : IAnalyticsView
@@ -23,6 +21,15 @@ public sealed class ChatAnalyticsView : IAnalyticsView
     public bool IsDebug => false;
 
     public UserControl CreateView(IAnalyticsSession session) => new ChatAnalyticsViewControl(session);
+}
+
+public sealed class ChatSummaryAnalyticsView : IAnalyticsView
+{
+    public string Id => "chat-summary";
+    public string Title => "Chat Summary";
+    public bool IsDebug => false;
+
+    public UserControl CreateView(IAnalyticsSession session) => new ChatAnalyticsViewControl(session, summary: true);
 }
 
 public sealed class DamageGraphAnalyticsView : IAnalyticsView
@@ -70,9 +77,9 @@ public static class AnalyticsViewCatalog
         new QueryAnalyticsView("thief", "Thief", "thief", combat: true),
         new QueryAnalyticsView("corsair", "Corsair", "corsair", combat: true),
         new QueryAnalyticsView("performance", "Performance", "performance", combat: true),
-        new QueryAnalyticsView("abyssea", "Abyssea", "abyssea"),
+        new QueryAnalyticsView("abyssea", "Abyssea", "abyssea", combat: true),
         new QueryAnalyticsView("skillchain", "Skillchain", "skillchain", combat: true),
-        new QueryAnalyticsView("chat-summary", "Chat Summary", "chat-summary"),
+        new ChatSummaryAnalyticsView(),
         new DamageGraphAnalyticsView(),
         new RawDataAnalyticsView()
     ];

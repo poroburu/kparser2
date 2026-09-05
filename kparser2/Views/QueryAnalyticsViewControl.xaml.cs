@@ -9,6 +9,8 @@ public partial class QueryAnalyticsViewControl : UserControl
 {
     private readonly QueryAnalyticsViewModel _viewModel;
 
+    public void SetRequest(AnalyticsReportRequest request) => _viewModel.SetRequest(request);
+
     public QueryAnalyticsViewControl(IAnalyticsSession session, string queryId, MobFilterService? mobFilter = null)
     {
         InitializeComponent();
