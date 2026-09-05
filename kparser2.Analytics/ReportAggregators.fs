@@ -22,19 +22,15 @@ module ReportAggregators =
 
     let filterInteractions (snap: AnalyticsSnapshot) (filter: MobFilter) (predicate: Interaction -> bool) =
         snap.Interactions
-        |> List.map (fun i ->
-            { i with
-                ActorName = EntityRegistry.formatEntity i.ActorId
-                TargetName = EntityRegistry.formatEntity i.TargetId })
         |> List.filter predicate
         |> List.filter (fun i ->
             match i.BattleId with
-            | None -> true
+            | None -> not (filter.ExcludeZeroXp || filter.SelectedMobName.IsSome || filter.SelectedBattleId.IsSome)
             | Some bid ->
                 snap.Battles
                 |> List.tryFind (fun b -> b.Id = bid)
                 |> Option.map (matchesMob filter)
-                |> Option.defaultValue true)
+                |> Option.defaultValue (not (filter.ExcludeZeroXp || filter.SelectedMobName.IsSome || filter.SelectedBattleId.IsSome)))
         |> List.filter (fun i ->
             match filter.SelectedPlayerName with
             | None -> true
@@ -219,7 +215,7 @@ module ReportAggregators =
                 stats <-
                     match i.Category with
                     | InteractionCategory.Melee -> { stats with Melee = addHitStats i stats.Melee }
-                    | InteractionCategory.MeleeCrit -> { stats with MeleeCrit = addHitStats i stats.MeleeCrit }
+                    | InteractionCategory.MeleeCrit -> { stats with Melee = addHitStats i stats.Melee; MeleeCrit = addHitStats i stats.MeleeCrit }
                     | InteractionCategory.Ranged | InteractionCategory.RangedCrit ->
                         { stats with Ranged = addHitStats i stats.Ranged }
                     | InteractionCategory.Ability -> { stats with Ability = addHitStats i stats.Ability }
@@ -256,6 +252,7 @@ module ReportAggregators =
 
     let buildPlayerDefense (snap: AnalyticsSnapshot) (filter: MobFilter) =
         defenseInteractions snap filter
+        |> List.filter (fun i -> isPerformanceParticipant snap i.TargetName)
         |> List.groupBy (fun i -> i.TargetName)
         |> List.map (fun (name, rows) ->
             let mutable stats = emptyPlayerDefense name

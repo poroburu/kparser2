@@ -212,6 +212,14 @@ module SessionStore =
 
         let interactions =
             InteractionBuilder.fromDecoderEvents ts None decoded.Events
+            |> fun interactions ->
+                // One identity per decoded packet, shared by all targets/effects.
+                // The allocated interaction ID provides a deterministic fallback for old captures.
+                match interactions with
+                | [] -> []
+                | first :: _ ->
+                    let identity = $"{evt.SessionUuid}:{evt.MessageId}:{first.Id}"
+                    interactions |> List.map (fun i -> { i with SourcePacketId = Some identity })
             |> List.map (fun interaction ->
                 CombatEntityInference.inferFromInteraction interaction
 

@@ -42,6 +42,8 @@ module BattleMessageCatalog =
     let classifyActionEffect (commandNo: int) (messageId: int) (miss: int) (value: int) =
         if isActionStartCommand commandNo then
             InteractionType.Unknown, None, None
+        elif messageId >= 420 && messageId <= 429 then
+            InteractionType.Aid, None, Some AidType.Enhance
         elif messageId = 0xBB && value > 0 then
             InteractionType.Harm, Some HarmType.Other, None
         elif messageId > 0 then

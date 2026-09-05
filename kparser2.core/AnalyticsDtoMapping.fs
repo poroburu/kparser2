@@ -111,7 +111,8 @@ module AnalyticsDtoMapping =
             IsProc = i.IsProc,
             ProcValue = i.ProcValue,
             IsLocalPlayerActor = i.IsLocalPlayerActor,
-            IsLocalPlayerTarget = i.IsLocalPlayerTarget
+            IsLocalPlayerTarget = i.IsLocalPlayerTarget,
+            SourcePacketId = Option.toObj i.SourcePacketId
         )
 
     let private toChat (c: ChatMessageRecord) =
@@ -237,7 +238,8 @@ module AnalyticsDtoMapping =
           IsProc = i.IsProc
           ProcValue = i.ProcValue
           IsLocalPlayerActor = i.IsLocalPlayerActor
-          IsLocalPlayerTarget = i.IsLocalPlayerTarget }
+          IsLocalPlayerTarget = i.IsLocalPlayerTarget
+          SourcePacketId = Option.ofObj i.SourcePacketId }
 
     let private fromChat (c: ChatMessageDto) =
         { TimestampMs = c.TimestampMs
@@ -371,10 +373,22 @@ module AnalyticsQueryService =
         AnalyticsQueryBridge.run queryId snap mobFilter
 
 module AnalyticsReportService =
-    let format (queryId: string) (dto: AnalyticsSnapshotDto) (filter: MobFilterDto) =
+    let formatRequest (request: AnalyticsReportRequest) (dto: AnalyticsSnapshotDto) =
         let snap = AnalyticsDtoMapping.fromSnapshotDto dto
-        let mobFilter = AnalyticsDtoMapping.toMobFilter filter
-        AnalyticsReportBridge.run queryId snap mobFilter
+        let filter = AnalyticsDtoMapping.toMobFilter request.Filter
+        let snap =
+            if isNull (box request.BattleIds) then snap
+            else
+                let ids = request.BattleIds |> Set.ofSeq
+                { snap with
+                    Battles = snap.Battles |> List.filter (fun b -> ids.Contains b.Id)
+                    Interactions = snap.Interactions |> List.filter (fun i -> i.BattleId |> Option.exists ids.Contains)
+                    ExperienceRecords = snap.ExperienceRecords |> List.filter (fun e -> e.BattleId |> Option.exists ids.Contains) }
+        DetailedReports.format request.QueryId (string request.Mode) request.ShowDetails request.ExcludeCrystals request.BaseAttacks snap filter
+        |> AnalyticsDtoMapping.toReportDto
+
+    let format (queryId: string) (dto: AnalyticsSnapshotDto) (filter: MobFilterDto) =
+        formatRequest (AnalyticsReportRequest(QueryId = queryId, Filter = filter)) dto
 
     let formatChat (dto: AnalyticsSnapshotDto) (modeFilter: string option) (speakerFilter: string option) =
         let snap = AnalyticsDtoMapping.fromSnapshotDto dto

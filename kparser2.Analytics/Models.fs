@@ -91,7 +91,8 @@ type Interaction =
       IsProc: bool
       ProcValue: int
       IsLocalPlayerActor: bool
-      IsLocalPlayerTarget: bool }
+      IsLocalPlayerTarget: bool
+      SourcePacketId: string option }
 
 type ChatMessageRecord =
     { TimestampMs: int64
@@ -113,6 +114,7 @@ type LootRecord =
       Quantity: int
       Gil: int
       PoolSlot: int
+      // The dropper/source for Found events; the recipient/lotter for distribution events.
       ActorName: string
       Detail: string }
 

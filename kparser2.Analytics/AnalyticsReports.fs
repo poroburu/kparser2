@@ -55,9 +55,15 @@ module PlayersReport =
                 ReportBuilder.empty
 
 module ChatSummaryReport =
+    let private normalizeFilter (value: string option) =
+        match value with
+        | Some value when String.IsNullOrWhiteSpace(value) || value.Trim().Equals("All", StringComparison.OrdinalIgnoreCase) -> None
+        | Some value -> Some(value.Trim())
+        | None -> None
+
     let format (snap: AnalyticsSnapshot) modeFilter speakerFilter =
-        let modeOpt = if modeFilter = Some "All" then None else modeFilter
-        let speakerOpt = if speakerFilter = Some "All" then None else speakerFilter
+        let modeOpt = normalizeFilter modeFilter
+        let speakerOpt = normalizeFilter speakerFilter
 
         let rows =
             snap.ChatMessages
@@ -96,8 +102,14 @@ module ChatReport =
         | _ -> ReportColors.black
 
     let format (snap: AnalyticsSnapshot) modeFilter speakerFilter =
-        let modeOpt = if modeFilter = Some "All" then None else modeFilter
-        let speakerOpt = if speakerFilter = Some "All" then None else speakerFilter
+        let normalizeFilter (value: string option) =
+            match value with
+            | Some value when String.IsNullOrWhiteSpace(value) || value.Trim().Equals("All", StringComparison.OrdinalIgnoreCase) -> None
+            | Some value -> Some(value.Trim())
+            | None -> None
+
+        let modeOpt = normalizeFilter modeFilter
+        let speakerOpt = normalizeFilter speakerFilter
 
         snap.ChatMessages
         |> List.filter (fun c ->
@@ -587,11 +599,12 @@ module LootReport =
         let kills = snap.Battles |> List.filter (fun b -> b.Killed) |> List.length
 
         let items =
-            snap.LootRecords
-            |> List.groupBy (fun l -> l.ItemName)
+            LootResolution.resolve snap.LootRecords
+            |> List.filter LootResolution.isMeaningful
+            |> List.groupBy (fun row -> row.ItemName)
             |> List.map (fun (item, rows) ->
-                let qty = rows |> List.sumBy (fun r -> r.Quantity)
-                let maxQty = rows |> List.maxBy (fun r -> r.Quantity) |> fun r -> r.Quantity
+                let qty = rows |> List.sumBy (fun row -> row.Loot.Quantity)
+                let maxQty = rows |> List.maxBy (fun row -> row.Loot.Quantity) |> fun row -> row.Loot.Quantity
                 item, qty, maxQty)
             |> List.sortByDescending (fun (_, qty, _) -> qty)
 

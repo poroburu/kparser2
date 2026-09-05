@@ -55,7 +55,8 @@ module InteractionBuilder =
           IsProc = isProc
           ProcValue = procValue
           IsLocalPlayerActor = isLocalPlayer actorId
-          IsLocalPlayerTarget = isLocalPlayer targetId }
+          IsLocalPlayerTarget = isLocalPlayer targetId
+          SourcePacketId = None }
 
     let fromCombatAction (timestampMs: int64) (battleId: int option) (action: CombatActionDecoded) =
         action.Targets
@@ -125,7 +126,8 @@ module InteractionBuilder =
             IsProc = false
             ProcValue = 0
             IsLocalPlayerActor = isLocalPlayer message.CasterId
-            IsLocalPlayerTarget = isLocalPlayer message.TargetId } ]
+            IsLocalPlayerTarget = isLocalPlayer message.TargetId
+            SourcePacketId = None } ]
 
     let fromDecoderEvents (timestampMs: int64) (battleId: int option) (events: DecoderEvent list) =
         events

@@ -34,11 +34,19 @@ module Trophy0xD3 =
                     | 3 -> LootEventType.Floor
                     | _ -> LootEventType.Lost
 
+                // For a final judgement sLootName is the actual winner. For a
+                // normal lot/pass update sLootName2 is the player taking action.
                 let actorName =
-                    if not (System.String.IsNullOrWhiteSpace currentName) then
-                        currentName
-                    elif not (System.String.IsNullOrWhiteSpace highestName) then
-                        highestName
+                    let preferred, fallback =
+                        if judgeFlag > 0 then
+                            highestName, currentName
+                        else
+                            currentName, highestName
+
+                    if not (System.String.IsNullOrWhiteSpace preferred) then
+                        preferred
+                    elif not (System.String.IsNullOrWhiteSpace fallback) then
+                        fallback
                     else
                         "Unknown"
 

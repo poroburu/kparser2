@@ -75,7 +75,7 @@ module private SettledHelpers =
           IsProc = false
           ProcValue = 0
           IsLocalPlayerActor = true
-          IsLocalPlayerTarget = false }
+          IsLocalPlayerTarget = false; SourcePacketId = None }
 
     let chat mode modeId speaker packetId : ChatMessageRecord =
         { TimestampMs = 10L

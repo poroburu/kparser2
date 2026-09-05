@@ -182,9 +182,13 @@ Set-Content -Path (Join-Path $OutputDir "chat_yell.ndjson") -Value $chatYellLine
 
 $d2 = New-TrophyListPacket 4172 1
 $d3 = New-TrophySolutionPacket 0 1 "Winner"
+$d2b = New-TrophyListPacket 4173 1
+$d3b = New-TrophySolutionPacket 0 1 "Winner2"
 $dropLines = @(
     (New-NdjsonLine "kpacket.v1.world.s2c.0x00D2" (New-Meta 0xD2 "GP_SERV_COMMAND_TROPHY_LIST" $d2.Length 1) $d2)
     (New-NdjsonLine "kpacket.v1.world.s2c.0x00D3" (New-Meta 0xD3 "GP_SERV_COMMAND_TROPHY_SOLUTION" $d3.Length 2) $d3)
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x00D2" (New-Meta 0xD2 "GP_SERV_COMMAND_TROPHY_LIST" $d2b.Length 3) $d2b)
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x00D3" (New-Meta 0xD3 "GP_SERV_COMMAND_TROPHY_SOLUTION" $d3b.Length 4) $d3b)
 )
 Set-Content -Path (Join-Path $OutputDir "item_drop.ndjson") -Value $dropLines -Encoding UTF8
 

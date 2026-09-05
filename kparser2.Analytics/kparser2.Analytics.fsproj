@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <Compile Include="Models.fs" />
+    <Compile Include="LootResolution.fs" />
     <Compile Include="ActionLookup.fs" />
     <Compile Include="SpellLookup.fs" />
     <Compile Include="ParseCodesTables.fs" />
@@ -23,6 +24,7 @@
     <Compile Include="ReportTemplates.fs" />
     <Compile Include="ReportAggregators.fs" />
     <Compile Include="AnalyticsReports.fs" />
+    <Compile Include="DetailedReports.fs" />
     <Compile Include="AnalyticsValidate.fs" />
     <Compile Include="ReportInterchange.fs" />
     <Compile Include="SessionStore.fs" />

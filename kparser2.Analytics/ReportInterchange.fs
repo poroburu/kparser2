@@ -8,7 +8,7 @@ open System.Text.Json.Serialization
 open FSharp.SystemTextJson
 
 module ReportInterchange =
-    let SchemaVersion = 1
+    let SchemaVersion = 2
 
     let productVersion =
         match Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>() with
@@ -24,6 +24,7 @@ module ReportInterchange =
 
     type ReportBundle =
         { Meta: ReportMeta
+          SessionStartMs: int64 option
           Combatants: Combatant list
           Fights: Battle list
           Events: Interaction list
@@ -58,6 +59,7 @@ module ReportInterchange =
               Zone = snap.ZoneName
               RecordedAt = DateTimeOffset.UtcNow.ToString("O")
               Kparser2Version = productVersion }
+          SessionStartMs = Some snap.SessionStartMs
           Combatants = snap.Combatants
           Fights = snap.Battles
           Events = snap.Interactions
@@ -76,7 +78,7 @@ module ReportInterchange =
                     "loot_by_item", loot ] }
 
     let toSnapshot (bundle: ReportBundle) =
-        { SessionStartMs = 0L
+        { SessionStartMs = bundle.SessionStartMs |> Option.defaultValue 0L
           ZoneName = bundle.Meta.Zone
           Combatants = bundle.Combatants
           Battles = bundle.Fights
@@ -94,7 +96,7 @@ module ReportInterchange =
         let json = File.ReadAllText path
         let bundle = JsonSerializer.Deserialize<ReportBundle>(json, jsonOptions)
 
-        if bundle.Meta.SchemaVersion <> SchemaVersion then
+        if bundle.Meta.SchemaVersion <> 1 && bundle.Meta.SchemaVersion <> SchemaVersion then
             failwith $"Unsupported schema version {bundle.Meta.SchemaVersion}"
 
         bundle

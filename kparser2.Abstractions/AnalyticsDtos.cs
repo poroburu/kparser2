@@ -45,6 +45,7 @@ public sealed class InteractionDto
     public int ProcValue { get; init; }
     public bool IsLocalPlayerActor { get; init; }
     public bool IsLocalPlayerTarget { get; init; }
+    public string? SourcePacketId { get; init; }
 }
 
 public sealed class ChatMessageDto

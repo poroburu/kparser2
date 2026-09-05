@@ -96,6 +96,25 @@ module ReportFormatTests =
         ReportTestHelpers.contains "Total Dmg" text
 
     [<Fact>]
+    let ``offense report keeps summary and detail columns aligned`` () =
+        let snap = ReportTestHelpers.replaySnapshot (FixturePaths.combatMeleeHits())
+        let lines = ReportTestHelpers.reportText "offense" snap |> fun text -> text.Split('\n')
+
+        let summaryHeader =
+            lines |> Array.find (fun line -> line.StartsWith("Player") && line.Contains("Total Dmg"))
+
+        let summaryRow = lines |> Array.find (fun line -> line.StartsWith("Entity") && line.Contains("43.24%"))
+        Assert.Equal(summaryHeader.IndexOf("Total Dmg"), summaryRow.IndexOf("128"))
+
+        let detailHeader =
+            lines |> Array.find (fun line -> line.StartsWith("Player") && line.Contains("Category"))
+
+        let detailRow = lines |> Array.find (fun line -> line.Contains("Melee") && line.Contains("Attack"))
+        Assert.Equal(detailHeader.IndexOf("Category"), detailRow.IndexOf("Melee"))
+        Assert.Equal(detailHeader.IndexOf("Action"), detailRow.IndexOf("Attack"))
+        Assert.Equal(detailHeader.IndexOf("Damage"), detailRow.IndexOf("128"))
+
+    [<Fact>]
     let ``defense report includes damage taken summary`` () =
         let snap = ReportTestHelpers.replaySnapshot (FixturePaths.combatAction())
         let text = ReportTestHelpers.reportText "defense" snap
@@ -122,6 +141,30 @@ module ReportFormatTests =
         ReportTestHelpers.contains "Chain   Count" text
 
     [<Fact>]
+    let ``loot report consolidates found and final distribution`` () =
+        let snap = ReportTestHelpers.replaySnapshot (FixturePaths.itemDrop())
+        let text = ReportTestHelpers.reportText "loot" snap
+
+        Assert.Contains("Recipient", text)
+        Assert.Contains("Source", text)
+        Assert.Contains("reraiser", text)
+        Assert.Contains("hi-reraiser", text)
+        Assert.Contains("Winner", text)
+        Assert.Contains("Winner2", text)
+        Assert.DoesNotContain("Found", text)
+        Assert.DoesNotContain("Pool slot", text)
+
+    [<Fact>]
+    let ``loot report keeps source for an undistributed item`` () =
+        let snap = ReportTestHelpers.replaySnapshot (FixturePaths.sample())
+        let text = ReportTestHelpers.reportText "loot" snap
+        let foundLine = text.Split('\n') |> Array.find (fun line -> line.StartsWith("Found"))
+
+        Assert.Contains("—", foundLine)
+        Assert.Contains("Entity 12345", foundLine)
+        Assert.True(foundLine.IndexOf("Entity 12345", StringComparison.Ordinal) > foundLine.IndexOf("—", StringComparison.Ordinal))
+
+    [<Fact>]
     let ``chat report formats messages with timestamps`` () =
         let snap = ReportTestHelpers.replaySnapshot (FixturePaths.chatSelfSay())
         let report = AnalyticsReportService.formatChat snap None None
@@ -130,6 +173,37 @@ module ReportFormatTests =
         Assert.Contains("[Say]", text)
         Assert.Contains("Poroburu", text)
         Assert.Contains("hello", text)
+
+    [<Fact>]
+    let ``chat all filters include every mode and speaker`` () =
+        let snap = ReportTestHelpers.replaySnapshot (FixturePaths.chatSelfSay())
+        let allText =
+            AnalyticsReportService.formatChat snap None None
+            |> fun report -> report.Spans |> Seq.map (fun s -> s.Text) |> String.Concat
+
+        let sentinelText =
+            AnalyticsReportService.formatChat snap (Some " all ") (Some "ALL")
+            |> fun report -> report.Spans |> Seq.map (fun s -> s.Text) |> String.Concat
+
+        Assert.Contains("[Say]", allText)
+        Assert.Contains("[Tell]", allText)
+        Assert.Equal(allText, sentinelText)
+
+        let summaryAllText =
+            AnalyticsReportService.formatChatSummary snap (Some " all ") (Some "ALL")
+            |> fun report -> report.Spans |> Seq.map (fun s -> s.Text) |> String.Concat
+
+        Assert.Contains("Say", summaryAllText)
+        Assert.Contains("Tell", summaryAllText)
+
+    [<Fact>]
+    let ``chat summary applies mode and speaker filters`` () =
+        let snap = ReportTestHelpers.replaySnapshot (FixturePaths.chatSelfSay())
+        let report = AnalyticsReportService.formatChatSummary snap (Some "Say") (Some "Poroburu")
+        let text = report.Spans |> Seq.map (fun s -> s.Text) |> String.Concat
+        Assert.Contains("Chat Summary", text)
+        Assert.Contains("Say", text)
+        Assert.DoesNotContain("Tell", text)
 
     [<Fact>]
     let ``offense detail report includes frequency histogram`` () =
@@ -178,7 +252,7 @@ module FightSegmenterTests =
           IsProc = false
           ProcValue = 0
           IsLocalPlayerActor = false
-          IsLocalPlayerTarget = false }
+          IsLocalPlayerTarget = false; SourcePacketId = None }
 
     let private deathInteraction actorId targetId ts =
         { harmInteraction actorId targetId ts 0 with
@@ -972,7 +1046,7 @@ module AnalyticsTests =
                 IsProc = false
                 ProcValue = 0
                 IsLocalPlayerActor = false
-                IsLocalPlayerTarget = false } ]
+                IsLocalPlayerTarget = false; SourcePacketId = None } ]
 
         EntityRegistry.registerLocalPlayerName "Porobururu"
 
