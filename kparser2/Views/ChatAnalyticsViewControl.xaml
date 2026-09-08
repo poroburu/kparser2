@@ -4,9 +4,9 @@
     <DockPanel Margin="8">
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
             <TextBlock Text="Mode:" VerticalAlignment="Center" Margin="0,0,4,0" />
-            <ComboBox Width="120" ItemsSource="{Binding ModeOptions}" SelectedItem="{Binding SelectedMode, Mode=TwoWay}" Margin="0,0,12,0" />
+            <ComboBox AutomationProperties.AutomationId="chat-mode" Width="120" ItemsSource="{Binding ModeOptions}" SelectedItem="{Binding SelectedMode, Mode=TwoWay}" Margin="0,0,12,0" />
             <TextBlock Text="Speaker:" VerticalAlignment="Center" Margin="0,0,4,0" />
-            <ComboBox Width="160" ItemsSource="{Binding SpeakerOptions}" SelectedItem="{Binding SelectedSpeaker, Mode=TwoWay}" />
+            <ComboBox AutomationProperties.AutomationId="chat-speaker" Width="160" ItemsSource="{Binding SpeakerOptions}" SelectedItem="{Binding SelectedSpeaker, Mode=TwoWay}" />
         </StackPanel>
         <FlowDocumentScrollViewer Document="{Binding ReportDocument}"
                                   IsSelectionEnabled="True"
