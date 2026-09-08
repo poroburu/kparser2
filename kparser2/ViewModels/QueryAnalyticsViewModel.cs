@@ -87,7 +87,8 @@ public sealed partial class QueryAnalyticsViewModel : ObservableObject, IDisposa
             return;
         }
 
-        if (string.Concat(report.Spans.Select(s => s.Text)) != new TextRange(ReportDocument.ContentStart, ReportDocument.ContentEnd).Text.TrimEnd('\r', '\n'))
+        var expectedText = report.Spans.Count == 0 ? "(no data)" : string.Concat(report.Spans.Select(s => s.Text));
+        if (expectedText.TrimEnd('\r', '\n') != new TextRange(ReportDocument.ContentStart, ReportDocument.ContentEnd).Text.TrimEnd('\r', '\n'))
             ReportDocument = AnalyticsReportRenderer.ToFlowDocument(report);
         StatusText = report.Spans.Count == 0 ? "No matching data in this capture." : "";
     }

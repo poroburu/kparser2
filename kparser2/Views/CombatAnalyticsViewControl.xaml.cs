@@ -113,7 +113,7 @@ public sealed class CombatAnalyticsViewControl : UserControl
         {
             _populating = true; selectedFights = null; preferences.BattleIds = null; fightButton.Content = "Select fights…";
             preferences.Player = null; preferences.Mob = null; players.SelectedItem = "(All)"; mobs.SelectedIndex = 0;
-            grouped.IsChecked = true; zeroXp.IsChecked = false; detail.IsChecked = false; crystals.IsChecked = false; mode.SelectedIndex = 0;
+            grouped.IsChecked = true; zeroXp.IsChecked = false; detail.IsChecked = false; crystals.IsChecked = false; mode.SelectedIndex = 0; baseAttacks.SelectedItem = 1;
             _populating = false; Populate(session.GetSnapshot()); Apply();
         };
         Populate(session.GetSnapshot()); Apply();
