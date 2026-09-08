@@ -1,8 +1,119 @@
 # UI parity QA
 
-UI parity is a second observation layer on top of the synchronized oracle
-capture. The packet stream and raw ChatLines remain authoritative. A visible
+QA runs at three resolutions: state, UI, and human. The packet stream and raw
+ChatLines remain authoritative. A visible
 difference is a lead to reconcile, not proof that either parser is correct.
+
+## Three-resolution plan
+
+1. **State:** compare normalized interactions/chat and report calculations on
+   paired captures. Preserve duplicates and record boundary quality. Equality
+   means the compared projections agree; it does not establish UI correctness.
+2. **UI:** inspect visible rows, selected filters, refresh, and ordering against
+   the state from that window. Record direct agent/automation inspections with
+   `-EvidenceSource ui`; include the surface and filter context in `Notes`.
+   A control endpoint responding to status/reset does not prove rendering.
+3. **Human:** preserve the user's wording and observation time with
+   `-EvidenceSource human` (the default). Reconcile the report with state and
+   visible UI evidence before deciding its classification. Human feedback can
+   expose missing workflows even when state totals agree.
+
+The synchronized comparison emits `<capture>.qa.json` with independent state,
+UI, and human results. Observation-only results are `unobserved` or `recorded`.
+A verified WPF replay bundle gives the UI layer a scoped `passed`/`failed`
+result. Older observation records count as human evidence. Empty files do not
+establish coverage. The default exit code gates state comparisons only;
+`-RequireUiEvidence` additionally requires a passing UI replay bundle. Neither
+mode infers human acceptance.
+
+Run offline gates before a live window:
+
+```powershell
+dotnet test .\kparser2\kparser2.sln --filter "Category!=Integration"
+powershell -NoProfile -ExecutionPolicy Bypass -File .\kparser2\scripts\test-parity-comparator.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\kparser2\scripts\test-report-comparator.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\kparser2\scripts\test-parity-evidence.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\kparser2\scripts\test-ui-evidence.ps1
+```
+
+Then validate reset acknowledgements, collect paired evidence, run the smoke
+matrix below, and reconcile observations. Track unresolved work on the owning
+child's GitHub issue, with links to local evidence where appropriate; do not
+promote a capture merely because the offline gates pass.
+
+An exact cursor proves a packet cutoff, not lossless paired capture: the
+current helper starts recorders after resetting the UIs, and the legacy RAM
+reader has no shared packet cursor. Events during startup or different stop
+times can still cause differences. Validate capture coverage before using a
+mismatch to change a decoder. A future coordinated readiness/start/stop
+handshake needs live verification before claiming a common full window.
+
+## Repeatable UI replay
+
+Run from the parent `kdev` directory on Windows with a **closed, frozen** capture:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\kparser2\scripts\test-ui-replay.ps1 `
+  -CapturePath .\kparser2\fixtures\sessions\bcmn30_petrifying_pair.ndjson `
+  -OutputDir .\kparser2\artifacts\ui-qa\camp-review
+```
+
+Choose a new output directory for every run, or omit it to get a unique one.
+The wrapper builds into `artifacts/ui-qa-build`, launches a hidden console with
+an offscreen WPF host, and returns nonzero on a failed check or timeout. It does
+not use the live UI control descriptors or reset a live session. Settings go to
+the run directory through `KPARSER2_VIEW_SETTINGS_PATH`; normal app settings
+and live executables are not used for the test run. `-NoBuild` reuses the QA
+build only, after an explicit build of the current sources.
+
+The runner exercises the actual text-report controls from `AnalyticsViewCatalog`:
+
+- Default reports and every offered report mode.
+- Player/enemy filters, saved filter restoration, and reset.
+- Applicable detail, crystal, zero-XP, and base-attack controls.
+- Modal fight selection: no fights, one fight, then reset.
+- Empty-state refresh and repeated snapshot updates (no duplicated text).
+- Chat mode and speaker selection.
+
+Each case saves a viewport PNG, full actual/expected document text, filters,
+and a verdict. `ui-run.json` records the capture SHA-256, case identities,
+failures, skipped surfaces, and limitations; `state.json` and `capture.ndjson`
+retain the state and exact input. The text oracle is `AnalyticsReportService`,
+so these checks establish binding/control agreement with state, not independent
+correctness of report calculations. Screenshot review checks appearance; a
+text match alone cannot establish legibility or absence of clipping.
+
+Chart/packet diagnostic surfaces and live connection health remain explicitly
+outside this text-report runner. Use the manual smoke matrix for those. A
+report's empty-data check does not establish event coverage for that feature.
+
+Supply the bundle when comparing the **same bytes**:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\kparser2\scripts\compare-synchronized.ps1 `
+  -KparserChatLines .\ffxi-captures\ndjson\window.kparser.chatlines.txt `
+  -Kparser2Capture .\ffxi-captures\ndjson\window.kparser2.complete.ndjson `
+  -UiRun .\kparser2\artifacts\ui-qa\camp-review\ui-run.json `
+  -RequireUiEvidence
+```
+
+Run UI QA on the reconciled capture when that is the comparison input. A hash
+mismatch, missing artifact, inconsistent verdict, empty case list, or changed
+text in a passing case rejects the bundle before the comparison runs.
+
+To attach a person's report to a saved screenshot case, add these options to
+`record-ui-observation.ps1` (with the same capture and surface):
+
+```powershell
+  -EvidenceSource human `
+  -UiRun .\kparser2\artifacts\ui-qa\camp-review\ui-run.json `
+  -UiCase offense/default
+```
+
+This preserves the person's summary/time and records the manifest hash and
+screenshot reference. The comparator rejects links to a changed bundle or a
+different capture/surface. Agent screenshot inspections use `-EvidenceSource
+ui`; do not record automated output as human feedback.
 
 ## Preflight
 
@@ -170,6 +281,16 @@ The UI comparison separates `rendering-only` observations from semantic
 observations, deferred observations, and unresolved observations. It does not
 turn a human observation into an automatic decoder fix or change the existing
 parity/report exit criteria.
+
+Unknown classifications, applications, evidence sources, or invalid timestamps
+are rejected. When reset/session metadata is supplied, conflicting observation
+metadata is rejected. Observations must name the compared capture (the
+reconciled `.complete.ndjson` filename is accepted for its original `.ndjson`).
+Exact comparisons also require matching exact observation
+boundaries, including cursor zero. `-RequireExactBoundary` requires explicit
+`-SessionUuid`, `-BoundaryMessageId`, `-BoundaryMode exact`, and
+`-BoundaryQuality exact` matching the capture header; missing metadata is not a
+zero cursor. Supply `-ResetId` to check the reset identity as well.
 
 ## Manual smoke matrix
 

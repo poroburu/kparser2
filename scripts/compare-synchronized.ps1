@@ -8,6 +8,8 @@ param(
     [string]$KparserCliPath = "kparser\kparser.Cli\bin\x86\Debug\kparser.cli.exe",
     [string]$Kparser2Project = "kparser2\kparser2.Cli\kparser2.Cli.fsproj",
     [string]$UiObservations = "",
+    [string]$UiRun = "",
+    [switch]$RequireUiEvidence,
     [string]$ResetId = "",
     [string]$ResetBoundaryUtc = "",
     [string]$SessionUuid = "",
@@ -31,163 +33,7 @@ function Resolve-RootPath([string]$Path) {
     return [System.IO.Path]::GetFullPath((Join-Path $root $Path))
 }
 
-function Read-UiObservations {
-    param([string]$Path)
-
-    if ([string]::IsNullOrWhiteSpace($Path)) {
-        return @()
-    }
-
-    if ([System.IO.Path]::IsPathRooted($Path)) {
-        $resolvedPath = [System.IO.Path]::GetFullPath($Path)
-    }
-    else {
-        $resolvedPath = [System.IO.Path]::GetFullPath((Join-Path $root $Path))
-    }
-
-    if (-not (Test-Path -LiteralPath $resolvedPath -PathType Leaf)) {
-        throw "UI observation file not found: $resolvedPath"
-    }
-
-    $rows = @()
-    $lineNumber = 0
-    foreach ($line in Get-Content -LiteralPath $resolvedPath) {
-        $lineNumber++
-        if ([string]::IsNullOrWhiteSpace($line)) {
-            continue
-        }
-
-        try {
-            $row = $line | ConvertFrom-Json
-        }
-        catch {
-            throw "Invalid UI observation JSON at $resolvedPath line $lineNumber`: $($_.Exception.Message)"
-        }
-
-        foreach ($propertyName in @("observed_at_utc", "application", "surface", "classification", "summary")) {
-            if ($null -eq $row.PSObject.Properties[$propertyName] -or
-                [string]::IsNullOrWhiteSpace([string]$row.$propertyName)) {
-                throw "UI observation at $resolvedPath line $lineNumber is missing '$propertyName'."
-            }
-        }
-
-        $rows += $row
-    }
-
-    return [pscustomobject]@{
-        path = $resolvedPath
-        rows = @($rows)
-    }
-}
-
-function Read-CaptureBoundary {
-    param([string]$Path)
-
-    $line = Get-Content -LiteralPath $Path -TotalCount 1
-    if ([string]::IsNullOrWhiteSpace($line)) {
-        return [pscustomobject]@{
-            mode = "none"
-            quality = "unavailable"
-            reason = "capture has no session header"
-            session_uuid = ""
-            message_id = 0
-        }
-    }
-
-    try {
-        $header = $line | ConvertFrom-Json
-    }
-    catch {
-        return [pscustomobject]@{
-            mode = "none"
-            quality = "unavailable"
-            reason = "capture session header is invalid"
-            session_uuid = ""
-            message_id = 0
-        }
-    }
-
-    if ([string]$header.type -ne "kparser2.session") {
-        return [pscustomobject]@{
-            mode = "none"
-            quality = "unavailable"
-            reason = "capture session header is missing"
-            session_uuid = ""
-            message_id = 0
-        }
-    }
-
-    return [pscustomobject]@{
-        mode = if ($header.boundary_mode) { [string]$header.boundary_mode } else { "none" }
-        quality = if ($header.boundary_quality) { [string]$header.boundary_quality } else { "unavailable" }
-        reason = if ($header.boundary_reason) { [string]$header.boundary_reason } else { "" }
-        session_uuid = if ($header.boundary_session_uuid) { [string]$header.boundary_session_uuid } else { "" }
-        message_id = if ($null -ne $header.boundary_message_id) { [UInt64]$header.boundary_message_id } else { [UInt64]0 }
-    }
-}
-
-function New-UiComparison {
-    param(
-        [string]$Path,
-        [object[]]$Rows,
-        [string]$ResetId,
-        [string]$ResetBoundaryUtc,
-        [string]$SessionUuid,
-        [UInt64]$BoundaryMessageId,
-        [string]$BoundaryMode,
-        [string]$BoundaryQuality,
-        [string]$BoundaryReason
-    )
-
-    $semanticClassifications = @(
-        "kparser-only",
-        "kparser2-missing",
-        "kparser2-extra"
-    )
-    $renderingRows = @($Rows | Where-Object {
-        [string]$_.classification -ieq "rendering-only"
-    })
-    $semanticRows = @($Rows | Where-Object {
-        $semanticClassifications -contains ([string]$_.classification).ToLowerInvariant()
-    })
-    $deferredRows = @($Rows | Where-Object {
-        [string]$_.classification -ieq "deferred"
-    })
-    $unclassifiedRows = @($Rows | Where-Object {
-        [string]$_.classification -ieq "unclassified"
-    })
-
-    $byClassification = [ordered]@{}
-    foreach ($row in @($Rows)) {
-        $classification = [string]$row.classification
-        if (-not $byClassification.Contains($classification)) {
-            $byClassification[$classification] = 0
-        }
-        $byClassification[$classification]++
-    }
-
-    return [ordered]@{
-        schema_version = 1
-        observations_path = $Path
-        reset_id = $ResetId
-        reset_boundary_utc = $ResetBoundaryUtc
-        session_uuid = $SessionUuid
-        boundary_message_id = $BoundaryMessageId
-        boundary_mode = $BoundaryMode
-        boundary_quality = $BoundaryQuality
-        boundary_reason = $BoundaryReason
-        observation_count = @($Rows).Count
-        rendering_only_count = $renderingRows.Count
-        semantic_count = $semanticRows.Count
-        deferred_count = $deferredRows.Count
-        unclassified_count = $unclassifiedRows.Count
-        by_classification = $byClassification
-        rendering_only = @($renderingRows)
-        semantic = @($semanticRows)
-        deferred = @($deferredRows)
-        unclassified = @($unclassifiedRows)
-    }
-}
+. (Join-Path $PSScriptRoot "parity-evidence.ps1")
 
 $chatPath = Resolve-RootPath $KparserChatLines
 $capturePath = Resolve-RootPath $Kparser2Capture
@@ -201,26 +47,11 @@ foreach ($path in @($chatPath, $capturePath, $kparserCli, $kparser2ProjectPath))
 }
 
 $captureBoundary = Read-CaptureBoundary $capturePath
-if ($RequireExactBoundary -and $captureBoundary.mode -ne "exact") {
-    throw "Exact comparison requires an exact capture boundary; found '$($captureBoundary.mode)': $($captureBoundary.reason)"
+if ($RequireExactBoundary) {
+    Assert-ExactBoundary -CaptureBoundary $captureBoundary -SessionUuid $SessionUuid `
+        -BoundaryMessageId $BoundaryMessageId -BoundaryMode $BoundaryMode `
+        -BoundaryQuality $BoundaryQuality -HasMessageId ($PSBoundParameters.ContainsKey("BoundaryMessageId"))
 }
-if ($RequireExactBoundary -and $BoundaryMode -ne "exact") {
-    throw "Exact comparison requires reset boundary_mode=exact; found '$BoundaryMode'."
-}
-if ($RequireExactBoundary -and $captureBoundary.quality -ne "exact") {
-    throw "Exact comparison requires exact boundary quality; found '$($captureBoundary.quality)': $($captureBoundary.reason)"
-}
-if ($RequireExactBoundary -and
-    -not [string]::IsNullOrWhiteSpace($SessionUuid) -and
-    $captureBoundary.session_uuid -ne $SessionUuid) {
-    throw "Capture boundary session_uuid '$($captureBoundary.session_uuid)' does not match reset session_uuid '$SessionUuid'."
-}
-if ($RequireExactBoundary -and
-    $BoundaryMessageId -gt 0 -and
-    [UInt64]$captureBoundary.message_id -ne $BoundaryMessageId) {
-    throw "Capture boundary message_id '$($captureBoundary.message_id)' does not match reset after_message_id '$BoundaryMessageId'."
-}
-
 if ([string]::IsNullOrWhiteSpace($OutputDir)) {
     $OutputDir = Split-Path -Parent $capturePath
 }
@@ -236,6 +67,9 @@ $parityJson = Join-Path $OutputDir "$base.parity.json"
 $reportJson = Join-Path $OutputDir "$base.report-compare.json"
 $uiComparisonJson = Join-Path $OutputDir "$base.ui-compare.json"
 $uiInput = Read-UiObservations $UiObservations
+$uiRunInput = if ($UiRun) { Read-UiRun -Path (Resolve-RootPath $UiRun) -CapturePath $capturePath } else { $null }
+if ($RequireUiEvidence -and $null -eq $uiRunInput) { throw 'RequireUiEvidence needs a WPF replay manifest supplied with -UiRun.' }
+Assert-ObservationWindow -Rows @($uiInput.rows) -ResetId $ResetId -SessionUuid $SessionUuid -BoundaryMessageId $BoundaryMessageId -BoundaryMode $BoundaryMode -CapturePath $capturePath
 
 & $kparserCli snapshot $chatPath --json --output $kparserJson
 if ($LASTEXITCODE -ne 0) {
@@ -262,7 +96,7 @@ $parityExit = $LASTEXITCODE
     -OutputPath $reportJson
 $reportExit = $LASTEXITCODE
 
-$uiExit = 0
+$uiComparison = $null
 if (-not [string]::IsNullOrWhiteSpace($UiObservations)) {
     $uiComparison = New-UiComparison `
         -Path $uiInput.path `
@@ -284,9 +118,15 @@ Write-Host "kparser snapshot:  $kparserJson"
 Write-Host "kparser2 snapshot: $kparser2Json"
 Write-Host "parity projection: $parityJson"
 Write-Host "report comparison:  $reportJson"
-Write-Host "parity exit=$parityExit report exit=$reportExit ui exit=$uiExit"
+$qa = New-QaSummary -ParityExit $parityExit -ReportExit $reportExit -Rows @($uiInput.rows) -Boundary $captureBoundary -UiRun $uiRunInput
+$qa.sources = [ordered]@{ capture = $capturePath; chatlines = $chatPath; observations = $uiInput.path }
+$qa.reset_id = $ResetId
+$qa.reset_boundary_utc = $ResetBoundaryUtc
+$qa | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $OutputDir "$base.qa.json") -Encoding utf8
+Write-Host "state=$($qa.state.status) ui=$($qa.ui.status) human=$($qa.human.status)"
+Write-Host "parity exit=$parityExit report exit=$reportExit require-ui=$RequireUiEvidence"
 
-if ($parityExit -ne 0 -or $reportExit -ne 0) {
+if ($parityExit -ne 0 -or $reportExit -ne 0 -or ($RequireUiEvidence -and $qa.ui.status -ne 'passed')) {
     exit 1
 }
 

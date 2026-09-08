@@ -3,6 +3,10 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$CapturePath,
     [string]$ObservationPath = "",
+    [ValidateSet("human", "ui")]
+    [string]$EvidenceSource = "human",
+    [string]$UiRun = "",
+    [string]$UiCase = "",
     [string]$Timestamp = "",
     [string]$ResetId = "",
     [string]$ResetBoundaryUtc = "",
@@ -82,6 +86,22 @@ if (-not (Test-Path -LiteralPath $captureFullPath -PathType Leaf)) {
     throw "Capture file not found: $captureFullPath"
 }
 
+$uiEvidence = $null
+if ($UiRun -or $UiCase) {
+    if (-not $UiRun -or -not $UiCase) { throw 'Supply both UiRun and UiCase (surface/scenario) to link a review.' }
+    . (Join-Path $PSScriptRoot 'parity-evidence.ps1')
+    $run = Read-UiRun -Path (Resolve-RepoPath $UiRun) -CapturePath $captureFullPath
+    $case = @($run.manifest.cases | Where-Object { "$($_.surface)/$($_.scenario)" -ceq $UiCase })
+    if ($case.Count -ne 1 -or $case[0].surface -ine $Surface) { throw 'UiCase must identify one case on the observation surface.' }
+    if ($Application -ne 'kparser2') { throw 'WPF replay evidence belongs to kparser2.' }
+    $uiEvidence = [ordered]@{
+        manifest_path = $run.path
+        manifest_sha256 = (Get-FileHash -LiteralPath $run.path -Algorithm SHA256).Hash
+        case = $UiCase
+        screenshot = $case[0].screenshot
+    }
+}
+
 if ([string]::IsNullOrWhiteSpace($ObservationPath)) {
     $observationFullPath = "$captureFullPath.ui-observations.jsonl"
 }
@@ -106,6 +126,8 @@ else {
 
 $record = [ordered]@{
     schema_version = 1
+    evidence_source = $EvidenceSource
+    ui_evidence = $uiEvidence
     observed_at_utc = $observedAt.ToUniversalTime().ToString("O")
     observed_at_local = $observedAt.ToLocalTime().ToString("O")
     capture_path = $captureFullPath
