@@ -17,11 +17,27 @@ public sealed class SessionCoordinator : IAsyncDisposable
     private bool _everConnected;
     private long _lastReceived;
     private CaptureState? _capture;
+    private int _sessionGeneration;
+    private DateTimeOffset _lastResetUtc;
+    private string _boundarySessionUuid = "";
+    private ulong _afterMessageId;
+    private string _boundaryMode = "none";
+    private string _boundaryQuality = "unavailable";
+    private string _boundaryReason = "no reset boundary";
     public string CaptureDirectory { get; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "kparser2", "captures");
     public IAnalyticsSession Session { get; private set; } = PacketSessionFactory.fromSnapshot(new AnalyticsSnapshotDto());
     public string Mode { get; private set; } = "Waiting";
     public string Status { get; private set; } = "Waiting for kpacket on localhost:5556";
     public string? CapturePath => _capture?.Path;
+    public int SessionGeneration => _sessionGeneration;
+    public DateTimeOffset LastResetUtc => _lastResetUtc;
+    public string SessionUuid => _uuid ?? "";
+    public ulong LastMessageId => _source?.LastMessageId ?? 0UL;
+    public string BoundarySessionUuid => _boundarySessionUuid;
+    public ulong BoundaryMessageId => _afterMessageId;
+    public string BoundaryMode => _boundaryMode;
+    public string BoundaryQuality => _boundaryQuality;
+    public string BoundaryReason => _boundaryReason;
     public event Action? Changed;
     public event Action? SessionChanged;
 
@@ -34,13 +50,24 @@ public sealed class SessionCoordinator : IAsyncDisposable
         public List<DateTimeOffset> Gaps { get; set; } = [];
     }
 
-    public async Task StartLiveAsync(bool fresh = false)
+    public async Task StartLiveAsync(
+        bool fresh = false,
+        string? boundarySessionUuid = null,
+        ulong afterMessageId = 0UL,
+        string boundaryMode = "none",
+        string boundaryQuality = "unavailable",
+        string boundaryReason = "")
     {
         await StopAsync();
         Mode = "Live";
         Status = "Waiting for kpacket on localhost:5556 — load kpacket in Ashita";
         _capture = null;
         _endedUuid = null;
+        _boundarySessionUuid = boundarySessionUuid ?? "";
+        _afterMessageId = afterMessageId;
+        _boundaryMode = boundaryMode;
+        _boundaryQuality = boundaryQuality;
+        _boundaryReason = boundaryReason;
         if (!fresh)
         {
             try
@@ -51,10 +78,26 @@ public sealed class SessionCoordinator : IAsyncDisposable
             catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException) { }
         }
         ReplaceSession(PacketSessionFactory.fromSnapshot(new AnalyticsSnapshotDto()));
+        _sessionGeneration++;
+        _lastResetUtc = DateTimeOffset.UtcNow;
         _liveCancellation = new CancellationTokenSource();
         _monitor = MonitorAsync(_liveCancellation.Token);
         Changed?.Invoke();
     }
+
+    public Task ResetLiveAsync(
+        string sessionUuid,
+        ulong afterMessageId,
+        string boundaryMode,
+        string boundaryQuality,
+        string boundaryReason) =>
+        StartLiveAsync(
+            true,
+            sessionUuid,
+            afterMessageId,
+            boundaryMode,
+            boundaryQuality,
+            boundaryReason);
 
     private async Task MonitorAsync(CancellationToken ct)
     {
@@ -115,7 +158,18 @@ public sealed class SessionCoordinator : IAsyncDisposable
             _capture = new CaptureState { Uuid = uuid, Path = Path.Combine(CaptureDirectory, $"capture-{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}.ndjson") };
         else _capture!.Gaps.Add(DateTimeOffset.UtcNow);
         await Task.Run(() => Session.Dispose(), ct);
-        _source = new DesktopPacketSource(new LivePacketSource("tcp://localhost:5555"), _capture!.Path, resume, uuid);
+        var exactBoundary = _boundaryMode == "exact" && uuid == _boundarySessionUuid;
+        var boundary = exactBoundary ? _afterMessageId : 0UL;
+        _source = new DesktopPacketSource(
+            new LivePacketSource("tcp://localhost:5555"),
+            _capture!.Path,
+            resume,
+            uuid,
+            boundary,
+            exactBoundary,
+            _boundaryMode,
+            _boundaryQuality,
+            _boundaryReason);
         Session = PacketSessionFactory.fromDesktopSource(_source);
         _uuid = uuid;
         _lastReceived = 0;
