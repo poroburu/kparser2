@@ -18,13 +18,14 @@ using kparser2.Views;
 namespace kparser2.Ui.Qa;
 
 /// <summary>Exercises the real WPF controls against a frozen replay; does not drive the live desktop.</summary>
-internal sealed class ReplayQa
+internal sealed partial class ReplayQa
 {
     private readonly List<object> _cases = [];
     private readonly List<object> _skipped = [];
     private int _failures;
     private string _output = "";
     private Window _window = null!;
+    private readonly Dictionary<string, string> _coverage = [];
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 
     public async Task<int> RunAsync(string capture, string output)
@@ -35,12 +36,13 @@ internal sealed class ReplayQa
         using (var input = new FileStream(capture, FileMode.Open, FileAccess.Read, FileShare.Read))
         using (var copy = File.Create(frozen)) await input.CopyToAsync(copy);
         var hash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(frozen)));
-        var snapshot = await Task.Run(() =>
+        using var replay = await Task.Run(() =>
         {
-            using var replay = PacketSessionFactory.fromReplayDefault(frozen);
-            replay.WaitForReplayComplete();
-            return ((IAnalyticsSession)replay).GetSnapshot();
+            var source = PacketSessionFactory.fromReplayDefault(frozen);
+            source.WaitForReplayComplete();
+            return source;
         });
+        var snapshot = ((IAnalyticsSession)replay).GetSnapshot();
         File.WriteAllText(Path.Combine(output, "state.json"), JsonSerializer.Serialize(snapshot, Json));
         using IAnalyticsSession session = PacketSessionFactory.fromSnapshot(snapshot);
         _window = new Window
@@ -55,17 +57,14 @@ internal sealed class ReplayQa
         {
             foreach (var view in AnalyticsViewCatalog.All)
             {
-                if (view is not QueryAnalyticsView && view is not ChatAnalyticsView && view is not ChatSummaryAnalyticsView)
-                {
-                    _skipped.Add(new { surface = view.Id, reason = "Not a text report; requires a separate chart/diagnostic inspection." });
-                    continue;
-                }
                 try
                 {
-                    var control = view.CreateView(session);
+                    var control = view.CreateView(view is RawDataAnalyticsView ? (IAnalyticsSession)replay : session);
                     _window.Content = control;
                     await PumpAsync();
                     if (view is QueryAnalyticsView) await CheckQueryAsync(view.Id, control, session, snapshot);
+                    else if (view is DamageGraphAnalyticsView) await CheckGraphAsync(control, session, snapshot);
+                    else if (view is RawDataAnalyticsView) await CheckDiagnosticsAsync(control, (IPacketSession)replay);
                     else await CheckChatAsync(view.Id, control, session, snapshot);
                 }
                 catch (Exception ex)
@@ -90,6 +89,7 @@ internal sealed class ReplayQa
             runner_sha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(typeof(ReplayQa).Assembly.Location))),
             status = _failures == 0 ? "passed" : "failed", case_count = _cases.Count, failure_count = _failures,
             cases = _cases, skipped = _skipped,
+            default_content = _coverage,
             human = new { status = "unobserved" },
             limitations = new[]
             {
@@ -118,6 +118,9 @@ internal sealed class ReplayQa
         void Reset() => Find<Button>(control, "reset-filters")!.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
 
         await Check("default", Request());
+        _window.Width = 760; _window.Height = 480;
+        await Check("compact", Request());
+        _window.Width = 1200; _window.Height = 800;
         var modes = Find<ComboBox>(control, "report-mode");
         if (modes is not null)
         {
@@ -214,6 +217,9 @@ internal sealed class ReplayQa
                 ? AnalyticsReportService.formatChatSummary(state ?? snapshot, mode, speaker)
                 : AnalyticsReportService.formatChat(state ?? snapshot, mode, speaker), new { mode, speaker });
         await Check("default");
+        _window.Width = 760; _window.Height = 480;
+        await Check("compact");
+        _window.Width = 1200; _window.Height = 800;
         var modes = Find<ComboBox>(control, "chat-mode")!;
         foreach (var mode in snapshot.ChatMessages.Select(c => c.Mode).Distinct())
         {
@@ -251,12 +257,30 @@ internal sealed class ReplayQa
             await Task.Delay(20);
         } while (timer.Elapsed < TimeSpan.FromSeconds(5));
         control.UpdateLayout();
-        var equal = viewer is not null && Normalize(actual) == Normalize(expected) && control.ActualWidth > 0 && control.ActualHeight > 0;
+        var unwrapped = surface is "chat" or "chat-summary" || (viewer?.Document is { } doc && LinesDoNotWrap(doc));
+        var equal = viewer is not null && Normalize(actual) == Normalize(expected) && control.ActualWidth > 0 && control.ActualHeight > 0 && unwrapped;
+        var kind = ContentKind(expected);
+        SaveCase(surface, scenario, control, expected, actual, filters, kind, timer.ElapsedMilliseconds, equal,
+            unwrapped ? null : "Fixed-width report rows wrap across visual lines.");
+    }
+
+    private static string ContentKind(string text)
+    {
+        if (text.TrimStart().StartsWith("Unavailable:", StringComparison.Ordinal)) return "unavailable";
+        if (string.IsNullOrWhiteSpace(text) || text.Contains("(no data)", StringComparison.Ordinal) ||
+            text.Contains("No matching", StringComparison.Ordinal)) return "empty-or-partial";
+        return "populated";
+    }
+
+    private void SaveCase(string surface, string scenario, UserControl control, string expected, string actual,
+        object filters, string kind, long elapsed, bool equal, string? error = null)
+    {
         if (!equal) _failures++;
+        if (scenario == "default") _coverage[surface] = kind;
         var name = $"{surface}-{scenario}";
         File.WriteAllText(Path.Combine(_output, name + ".actual.txt"), actual);
         File.WriteAllText(Path.Combine(_output, name + ".expected.txt"), expected);
-        var image = new RenderTargetBitmap(1200, 800, 96, 96, PixelFormats.Pbgra32);
+        var image = new RenderTargetBitmap((int)Math.Ceiling(_window.ActualWidth), (int)Math.Ceiling(_window.ActualHeight), 96, 96, PixelFormats.Pbgra32);
         // Include the host background; a transparent PNG makes black report text
         // disappear in dark screenshot viewers even though the live host is white.
         image.Render(_window);
@@ -265,12 +289,33 @@ internal sealed class ReplayQa
         using (var file = File.Create(Path.Combine(_output, name + ".png"))) encoder.Save(file);
         _cases.Add(new
         {
-            surface, scenario, status = equal ? "passed" : "failed", filters,
+            surface, scenario, status = equal ? "passed" : "failed", filters, error,
             screenshot = name + ".png", actual_text = name + ".actual.txt", expected_text = name + ".expected.txt",
-            content_kind = expectedReport.Spans.Count == 0 ? "empty" : "report",
-            elapsed_ms = timer.ElapsedMilliseconds
+            content_kind = kind,
+            viewport = new { width = _window.ActualWidth, height = _window.ActualHeight },
+            elapsed_ms = elapsed
         });
         Console.WriteLine($"{surface}/{scenario}: {(equal ? "passed" : "FAILED")}");
+    }
+
+    private static bool LinesDoNotWrap(FlowDocument document)
+    {
+        foreach (var run in document.Blocks.OfType<Paragraph>().SelectMany(p => p.Inlines.OfType<Run>()))
+        {
+            var offset = 0;
+            foreach (var line in run.Text.Split('\n'))
+            {
+                var length = line.TrimEnd('\r').Length;
+                if (length > 1)
+                {
+                    var first = run.ContentStart.GetPositionAtOffset(offset)?.GetCharacterRect(LogicalDirection.Forward) ?? Rect.Empty;
+                    var last = run.ContentStart.GetPositionAtOffset(offset + length - 1)?.GetCharacterRect(LogicalDirection.Forward) ?? Rect.Empty;
+                    if (!first.IsEmpty && !last.IsEmpty && Math.Abs(first.Top - last.Top) > 1) return false;
+                }
+                offset += line.Length + 1;
+            }
+        }
+        return true;
     }
 
     private static string Normalize(string text) => text.Replace("\r\n", "\n").TrimEnd('\r', '\n');

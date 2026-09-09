@@ -74,6 +74,9 @@ The runner exercises the actual text-report controls from `AnalyticsViewCatalog`
 - Modal fight selection: no fights, one fight, then reset.
 - Empty-state refresh and repeated snapshot updates (no duplicated text).
 - Chat mode and speaker selection.
+- Compact (760 x 480) report viewports, including fixed-width row wrapping checks.
+- Damage graph filters, intervals, cumulative totals, empty refresh, and legend colors.
+- Raw packet grid ordering, selection, metadata, hex bytes, and clearing selection.
 
 Each case saves a viewport PNG, full actual/expected document text, filters,
 and a verdict. `ui-run.json` records the capture SHA-256, case identities,
@@ -83,8 +86,15 @@ so these checks establish binding/control agreement with state, not independent
 correctness of report calculations. Screenshot review checks appearance; a
 text match alone cannot establish legibility or absence of clipping.
 
-Chart/packet diagnostic surfaces and live connection health remain explicitly
-outside this text-report runner. Use the manual smoke matrix for those. A
+Graph checks independently reconcile plotted totals with input damage and check
+axis/series consistency; they do not prove every time bucket is correct. Packet
+checks compare the actual bound grid and byte display with the replay session.
+Live connection health remains outside this runner.
+
+The manifest's `default_content` distinguishes `populated`, `empty-or-partial`,
+and `unavailable` default views. These are conservative presentation signals
+based on report messages, not proof of semantic event coverage. Run additional
+recorded fixtures such as `bst_camp_multi.ndjson` for XP and loot coverage. A
 report's empty-data check does not establish event coverage for that feature.
 
 Supply the bundle when comparing the **same bytes**:
