@@ -44,6 +44,16 @@ public static class AnalyticsReportRenderer
             paragraph.Inlines.Add(run);
         }
 
+        // Reports use space-padded columns. A narrow viewport must scroll the
+        // document horizontally instead of wrapping one data row into several.
+        var text = string.Concat(report.Spans.Select(s => s.Text));
+        var typeface = new Typeface(MonospaceFont, FontStyles.Normal, FontWeights.Bold, FontStretches.Normal);
+        var widestLine = text.Split('\n').Select(line => new FormattedText(
+            line.TrimEnd('\r'), CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+            typeface, document.FontSize, Brushes.Black, 1.0).WidthIncludingTrailingWhitespace).DefaultIfEmpty(0).Max();
+        document.PageWidth = Math.Max(40, Math.Ceiling(widestLine) + document.PagePadding.Left + document.PagePadding.Right + 2);
+        document.MinPageWidth = document.PageWidth;
+
         document.Blocks.Add(paragraph);
         return document;
     }
