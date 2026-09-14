@@ -103,12 +103,28 @@ function Get-PlayerNames([object]$Document) {
 function Get-NormalizedInteractions([object]$Document) {
     $players = Get-PlayerNames $Document
     $rows = @()
+    # Legacy parity omits preparing flags. Corroborate each excluded row with
+    # the native snapshot's explicit preparation records, preserving counts.
+    $preparations = @{}
+    if ($null -ne (Get-PropertyValue $Document "parity")) {
+        foreach ($native in @(As-Array (Get-PropertyValue $Document "interactions"))) {
+            if ((Get-PropertyValue $native "preparing") -eq $true) {
+                $key = "$(Text (Get-PropertyValue $native 'actorName'))|$(Text (Get-PropertyValue $native 'targetName'))|$(Text (Get-PropertyValue $native 'actionType'))|$(Number (Get-PropertyValue $native 'amount'))"
+                $preparations[$key] = 1 + [int]$preparations[$key]
+            }
+        }
+    }
 
     foreach ($row in (Get-Interactions $Document)) {
         $actor = Text (Get-PropertyValue $row "actorName")
         $target = Text (Get-PropertyValue $row "targetName")
         $interaction = Text (Get-PropertyValue $row "interactionType")
         $action = Text (Get-PropertyValue $row "actionType")
+        $prepareKey = "$actor|$target|$action|$(Number (Get-PropertyValue $row 'amount'))"
+        if ((Text (Get-PropertyValue $row 'success')) -eq 'None' -and $preparations[$prepareKey] -gt 0) {
+            $preparations[$prepareKey]--
+            continue
+        }
         $harm = Text (Get-PropertyValue $row "harmType")
         $category = Text (Get-PropertyValue $row "Category")
         if ($category.Length -eq 0) {
@@ -117,6 +133,9 @@ function Get-NormalizedInteractions([object]$Document) {
         if ($category.Length -eq 0) {
             $category = $action
         }
+        # v1's aggregate category includes critical hits in melee/ranged.
+        if ($category -eq 'Melee Crit') { $category = 'Melee' }
+        if ($category -eq 'Ranged Crit') { $category = 'Ranged' }
 
         $isPlayerActor = $players.Count -eq 0 -or $players.ContainsKey($actor.ToLowerInvariant())
         $isEnfeeble = $harm -ieq "Enfeeble" -or $action -ieq "Enfeeble"
@@ -227,9 +246,21 @@ function Get-Battles([object]$Document) {
         if ($enemy.Length -eq 0) {
             $enemy = Text (Get-PropertyValue $battle "EnemyName")
         }
+        # Wire NPC resource names use underscores; the game renders spaces.
+        $enemy = $enemy.Replace('_', ' ')
         $killer = Text (Get-PropertyValue $battle "killerName")
         if ($killer.Length -eq 0) {
             $killer = Text (Get-PropertyValue $battle "KillerName")
+        }
+        if ($killer.Length -eq 0) {
+            $killerId = Get-PropertyValue $battle "KillerId"
+            if ($null -ne $killerId) {
+                $combatants = @(As-Array (Get-PropertyValue $Document "Combatants"))
+                $match = @($combatants | Where-Object {
+                    (Get-PropertyValue $_ "Id") -eq $killerId
+                })
+                if ($match.Count -eq 1) { $killer = Text (Get-PropertyValue $match[0] "Name") }
+            }
         }
         $killed = [bool](Get-PropertyValue $battle "killed")
         if ($null -eq (Get-PropertyValue $battle "killed")) {
