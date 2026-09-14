@@ -42,6 +42,15 @@ module BattleMessageCatalog =
     let classifyActionEffect (commandNo: int) (messageId: int) (miss: int) (value: int) =
         if isActionStartCommand commandNo then
             InteractionType.Unknown, None, None
+        // Wire message ids are not legacy chat ParseCodes. Live BST captures
+        // and server/scripts/enum/msg.lua: 67=HIT_CRIT, 185=DAMAGE.
+        // XiPackets 0x28: command 3 finishes a WS, 11 a monster/pet skill.
+        elif commandNo = 1 && messageId = 67 then
+            InteractionType.Harm, Some HarmType.Melee, None
+        elif commandNo = 3 && messageId = 185 then
+            InteractionType.Harm, Some HarmType.Weaponskill, None
+        elif commandNo = 11 && messageId = 185 then
+            InteractionType.Harm, Some HarmType.Ability, None
         elif messageId >= 420 && messageId <= 429 then
             InteractionType.Aid, None, Some AidType.Enhance
         elif messageId = 0xBB && value > 0 then
