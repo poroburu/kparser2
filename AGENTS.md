@@ -265,6 +265,20 @@ Fixture replay (`analytics snapshot`, `--parity-chat`, `dotnet test`) does **not
 
 ## Agentic parity scan
 
+A request for a **QA parity scan** implicitly includes **kparser v1** (the
+read-only `../kparser` oracle): capture its raw ChatLines alongside kparser2
+packets and run `scripts/compare-synchronized.ps1`. Packet-only replay or
+`--assert-settled` is not completion of v1 parity. Follow
+`docs/ui-parity-qa.md` for capture preflight and evidence requirements.
+Request elevated permissions when necessary for local capture; if the RAM
+reader reports inaccessible game modules, launch the oracle with Windows
+Administrator elevation (`RunAs`). A shell sandbox exception alone does not
+grant Administrator rights. Verify actual ChatLine growth before declaring
+the paired capture ready. Preserve failed attachment evidence, and mark v1
+parity unobserved until usable overlapping streams exist.
+For timestamp adaptation, private capture retention and sanitized regression
+exports, follow `docs/oracle-datasets.md`.
+
 Testers **only play**. A local Cursor Agent thread on the game PC records last-green CLI and ranks settled gaps. Not a cloud Automation (`:5555` is localhost). Not WPF. No in-game cast checklist.
 
 Docs: [docs/parity-inequalities.md](docs/parity-inequalities.md), [docs/metadata-gaps.md](docs/metadata-gaps.md), [docs/ui-parity-qa.md](docs/ui-parity-qa.md).
