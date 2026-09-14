@@ -55,7 +55,34 @@ timestamps with multiple distinctive actor/target/action/amount sequences.
 Do not silently choose whichever alignment gives the smallest diff. Exclude
 partial fights from whole-fight totals and label unmatched tails separately.
 If exact cursor/reset evidence is missing, do not claim exact reconciliation.
-The September 14 capture has a late v1 attachment and remains unaligned.
+The September 14 full capture has a late v1 attachment. Use reviewed complete
+fight windows rather than comparing its whole-file totals.
+
+`node scripts/align-oracle-window.cjs PACKETS NORMALIZED_CHAT NEW_DIR START_UTC
+END_UTC LOCAL_OFFSET_MINUTES` produces a private candidate with a half-open
+scored window, earlier entity/party/pet setup packets, and source hashes. UTC
+arguments must end in `Z`; the local UTC offset is explicit. Split windows at
+local midnight. The tool does not discover anchors or certify complete fights.
+Tests: `node --test scripts/test-align-oracle-window.cjs`.
+
+### September 14 aligned validation
+
+The Antican window 14:50:20Z–14:52:35Z has matching 405/285 weapon-skill damage,
+236/186 pet-move damage, and the 14:52:29Z kill/180 XP as anchors. A second
+beetle window 14:52:40Z–14:54:12Z ends after its 14:54:09Z kill/131 XP and before
+the next fight's opening hit at about 14:54:14Z. Offset: local time = UTC−4.
+The earlier 14:54:15Z candidate included that partial next fight; it is not the
+accepted whole-fight window. These are recorded boundary choices, not automatic
+best-fit alignment. Retained setup packets remain outside scored combat.
+
+After fixing wire 67 critical damage, wire 185 WS/pet damage categories, and
+the pet heuristic's overwrite of observed NPC names, both windows give equal
+fight/offense/XP reports. The comparator resolves killer IDs through combatants,
+normalizes NPC underscores, folds critical hits into legacy aggregate categories,
+and excludes preparation rows only when corroborated by native v1 flags.
+Real damage changes, unresolved killer IDs and uncorroborated zero-value rows
+remain mismatches in regression tests. This is report parity for these windows;
+it does not establish all-interaction, chat, UI or human parity.
 
 ## Additional sessions to collect
 
