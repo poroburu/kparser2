@@ -659,6 +659,27 @@ module DecoderTests =
         Assert.Equal("Entity 629145", EntityRegistry.formatEntity 0x99999u)
         Assert.True(EntityRegistry.tryGetEntityKind 99999u |> Option.isNone)
 
+        EntityRegistry.observe
+            { Topic = "test"
+              Timestamp = 4UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x000Eus
+              PacketName = "GP_SERV_COMMAND_CHAR_NPC"
+              Size = 68u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 4UL
+              Data = Fixtures.npcUpdatePacket "Desert_Beetle" 99999u }
+        EntityRegistry.registerLocalPetActor 99999u
+        Assert.Equal(Some "Desert_Beetle", EntityRegistry.tryGetName 99999u)
+        Assert.Equal(Some EntityRegistry.EntityKind.Mob, EntityRegistry.tryGetEntityKind 99999u)
+        Assert.False(EntityRegistry.isLocalPet 99999u)
+        EntityRegistry.registerLocalPetActor 88888u
+        Assert.Equal(Some "LullabyMelodia", EntityRegistry.tryGetName 88888u)
+
     [<Fact>]
     let ``party member update registers player name from 0xDD`` () =
         EntityRegistry.reset()

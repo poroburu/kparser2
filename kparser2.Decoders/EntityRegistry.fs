@@ -308,10 +308,11 @@ module EntityRegistry =
             | Some EntityKind.Player | Some EntityKind.Pet -> ()
             | _ ->
                 match localJugPetName with
-                | Some petName ->
+                | Some petName when tryGetName entityId |> Option.forall ((=) petName) ->
                     localPetEntityIds.Add entityId |> ignore
                     registerName entityId petName EntityKind.Pet
-                | None -> ()
+                // Interaction heuristics cannot overwrite an observed NPC name.
+                | _ -> ()
 
     let tryLocalJugPetName () = localJugPetName
 
