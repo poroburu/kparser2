@@ -6,6 +6,20 @@ open System.IO
 open System.Text.Json
 
 module ActionLookup =
+    // Verified against paired BST ChatLines and server/sql/{weapon_skills,mob_skills}.sql.
+    // These IDs belong to separate namespaces from job abilities in actions.json.
+    let tryWeaponSkillName id =
+        match id with | 69 -> Some "Rampage" | _ -> None
+
+    let tryMonsterSkillName id =
+        match id with
+        | 260 | 3857 -> Some "Lamb Chop"
+        | 340 -> Some "Rhino Attack"
+        | 341 -> Some "Rhino Guard"
+        | 792 -> Some "Sandstorm"
+        | 795 -> Some "Sand Trap"
+        | _ -> None
+
     let private actions = Dictionary<int, string>()
 
     let private tryLoad () =

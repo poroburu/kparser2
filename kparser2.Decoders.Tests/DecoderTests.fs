@@ -7,6 +7,37 @@ open Xunit
 
 [<Collection("EntityRegistry")>]
 module DecoderTests =
+    [<Theory>]
+    [<InlineData(5, "blindness")>]
+    [<InlineData(7, "petrification")>]
+    [<InlineData(42, "Regen")>]
+    [<InlineData(66, "Copy Image")>]
+    [<InlineData(148, "Evasion Down")>]
+    let ``synthetic status expiry templates preserve system speaker`` (effect: int, label: string) =
+        let message = Fixtures.battleMessagePacket 100u 100u 206us (uint32 effect) 0u 0uy |> Battle0x29.decode |> Option.get
+        let chat = ParameterizedChat.statusExpiry message |> Option.get
+        Assert.Equal("System", chat.Speaker)
+        Assert.Equal("System", chat.Mode)
+        Assert.EndsWith($"'s {label} effect wears off.", chat.Message)
+        Assert.True(ParameterizedChat.statusExpiry {message with MessageNum = 205us} |> Option.isNone)
+        Assert.True(ParameterizedChat.statusExpiry {message with Param1 = 999u} |> Option.isNone)
+
+    [<Fact>]
+    let ``synthetic stare emote rejects truncated and unsupported templates`` () =
+        let data = Array.zeroCreate<byte> 24
+        BitConverter.GetBytes(100u).CopyTo(data, 4)
+        BitConverter.GetBytes(200u).CopyTo(data, 8)
+        BitConverter.GetBytes(23us).CopyTo(data, 16)
+        let chat = ParameterizedChat.emote data |> Option.get
+        Assert.Equal("Emote", chat.Mode)
+        Assert.Contains(" stares at ", chat.Message)
+        Assert.True(ParameterizedChat.emote data.[0..22] |> Option.isNone)
+        data.[22] <- 2uy
+        Assert.True(ParameterizedChat.emote data |> Option.isNone)
+        data.[22] <- 0uy
+        data.[16] <- 24uy
+        Assert.True(ParameterizedChat.emote data |> Option.isNone)
+
     [<Fact>]
     let ``Chat0x17 decodes speaker and message`` () =
         let data = Fixtures.chatPacket "Alice" "Hello world" 0x00uy
