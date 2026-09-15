@@ -42,6 +42,27 @@ module BattleMessageCatalog =
     let classifyActionEffect (commandNo: int) (messageId: int) (miss: int) (value: int) =
         if isActionStartCommand commandNo then
             InteractionType.Unknown, None, None
+        // Wire message ids are not legacy chat ParseCodes. Live BST captures
+        // and server/scripts/enum/msg.lua: 67=HIT_CRIT, 185=DAMAGE.
+        // XiPackets 0x28: command 3 finishes a WS, 11 a monster/pet skill.
+        elif commandNo = 1 && messageId = 67 then
+            InteractionType.Harm, Some HarmType.Melee, None
+        elif commandNo = 3 && messageId = 185 then
+            InteractionType.Harm, Some HarmType.Weaponskill, None
+        elif commandNo = 11 && messageId = 185 then
+            InteractionType.Harm, Some HarmType.Ability, None
+        elif (commandNo = 1 || commandNo = 11) && messageId = 31 && miss <> 0 then
+            InteractionType.Harm, Some(if commandNo = 1 then HarmType.Melee else HarmType.Ability), None
+        elif commandNo = 6 && messageId = 102 then
+            InteractionType.Aid, None, Some AidType.Recovery
+        elif commandNo = 11 && messageId = 186 then
+            InteractionType.Aid, None, Some AidType.Enhance
+        elif commandNo = 11 && (messageId = 242 || messageId = 277) then
+            InteractionType.Harm, Some HarmType.Enfeeble, None
+        elif commandNo = 11 && (messageId = 264 || messageId = 189 || messageId = 283) then
+            InteractionType.Harm, Some HarmType.Ability, None
+        elif commandNo = 4 && messageId = 106 then
+            InteractionType.Unknown, None, None
         elif messageId >= 420 && messageId <= 429 then
             InteractionType.Aid, None, Some AidType.Enhance
         elif messageId = 0xBB && value > 0 then
@@ -104,7 +125,10 @@ module BattleMessageCatalog =
         | n -> $"state-{n}"
 
     let successLabelForEffect (messageId: int) (miss: int) (value: int) =
-        if value = 0 && (messageId = 0x44 || messageId = 0x43 || messageId = 0x3B || messageId = 0x45 || messageId = MsgBasicCatalog.MagicNoEffect || messageId = MsgBasicCatalog.MagicFail) then
+        if messageId = 31 && miss <> 0 then "shadow-absorb"
+        elif messageId = 106 then "intimidated"
+        elif messageId = 189 || messageId = 283 then "no-effect"
+        elif value = 0 && (messageId = 0x44 || messageId = 0x43 || messageId = 0x3B || messageId = 0x45 || messageId = MsgBasicCatalog.MagicNoEffect || messageId = MsgBasicCatalog.MagicFail) then
             "no-effect"
         elif value = 0 && messageId = 0x69 then
             "anticipate"
@@ -114,7 +138,11 @@ module BattleMessageCatalog =
             successLabel miss
 
     let actionName commandNo commandArg messageId =
-        if commandNo = 4 then
+        if commandNo = 3 then
+            ActionLookup.tryWeaponSkillName commandArg |> Option.defaultValue $"weaponskill-{commandArg}"
+        elif commandNo = 11 then
+            ActionLookup.tryMonsterSkillName commandArg |> Option.defaultValue $"monster-skill-{commandArg}"
+        elif commandNo = 4 then
             SpellLookup.tryGetName commandArg |> Option.defaultValue $"spell-{commandArg}"
         else
             match ActionLookup.tryGetName commandArg with

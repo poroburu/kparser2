@@ -24,6 +24,7 @@
     <Compile Include="ParseCodesParityTests.fs" />
     <Compile Include="InteractionParityTests.fs" />
     <Compile Include="AnalyticsTests.fs" />
+    <Compile Include="ChatEchoTests.fs" />
     <Compile Include="LiveBoundaryTests.fs" />
   </ItemGroup>
 

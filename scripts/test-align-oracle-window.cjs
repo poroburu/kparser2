@@ -1,0 +1,24 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const os=require('node:os');
+const path=require('node:path');
+const {align}=require('./align-oracle-window.cjs');
+test('alignment retains setup and duplicates, excludes both combat tails, and uses explicit offset',t=>{
+ const p=fs.mkdtempSync(path.join(os.tmpdir(),'alignment-test-'));
+ t.after(()=>fs.rmSync(p,{recursive:true}));
+ const packets=path.join(p,'raw'),chat=path.join(p,'chat'),out=path.join(p,'out');
+ const at=Date.parse('2026-09-14T14:00:00Z');
+ const packet=(timestamp,id)=>JSON.stringify({meta:JSON.stringify({timestamp,packet_id:id,direction:'incoming'}),data_b64:'AA=='});
+ const raw=[JSON.stringify({type:'kparser2.session'}),packet(at-10,14),packet(at-1,40),packet(at,40),packet(at,40),packet(at+1000,40)].join('\n');
+ const header='00,'.repeat(21);
+ fs.writeFileSync(packets,raw);fs.writeFileSync(chat,[header+'[09:59:59] before',header+'[10:00:00] hit',header+'[10:00:01] after'].join('\n'));
+ const m=align(packets,chat,out,'2026-09-14T14:00:00Z','2026-09-14T14:00:01Z',-240);
+ assert.equal(m.setup_packets,1);assert.equal(m.scored_packets,2);assert.equal(m.chatlines,1);
+ assert.deepEqual(m.unmatched_capture_tails,{packets_before:1,packets_after:1,chat_before:1,chat_after:1});
+ assert.equal(fs.readFileSync(packets,'utf8'),raw);
+ assert.equal(m.boundary_quality,'timestamp-aligned-not-exact');
+ assert.throws(()=>align(packets,chat,path.join(p,'invalid'),'2026-09-14T03:59:59Z','2026-09-14T04:00:01Z',-240));
+ fs.writeFileSync(packets,JSON.stringify({meta:{packet_id:40}}));
+ assert.throws(()=>align(packets,chat,path.join(p,'missing-time'),'2026-09-14T14:00:00Z','2026-09-14T14:00:01Z',-240),/lacks timestamp/);
+});

@@ -15,6 +15,7 @@ module LootResolution =
 
     let isDistribution (loot: LootRecord) =
         loot.Detail.StartsWith("judge=", StringComparison.Ordinal)
+        || loot.Detail = "message=565"
 
     let private isPoolPlaceholder (name: string) =
         name.StartsWith("Pool slot ", StringComparison.OrdinalIgnoreCase)

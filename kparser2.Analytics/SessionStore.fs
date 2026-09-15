@@ -98,13 +98,13 @@ module SessionStore =
             store.ChatMessages <-
                 store.ChatMessages
                 |> List.map (fun c ->
-                    if needsSpeakerBackfill c.Speaker then
+                    if c.Mode <> "System" && needsSpeakerBackfill c.Speaker then
                         { c with Speaker = name; IsLocalPlayer = true }
                     else
                         c)
 
     let private resolveChatForSnapshot (c: ChatMessageRecord) =
-        if needsSpeakerBackfill c.Speaker then
+        if c.Mode <> "System" && needsSpeakerBackfill c.Speaker then
             match EntityRegistry.localPlayerName () with
             | Some name -> { c with Speaker = name; IsLocalPlayer = true }
             | None -> c
@@ -235,6 +235,13 @@ module SessionStore =
             match event with
             | DecoderEvent.Chat chat -> ingestChat store ts evt chat
             | DecoderEvent.CombatMessage message ->
+                // FoV gil is parameterized system text (msg.lua FOV_OBTAINS_GIL).
+                if message.MessageNum = 565us && message.Param1 > 0u then
+                    store.LootRecords <-
+                        { TimestampMs = ts; EventType = "Won"; ItemId = 0; ItemName = "Gil"
+                          Quantity = 0; Gil = int message.Param1; PoolSlot = -1
+                          ActorName = EntityRegistry.formatEntity message.TargetId
+                          Detail = "message=565" } :: store.LootRecords
                 match
                     ExperienceParser.tryParseBattleMessage (int message.MessageNum) message.Param1 message.Param2
                 with

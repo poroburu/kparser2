@@ -213,10 +213,16 @@ module ReportFormatTests =
 
     [<Fact>]
     let ``deaths report includes summary and details`` () =
-        let snap = ReportTestHelpers.replaySnapshot (FixturePaths.combatDeath())
-        let text = ReportTestHelpers.reportText "deaths" snap
+        let snap = ReplayHelpers.ingestFixture (FixturePaths.combatDeath())
+        let combatant id kind = { Id=id; Name=$"Entity {id}"; Kind=kind; Job=""; PlayerInfo=None }
+        let playerDeath = { snap with Combatants = [combatant 100u EntityKind.Mob; combatant 200u EntityKind.Player] }
+        let text = ReportTestHelpers.reportText "deaths" (AnalyticsDtoMapping.toSnapshotDto playerDeath)
         ReportTestHelpers.contains "Player Deaths" text
         ReportTestHelpers.contains "Summary" text
+        ReportTestHelpers.contains "Entity 200" text
+        let mobDeath = { snap with Combatants = [combatant 100u EntityKind.Pet; combatant 200u EntityKind.Mob] }
+        let kills = ReportTestHelpers.reportText "deaths" (AnalyticsDtoMapping.toSnapshotDto mobDeath)
+        Assert.DoesNotContain("Summary", kills)
 
     [<Fact>]
     [<Trait("Category", "Integration")>]

@@ -52,9 +52,13 @@ module ChatIngest =
           TargetName = tryParseTellTarget chat.Message }
 
     let private isDuplicate (a: ChatMessageRecord) (b: ChatMessageRecord) =
-        a.Mode = b.Mode
+        a.PacketId = 0x00B5 && a.Direction = "outgoing"
+        && b.PacketId = 0x0017 && b.Direction = "incoming"
+        && a.IsLocalPlayer && b.IsLocalPlayer
+        && (a.Speaker = b.Speaker || isPlaceholderSpeaker a.Speaker || isPlaceholderSpeaker b.Speaker)
+        && a.Mode = b.Mode
         && a.Message = b.Message
-        && abs (a.TimestampMs - b.TimestampMs) <= 500L
+        && b.TimestampMs >= a.TimestampMs && b.TimestampMs - a.TimestampMs <= 500L
 
     let private preferSpeaker left right =
         let left = normalizeSpeaker left
@@ -71,8 +75,10 @@ module ChatIngest =
 
     /// Merge duplicate 0xB5 + 0x17 echo rows; keep the row with the best speaker label.
     let appendChat (messages: ChatMessageRecord list) (record: ChatMessageRecord) =
-        match messages with
-        | head :: tail when isDuplicate head record ->
+        match messages |> List.tryFindIndex (fun previous -> isDuplicate previous record) with
+        | Some index ->
+            let head = messages.[index]
+            let tail = messages |> List.indexed |> List.choose (fun (i, row) -> if i = index then None else Some row)
             let mergedSpeaker = preferSpeaker head.Speaker record.Speaker
 
             let baseRecord =

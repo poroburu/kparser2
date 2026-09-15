@@ -90,6 +90,7 @@ public sealed partial class DamageGraphViewModel : ObservableObject, IDisposable
             if (rows.Length == 0)
             {
                 ReconcileSeries([]);
+                XAxes[0].Labels = Array.Empty<string>();
                 Status = "No matching damage in this capture.";
                 return;
             }
@@ -115,6 +116,8 @@ public sealed partial class DamageGraphViewModel : ObservableObject, IDisposable
                         GeometrySize = 0,
                         LineSmoothness = 0,
                         Stroke = new SolidColorPaint(ColorFor(player.Key), 2),
+                        GeometryStroke = new SolidColorPaint(ColorFor(player.Key), 2),
+                        GeometryFill = new SolidColorPaint(ColorFor(player.Key)),
                         Fill = null,
                         AnimationsSpeed = TimeSpan.Zero
                     };

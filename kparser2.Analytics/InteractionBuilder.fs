@@ -69,7 +69,7 @@ module InteractionBuilder =
                     let interactionType, harmType, aidType =
                         BattleMessageCatalog.classifyActionEffect action.CommandNo effect.MessageId effect.Miss effect.Value
 
-                    if interactionType = InteractionType.Unknown && effect.Value = 0 && effect.Miss = 0 then
+                    if interactionType = InteractionType.Unknown && effect.Value = 0 && effect.Miss = 0 && effect.MessageId <> 106 then
                         None
                     else
                         Some(
@@ -82,7 +82,7 @@ module InteractionBuilder =
                                 harmType
                                 aidType
                                 (BattleMessageCatalog.actionName action.CommandNo (int action.CommandArg) effect.MessageId)
-                                effect.Value
+                                (if effect.MessageId = 31 && effect.Miss <> 0 then 0 else effect.Value)
                                 (BattleMessageCatalog.successLabelForEffect effect.MessageId effect.Miss effect.Value)
                                 action.CommandNo
                                 effect.MessageId

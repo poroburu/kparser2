@@ -164,6 +164,16 @@ module DeathsReport =
     let format (snap: AnalyticsSnapshot) (filter: MobFilter) =
         let deaths =
             ReportAggregators.filterInteractions snap filter (fun i -> i.InteractionType = InteractionType.Death)
+            |> List.map (fun d ->
+                // Message 6 is killer defeats target; message 20 names the fallen actor.
+                if d.MessageId = 6 then
+                    { d with ActorId = d.TargetId; ActorName = d.TargetName
+                             TargetId = d.ActorId; TargetName = d.ActorName }
+                elif d.MessageId = 20 then { d with TargetName = "" }
+                else d)
+            |> List.filter (fun d ->
+                snap.Combatants |> List.exists (fun c ->
+                    c.Id = d.ActorId && (c.Kind = EntityKind.Player || c.Kind = EntityKind.Pet || c.Kind = EntityKind.Fellow)))
 
         if deaths.IsEmpty then
             ReportBuilder.empty |> ReportBuilder.appendTitle ReportTemplates.Death.title
