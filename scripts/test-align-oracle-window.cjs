@@ -15,7 +15,10 @@ test('alignment retains setup and duplicates, excludes both combat tails, and us
  fs.writeFileSync(packets,raw);fs.writeFileSync(chat,[header+'[09:59:59] before',header+'[10:00:00] hit',header+'[10:00:01] after'].join('\n'));
  const m=align(packets,chat,out,'2026-09-14T14:00:00Z','2026-09-14T14:00:01Z',-240);
  assert.equal(m.setup_packets,1);assert.equal(m.scored_packets,2);assert.equal(m.chatlines,1);
+ assert.deepEqual(m.unmatched_capture_tails,{packets_before:1,packets_after:1,chat_before:1,chat_after:1});
  assert.equal(fs.readFileSync(packets,'utf8'),raw);
  assert.equal(m.boundary_quality,'timestamp-aligned-not-exact');
  assert.throws(()=>align(packets,chat,path.join(p,'invalid'),'2026-09-14T03:59:59Z','2026-09-14T04:00:01Z',-240));
+ fs.writeFileSync(packets,JSON.stringify({meta:{packet_id:40}}));
+ assert.throws(()=>align(packets,chat,path.join(p,'missing-time'),'2026-09-14T14:00:00Z','2026-09-14T14:00:01Z',-240),/lacks timestamp/);
 });

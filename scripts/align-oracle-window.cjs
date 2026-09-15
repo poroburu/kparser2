@@ -11,6 +11,7 @@ function align(packets, chat, output, startUtc, endUtc, offsetMinutes) {
   if (new Date(end-1+offset).toISOString().slice(0,10)!==day) throw Error('Split windows crossing local midnight');
   const setupIds = new Set([0xA,0xD,0xE,0xDD,0xDF,0x68]);
   let setup=0, scored=0, lines=0;
+  const tails={packets_before:0,packets_after:0,chat_before:0,chat_after:0};
   const packetRows = fs.readFileSync(packets,'utf8').split(/\r?\n/).filter(Boolean).filter(line=>{
     const row=JSON.parse(line);
     if(row.type==='kparser2.session') return true;
@@ -18,6 +19,7 @@ function align(packets, chat, output, startUtc, endUtc, offsetMinutes) {
     if(!Number.isFinite(meta.timestamp)) throw Error('Packet lacks timestamp');
     if(meta.timestamp>=start && meta.timestamp<end) {scored++; return true;}
     if(meta.timestamp<start && setupIds.has(meta.packet_id) && meta.direction==='incoming') {setup++;return true;}
+    tails[meta.timestamp<start?'packets_before':'packets_after']++;
     return false;
   });
   const chatRows=fs.readFileSync(chat,'utf8').split(/\r?\n/).filter(Boolean).filter(line=>{
@@ -25,15 +27,17 @@ function align(packets, chat, output, startUtc, endUtc, offsetMinutes) {
     const m=/^(?:[^,]*,){21}\[(\d{2}:\d{2}:\d{2})\]/.exec(line);
     if(!m) throw Error('ChatLine lacks normalized timestamp');
     const time=Date.parse(day+'T'+m[1]+'Z')-offset;
-    if(time>=start && time<end) {lines++;return true;} return false;
+    if(time>=start && time<end) {lines++;return true;}
+    tails[time<start?'chat_before':'chat_after']++;return false;
   });
   if(!scored || !lines) throw Error('Both sides must contain scored records');
   fs.mkdirSync(output);
   fs.writeFileSync(path.join(output,'packets.ndjson'),packetRows.join('\n')+'\n');
   fs.writeFileSync(path.join(output,'oracle.chatlines.txt'),chatRows.join('\n')+'\n');
   const manifest={schema_version:1,start_utc:startUtc,end_utc_exclusive:endUtc,local_utc_offset_minutes:Number(offsetMinutes),
-    boundary_quality:'timestamp-aligned-not-exact',setup_packets:setup,scored_packets:scored,chatlines:lines,
+    boundary_quality:'timestamp-aligned-not-exact',setup_packets:setup,scored_packets:scored,chatlines:lines,unmatched_capture_tails:tails,
     source_hashes:{packets:hash(packets),chat:hash(chat)},
+    output_hashes:{packets:hash(path.join(output,'packets.ndjson')),chat:hash(path.join(output,'oracle.chatlines.txt'))},
     setup_opcodes:[...setupIds],scope:'Private candidate; confirm event anchors and complete fights before interpreting differences.'};
   fs.writeFileSync(path.join(output,'alignment.json'),JSON.stringify(manifest,null,2)+'\n');
   return manifest;

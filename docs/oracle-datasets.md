@@ -86,6 +86,10 @@ it does not establish all-interaction, chat, UI or human parity.
 
 ## Additional sessions to collect
 
+For whole-interval state/chat reconciliation and offline UI regression, use
+[saved-session-parity.md](saved-session-parity.md). It supplies one repeatable
+entry point and keeps automated, visual and human evidence separate.
+
 - BST pet lifecycle: charm success/failure, release/death/replacement, pet moves,
   player/pet damage, kill/XP/loot attribution. Current capture is a candidate.
 - Melee/ranged: hit/miss/critical, multi-hit weapon skills, counters, parries,
