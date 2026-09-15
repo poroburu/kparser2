@@ -77,7 +77,7 @@ Run with no arguments for the full command list.
 
 ### Compatibility
 
-Paired RC tags: **kparser2 v0.1.0-rc.1** ↔ **kpacket2 v0.1.0-rc.1** ↔ wire **`kpacket.v1`**. See [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
+Current RC: **kparser2 v0.1.0-rc.2** with **kpacket2 v0.1.0-rc.1** on wire **`kpacket.v1`**. See [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
 ## Quick start
 

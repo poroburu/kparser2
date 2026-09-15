@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <Version>0.1.0-rc.1</Version>
-    <InformationalVersion>0.1.0-rc.1</InformationalVersion>
+    <Version>0.1.0-rc.2</Version>
+    <InformationalVersion>0.1.0-rc.2</InformationalVersion>
   </PropertyGroup>
 </Project>
