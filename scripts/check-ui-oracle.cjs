@@ -16,6 +16,13 @@ function check(v1Path,uiPath){
   for(const [actor,total] of actual)if(!expected.has(actor))checks.push({surface,actor,expected:null,actual:total,passed:false,actual_sha256:hash(file)});
  }
  const xp=(v1.battles??[]).reduce((n,b)=>n+b.experiencePoints,0);
+ const deaths=new Map();
+ for(const m of v1.messages??[]){if(m.combat?.interactionType!=='Death')continue;
+  for(const t of m.combat.targets??[])if(['Player','Pet','Fellow'].includes(t.entityType))deaths.set(t.name,(deaths.get(t.name)??0)+1);
+ }
+ const deathFile=path.join(dir,'deaths-default.actual.txt'),deathText=fs.readFileSync(deathFile,'utf8').split('Details')[0];
+ const actualDeaths=new Map();for(const line of deathText.split(/\r?\n/)){const m=/^\s*(\S+)\s+(\d+)\s*$/.exec(line);if(m)actualDeaths.set(m[1],Number(m[2]));}
+ checks.push({surface:'deaths',expected:[...deaths],actual:[...actualDeaths],passed:JSON.stringify([...deaths].sort())===JSON.stringify([...actualDeaths].sort()),actual_sha256:hash(deathFile)});
  const xpFile=path.join(dir,'experience-default.actual.txt');
  const match=/Total Experience\s*:\s*(\d+)/.exec(fs.readFileSync(xpFile,'utf8'));
  checks.push({surface:'experience',expected:xp,actual:match?Number(match[1]):null,passed:match!=null&&Number(match[1])===xp,actual_sha256:hash(xpFile)});
