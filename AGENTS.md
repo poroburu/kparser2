@@ -2,6 +2,16 @@
 
 This document helps Cursor agents iterate on kparser2 **without Ashita running**.
 
+## Release gate and harness freeze
+
+Decided in [#10](https://github.com/poroburu/kparser2/issues/10) (2026-09-15); tracker [#9](https://github.com/poroburu/kparser2/issues/9).
+
+- The **only** RC gate is [docs/RELEASING.md](docs/RELEASING.md): Release build, `dotnet test` including `Category=Integration`, the five fixture smokes, three publish outputs launched from the publish directory, one short live `probe`/`record` when the game is up (else record untested).
+- **kparser v1 comparison is not a gate.** It is a read-only, on-demand oracle. A scan or PR is complete without a paired RAM ChatLine capture.
+- **Harness frozen** until the current RC ships: do not add oracle, evidence, alignment, dataset, or UI-QA scripts/docs under `scripts/` or `docs/`. Fix decoders/reports from live Horizon bytes; add a fixture and a test. New harness work needs a written release-risk reason on #9 first.
+- [#4](https://github.com/poroburu/kparser2/issues/4) is a capability inventory, not the definition of done. Unchecked tabs ship as release-note limitations. [#6](https://github.com/poroburu/kparser2/issues/6) and [#7](https://github.com/poroburu/kparser2/issues/7) are deferred backlog, not RC blockers.
+- One status comment per decision on the owning issue. Do not cross-post the same checkpoint to several issues.
+
 ## Quick commands
 
 ```powershell
@@ -265,19 +275,16 @@ Fixture replay (`analytics snapshot`, `--parity-chat`, `dotnet test`) does **not
 
 ## Agentic parity scan
 
-A request for a **QA parity scan** implicitly includes **kparser v1** (the
-read-only `../kparser` oracle): capture its raw ChatLines alongside kparser2
-packets and run `scripts/compare-synchronized.ps1`. Packet-only replay or
-`--assert-settled` is not completion of v1 parity. Follow
-`docs/ui-parity-qa.md` for capture preflight and evidence requirements.
-Request elevated permissions when necessary for local capture; if the RAM
-reader reports inaccessible game modules, launch the oracle with Windows
-Administrator elevation (`RunAs`). A shell sandbox exception alone does not
-grant Administrator rights. Verify actual ChatLine growth before declaring
-the paired capture ready. Preserve failed attachment evidence, and mark v1
-parity unobserved until usable overlapping streams exist.
-For timestamp adaptation, private capture retention and sanitized regression
-exports, follow `docs/oracle-datasets.md`.
+A **QA parity scan** is packet-only by default: `record`, reconcile,
+`analytics snapshot --assert-settled`, rank gaps. Paired **kparser v1** RAM
+ChatLines (`scripts/compare-synchronized.ps1`, `docs/ui-parity-qa.md`,
+`docs/oracle-datasets.md`, `docs/saved-session-parity.md`) are an **optional
+spot-check** the user requests explicitly; they are not required for scan
+completion and not an RC gate (see *Release gate and harness freeze*). When a
+v1 capture is requested: the RAM reader may need Windows Administrator
+elevation (`RunAs`); a shell sandbox exception alone does not grant it. Verify
+ChatLine growth before declaring the paired capture ready, and mark v1 parity
+unobserved until usable overlapping streams exist.
 
 Testers **only play**. A local Cursor Agent thread on the game PC records last-green CLI and ranks settled gaps. Not a cloud Automation (`:5555` is localhost). Not WPF. No in-game cast checklist.
 
