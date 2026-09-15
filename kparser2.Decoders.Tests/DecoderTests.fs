@@ -7,6 +7,19 @@ open Xunit
 
 [<Collection("EntityRegistry")>]
 module DecoderTests =
+    [<Fact>]
+    let ``character model bytes cannot become job metadata`` () =
+        EntityRegistry.reset()
+        let data = Fixtures.charPcPacket "Alice" 100u
+        data.[86] <- 178uy
+        data.[87] <- 112uy
+        EntityRegistry.observe
+            { Topic = "test"; Timestamp = 1UL; Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"; PacketId = 0x000Dus; PacketName = "CHAR_PC"
+              Size = uint32 data.Length; Injected = false; Blocked = false
+              SessionUuid = "synthetic"; Version = "v1"; MessageId = 1UL; Data = data }
+        Assert.True(EntityRegistry.tryGetJob 100u |> Option.isNone)
+
     [<Theory>]
     [<InlineData(5, "blindness")>]
     [<InlineData(7, "petrification")>]
