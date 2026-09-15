@@ -8,13 +8,15 @@ open kparser2.Ingest
 type PluginHello =
     { version: string
       session_uuid: string
+      last_message_id: uint64
       capabilities: JsonElement }
 
 type PluginStats =
     { packets_published: int64
       packets_filtered: int64
       commands_processed: int64
-      pub_send_errors: int64 }
+      pub_send_errors: int64
+      last_message_id: uint64 }
 
 module ConnectionProbe =
     let private jsonOptions = JsonSerializerOptions(PropertyNameCaseInsensitive = true)
@@ -50,6 +52,22 @@ module ConnectionProbe =
 
     let helloInfo () =
         hello() |> Option.bind tryParseHello
+
+    let hasMessageCursor (hello: PluginHello) =
+        let mutable cursor = Unchecked.defaultof<JsonElement>
+
+        hello.capabilities.ValueKind <> JsonValueKind.Undefined
+        && hello.capabilities.TryGetProperty("message_id_cursor", &cursor)
+        && cursor.ValueKind = JsonValueKind.True
+
+    let boundaryCapabilityFromHello (hello: PluginHello option) =
+        match hello with
+        | Some value when hasMessageCursor value -> Ok value
+        | Some _ -> Error "kpacket does not advertise message_id_cursor"
+        | None -> Error "Unable to read kpacket hello/session boundary on tcp://localhost:5556"
+
+    let boundaryCapability () =
+        boundaryCapabilityFromHello (helloInfo())
 
     let pluginStats () =
         statsRaw() |> Option.bind tryParseStats

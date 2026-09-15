@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Automation;
 using kparser2.Abstractions;
 using kparser2.Services;
 
@@ -31,6 +32,13 @@ public sealed class CombatAnalyticsViewControl : UserControl
         var fightButton = new Button { Content = "Select fights…", Padding = new Thickness(8, 4, 8, 4), Margin = new Thickness(4) };
         var reset = new Button { Content = "Reset filters", Padding = new Thickness(8, 4, 8, 4), Margin = new Thickness(4) };
         var queryView = new QueryAnalyticsViewControl(session, queryId);
+        foreach (var (control, id) in new (DependencyObject, string)[]
+        {
+            (mode, "report-mode"), (players, "player-filter"), (mobs, "enemy-filter"),
+            (grouped, "group-enemies"), (zeroXp, "exclude-zero-xp"), (detail, "show-details"),
+            (crystals, "exclude-crystals"), (baseAttacks, "base-attacks"),
+            (fightButton, "select-fights"), (reset, "reset-filters")
+        }) AutomationProperties.SetAutomationId(control, id);
         IReadOnlyList<int>? selectedFights = preferences.BattleIds?.Distinct().ToArray();
         if (selectedFights is { } savedFights) fightButton.Content = $"{savedFights.Count} fights selected";
         void Add(string label, UIElement control)
@@ -99,11 +107,13 @@ public sealed class CombatAnalyticsViewControl : UserControl
         fightButton.Click += (_, _) =>
         {
             var list = new ListBox { SelectionMode = SelectionMode.Multiple, DisplayMemberPath = nameof(EnemyOption.Label), MinHeight = 240 };
+            AutomationProperties.SetAutomationId(list, "fight-selection");
             var options = session.GetSnapshot().Battles.Select(b => new EnemyOption(b.Id, b.EnemyName, $"#{b.Id} {b.EnemyName} — {b.ExperiencePoints} XP")).ToArray();
             list.ItemsSource = options;
             foreach (var option in options.Where(o => selectedFights is null || selectedFights.Contains(o.Id!.Value))) list.SelectedItems.Add(option);
             var panel = new DockPanel { Margin = new Thickness(12) };
             var apply = new Button { Content = "Apply selected fights", Padding = new Thickness(10), Margin = new Thickness(0, 8, 0, 0) };
+            AutomationProperties.SetAutomationId(apply, "apply-fights");
             DockPanel.SetDock(apply, Dock.Bottom); panel.Children.Add(apply); panel.Children.Add(list);
             var window = new Window { Owner = Window.GetWindow(this), Title = "Select fights (Ctrl/Shift for multiple)", Content = panel, Width = 460, Height = 420, WindowStartupLocation = WindowStartupLocation.CenterOwner };
             apply.Click += (_, _) => { selectedFights = list.SelectedItems.Cast<EnemyOption>().Select(o => o.Id!.Value).ToArray(); window.DialogResult = true; };
@@ -113,7 +123,7 @@ public sealed class CombatAnalyticsViewControl : UserControl
         {
             _populating = true; selectedFights = null; preferences.BattleIds = null; fightButton.Content = "Select fights…";
             preferences.Player = null; preferences.Mob = null; players.SelectedItem = "(All)"; mobs.SelectedIndex = 0;
-            grouped.IsChecked = true; zeroXp.IsChecked = false; detail.IsChecked = false; crystals.IsChecked = false; mode.SelectedIndex = 0;
+            grouped.IsChecked = true; zeroXp.IsChecked = false; detail.IsChecked = false; crystals.IsChecked = false; mode.SelectedIndex = 0; baseAttacks.SelectedItem = 1;
             _populating = false; Populate(session.GetSnapshot()); Apply();
         };
         Populate(session.GetSnapshot()); Apply();

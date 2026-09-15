@@ -20,7 +20,16 @@ type SnapshotPacketSource() =
 
 /// Subscribe before replaying history. A separate pump journals the continuation
 /// while the replay worker feeds history, then drains it in receive order.
-type DesktopPacketSource(live: IPacketSource, path: string, resume: bool, uuid: string) =
+type DesktopPacketSource(
+    live: IPacketSource,
+    path: string,
+    resume: bool,
+    uuid: string,
+    afterMessageId: uint64,
+    enforceBoundary: bool,
+    boundaryMode: string,
+    boundaryQuality: string,
+    boundaryReason: string) =
     let output = Channel.CreateUnbounded<PacketEvent>()
     let pending = Channel.CreateUnbounded<PacketEvent>()
     let cts = new CancellationTokenSource()
@@ -30,6 +39,7 @@ type DesktopPacketSource(live: IPacketSource, path: string, resume: bool, uuid: 
     let mutable ended = false
     let mutable changedSession = ""
     let mutable received = 0L
+    let mutable lastMessageId = 0UL
     // A stable read handle limits recovery to the pre-launch prefix.
     let history = if resume && File.Exists path then Some(new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) else None
     let historyLength = history |> Option.map (fun s -> s.Length) |> Option.defaultValue 0L
@@ -50,7 +60,16 @@ type DesktopPacketSource(live: IPacketSource, path: string, resume: bool, uuid: 
                 writer <- Some(new StreamWriter(new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite)))
                 writer.Value.AutoFlush <- true
                 if historyLength > 0L then writer.Value.WriteLine()
-                else Ndjson.writeSessionHeader writer.Value None (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+                else
+                    Ndjson.writeSessionHeaderWithBoundary
+                        writer.Value
+                        None
+                        (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+                        uuid
+                        afterMessageId
+                        boundaryMode
+                        boundaryQuality
+                        boundaryReason
             with ex -> error <- "Capture could not be saved: " + ex.Message
             let mutable running = true
             while running && not cts.IsCancellationRequested do
@@ -59,9 +78,11 @@ type DesktopPacketSource(live: IPacketSource, path: string, resume: bool, uuid: 
                 else
                     let mutable evt = Unchecked.defaultof<PacketEvent>
                     while live.Packets.TryRead(&evt) do
-                        if evt.SessionUuid <> "" && evt.SessionUuid <> uuid then changedSession <- evt.SessionUuid
-                        elif not ended then
+                        if evt.SessionUuid <> uuid then
+                            if evt.SessionUuid <> "" then changedSession <- evt.SessionUuid
+                        elif not ended && (not enforceBoundary || evt.MessageId > afterMessageId) then
                             received <- received + 1L
+                            lastMessageId <- evt.MessageId
                             match writer with
                             | Some w ->
                                 try w.WriteLine(encode evt)
@@ -128,6 +149,7 @@ type DesktopPacketSource(live: IPacketSource, path: string, resume: bool, uuid: 
     member _.ReceivedPackets = received
     member _.Ended = ended
     member _.ChangedSession = changedSession
+    member _.LastMessageId = lastMessageId
     interface IPacketSource with
         member _.Packets = output.Reader
         member _.WaitForCompletion() = replay.GetAwaiter().GetResult()

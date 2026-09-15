@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.IO;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -14,12 +15,19 @@ public partial class MainWindow : Window
 {
     private readonly SessionCoordinator _coordinator = new();
     private readonly ViewSettingsService _settings = ViewSettingsService.Shared;
+    private readonly UiControlServer _uiControl;
     private readonly List<ReportEntry> _reports = [];
     private bool _ready, _closing, _busy;
     private sealed record ReportEntry(string Id, string Title, string Group, int GroupOrder, Func<IAnalyticsSession, UserControl> Create);
     public MainWindow()
     {
         InitializeComponent();
+        _uiControl = new UiControlServer(
+            "kparser2",
+            GetUiControlDescriptorPath(),
+            GetUiControlStatus,
+            ResetUiSession);
+        _uiControl.Start();
         var s = _settings.State;
         Width = double.IsFinite(s.Width) ? Math.Clamp(s.Width, 760, Math.Max(760, SystemParameters.VirtualScreenWidth)) : 1200;
         Height = double.IsFinite(s.Height) ? Math.Clamp(s.Height, 480, Math.Max(480, SystemParameters.VirtualScreenHeight)) : 800;
@@ -99,6 +107,113 @@ public partial class MainWindow : Window
         StatusText.Text = _coordinator.Status;
         CaptureText.Text = _coordinator.Mode == "Live" && _coordinator.CapturePath is string path ? "Saving to " + path : "";
     }
+
+    private string GetUiControlStatus()
+    {
+        return JsonSerializer.Serialize(new
+        {
+            ok = true,
+            service = "kparser2",
+            pid = Environment.ProcessId,
+            mode = _coordinator.Mode,
+            status = _coordinator.Status,
+            running = _coordinator.Mode == "Live",
+            generation = _coordinator.SessionGeneration,
+            session_uuid = _coordinator.SessionUuid,
+            boundary_session_uuid = _coordinator.BoundarySessionUuid,
+            boundary_mode = _coordinator.BoundaryMode,
+            boundary_quality = _coordinator.BoundaryQuality,
+            boundary_reason = _coordinator.BoundaryReason,
+            last_message_id = _coordinator.LastMessageId,
+            boundary_message_id = _coordinator.BoundaryMessageId,
+            last_reset_utc = _coordinator.LastResetUtc == default ? "" : _coordinator.LastResetUtc.ToString("O"),
+            capture_path = _coordinator.CapturePath ?? ""
+        });
+    }
+
+    private string ResetUiSession(
+        string resetId,
+        string sessionUuid,
+        string afterMessageId,
+        string boundaryMode,
+        string boundaryQuality,
+        string boundaryReason)
+    {
+        try
+        {
+            if (boundaryMode != "exact" && boundaryMode != "degraded")
+                throw new ArgumentException("boundary_mode must be exact or degraded");
+            if (boundaryMode == "exact" &&
+                (boundaryQuality != "exact" || string.IsNullOrWhiteSpace(sessionUuid)))
+                throw new ArgumentException("exact boundaries require exact quality and session_uuid");
+
+            if (!ulong.TryParse(afterMessageId, out var boundaryMessageId))
+                throw new ArgumentException("after_message_id must be an unsigned integer");
+
+            var resetTask = Dispatcher
+                .InvokeAsync(() => _coordinator.ResetLiveAsync(
+                    sessionUuid,
+                    boundaryMessageId,
+                    boundaryMode,
+                    boundaryQuality,
+                    boundaryReason))
+                .Task
+                .GetAwaiter()
+                .GetResult();
+            resetTask.GetAwaiter().GetResult();
+            return JsonSerializer.Serialize(new
+            {
+                ok = true,
+                service = "kparser2",
+                reset_id = resetId,
+                session_uuid = sessionUuid,
+                boundary_message_id = boundaryMessageId,
+                boundary_mode = boundaryMode,
+                boundary_quality = boundaryQuality,
+                boundary_reason = boundaryReason,
+                generation = _coordinator.SessionGeneration,
+                mode = _coordinator.Mode,
+                status = _coordinator.Status,
+                capture_path = _coordinator.CapturePath ?? ""
+            });
+        }
+        catch (Exception ex)
+        {
+            return JsonSerializer.Serialize(new
+            {
+                ok = false,
+                service = "kparser2",
+                reset_id = resetId,
+                error = ex.Message
+            });
+        }
+    }
+
+    private static string GetUiControlDescriptorPath()
+    {
+        var root = Environment.GetEnvironmentVariable("KDEV_ROOT");
+        var directory = new DirectoryInfo(
+            string.IsNullOrWhiteSpace(root) ? AppContext.BaseDirectory : root);
+
+        while (directory is not null)
+        {
+            if (Directory.Exists(Path.Combine(directory.FullName, "ffxi-captures")))
+            {
+                var captureDirectory = Path.Combine(directory.FullName, "ffxi-captures", "ndjson");
+                Directory.CreateDirectory(captureDirectory);
+                return Path.Combine(captureDirectory, "ui-control-kparser2.json");
+            }
+
+            directory = directory.Parent;
+        }
+
+        var fallback = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "kdev",
+            "ui-control-kparser2.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(fallback)!);
+        return fallback;
+    }
     private async Task RunAsync(Func<Task> action)
     {
         if (_busy) return;
@@ -160,6 +275,7 @@ public partial class MainWindow : Window
     {
         if (_closing) return;
         e.Cancel = true; _closing = true;
+        _uiControl.Dispose();
         _coordinator.Changed -= UpdateStatus; _coordinator.SessionChanged -= ShowSelectedReport;
         ReportContent.Content = null;
         var bounds = RestoreBounds; var s = _settings.State;

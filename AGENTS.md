@@ -155,11 +155,47 @@ dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.
 powershell -File C:\Users\porob\git\kdev\kparser2\scripts\compare-chat-parity.ps1 kparser-chat.json k2-yell.json
 ```
 
+For the complete name-keyed projection, use `--parity` on kparser2 and compare both
+chat and interaction multisets:
+
+```powershell
+powershell -File C:\Users\porob\git\kdev\kparser\scripts\snapshot.ps1 snapshot `
+  C:\Users\porob\git\kdev\kparser\fixtures\chatlines\chat_yell.txt --json -o kparser-snapshot.json
+
+dotnet run --project C:\Users\porob\git\kdev\kparser2\kparser2.Cli\kparser2.Cli.fsproj -- `
+  analytics snapshot C:\Users\porob\git\kdev\kparser2\fixtures\sessions\chat_yell.ndjson `
+  --parity -o kparser2-parity.json
+
+powershell -File C:\Users\porob\git\kdev\kparser2\scripts\compare-parity.ps1 `
+  -KparserJson kparser-snapshot.json -Kparser2Json kparser2-parity.json
+```
+
+The comparator is order-independent and preserves duplicate rows. It reports
+`kparser2-missing` rows as `missing`, `kparser2-extra` rows as `extra`, and
+does not compare entity or battle IDs. Use `--parity-chat` or
+`--parity-interactions` when only one projection is needed.
+
 These fixture dumps do not load kpacket. They only prove both CLIs agree on **constructed** bytes/text (`generate-fixtures.ps1`), not that HorizonXI sends that layout. Combat still diffs `parity.interactions` by **name** (not IDs). Schema: [kparser/docs/snapshot-schema.md](../kparser/docs/snapshot-schema.md). kparser `actionType` is Melee/Ranged/Spell; kparser2 `HarmType` uses the same labels. kparser `success` uses `hit` / `miss` / `parry` / `shadow-absorb` / `no-effect`. Chat `message` is body-only; kparser native `chat[]` keeps the full line.
 
 **Oracle policy:** live NDJSON is ground truth. `kparser.cli` is a **read-only** oracle (chatlines / `parity.chat` / `parity.interactions`). It can be wrong. Do **not** change kparser to match kparser2. If they disagree, research XiPackets / VieweD / the capture, then fix kparser2 (or note that kparser omits the event). Dual-dump never authorizes editing kparser.
 
 Long-running parity: observe (`watch` / `record` under `ffxi-captures/ndjson/`). When one pattern fails to reconcile, implement that event in kparser2 only. Prompt in-game with `kparser2.cli echo`, not a Cursor checklist.
+
+For a headless Windows run with checkpoint-triggered analytics, use the single
+recorder supervisor:
+
+```powershell
+powershell -File C:\Users\porob\git\kdev\kparser2\scripts\parity-loop.ps1 `
+  -DurationMs 1200000 -CheckpointMs 120000 -IdleMs 180000 `
+  -AssertCombat -MinBattles 2
+```
+
+The supervisor runs `record` as its only long-lived process. It fingerprints
+heat, reconciles complete NDJSON lines, runs `analytics snapshot --parity
+--assert-settled` only on the first checkpoint, a heat change, or capture stop,
+and writes `parity_latest.json` plus checkpoint reports under the capture
+directory. Supply `-KparserJson` only when a corresponding legacy ChatLine
+snapshot exists; live NDJSON remains the wire-truth oracle.
 
 **Disconnect:** `record` stops on `:5556` hello failure (3 missed 1s polls), `session_uuid` change, incoming `0x000B` with `LogoutState` LOGOUT/TIMEOUT/GMLOGOUT (`1`/`8`/`9`), or `--idle-ms` stall after packets (default 180s; `0` disables). Incoming `0x000B` **ZONECHANGE** (`2`) is a zone-server handoff (next IP/port in `Iwasaki`), not `/logout` — keep recording the same file. It does not append across real session ends. Copy complete lines with `scripts/reconcile-capture.ps1`. Do not treat a truncated last line or a magic start without finish as a decoder bug. After a real stop, wait with `scripts/wait-kpacket-session.ps1 -PreviousUuid <old>`, then `record` a **new** path. If the user ends the parity run, do not start another recorder.
 
@@ -231,7 +267,12 @@ Fixture replay (`analytics snapshot`, `--parity-chat`, `dotnet test`) does **not
 
 Testers **only play**. A local Cursor Agent thread on the game PC records last-green CLI and ranks settled gaps. Not a cloud Automation (`:5555` is localhost). Not WPF. No in-game cast checklist.
 
-Docs: [docs/parity-inequalities.md](docs/parity-inequalities.md), [docs/metadata-gaps.md](docs/metadata-gaps.md).
+Docs: [docs/parity-inequalities.md](docs/parity-inequalities.md), [docs/metadata-gaps.md](docs/metadata-gaps.md), [docs/ui-parity-qa.md](docs/ui-parity-qa.md).
+
+When both desktop applications are visible during a scan, treat them as a
+manual UI-QA layer. Keep the CLI captures authoritative, record user-reported
+UI discrepancies with `scripts/record-ui-observation.ps1`, and include the
+JSONL artifact in `scripts/compare-synchronized.ps1` with `-UiObservations`.
 
 ### Paste this (solo, same box)
 

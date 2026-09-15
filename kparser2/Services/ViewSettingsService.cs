@@ -5,7 +5,8 @@ namespace kparser2.Services;
 
 public sealed class ViewSettingsService
 {
-    private static readonly string SettingsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "kparser2", "view-settings.json");
+    private static readonly string SettingsPath = Environment.GetEnvironmentVariable("KPARSER2_VIEW_SETTINGS_PATH")
+        ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "kparser2", "view-settings.json");
     public static ViewSettingsService Shared { get; } = new();
     public ViewSettings State { get; private set; } = new();
     public string? Error { get; private set; }

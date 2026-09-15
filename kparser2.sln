@@ -23,6 +23,8 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "kparser2.Cli", "kparser2.Cl
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "kparser2", "kparser2\kparser2.csproj", "{9E6F8821-BB92-40A3-A09B-4DB48BFF3089}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "kparser2.Ui.Qa", "kparser2.Ui.Qa\kparser2.Ui.Qa.csproj", "{5307537C-42EA-4DE9-9CC6-B96286B4DC63}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -69,5 +71,9 @@ Global
 		{9E6F8821-BB92-40A3-A09B-4DB48BFF3089}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9E6F8821-BB92-40A3-A09B-4DB48BFF3089}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9E6F8821-BB92-40A3-A09B-4DB48BFF3089}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5307537C-42EA-4DE9-9CC6-B96286B4DC63}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5307537C-42EA-4DE9-9CC6-B96286B4DC63}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5307537C-42EA-4DE9-9CC6-B96286B4DC63}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5307537C-42EA-4DE9-9CC6-B96286B4DC63}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

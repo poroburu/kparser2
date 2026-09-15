@@ -1,6 +1,8 @@
 open System
 open System.Diagnostics
 open System.IO
+open System.Net.Http
+open System.Net.Http.Headers
 open System.Text.Json
 open System.Threading
 open System.Threading.Tasks
@@ -165,6 +167,124 @@ let private runHello () =
     | Some response -> printfn "%s" response
     | None -> printfn "Unable to reach kpacket2 command socket on tcp://localhost:5556"
 
+type private UiEndpoint =
+    { Service: string
+      BaseUrl: string
+      Token: string
+      Port: int
+      Pid: int }
+
+let private readUiEndpoint (path: string) =
+    if not (File.Exists path) then
+        failwithf "UI control descriptor not found: %s" path
+
+    use document = JsonDocument.Parse(File.ReadAllText path)
+    let root = document.RootElement
+    { Service = root.GetProperty("service").GetString()
+      BaseUrl = root.GetProperty("base_url").GetString()
+      Token = root.GetProperty("token").GetString()
+      Port = root.GetProperty("port").GetInt32()
+      Pid = root.GetProperty("pid").GetInt32() }
+
+let private uiDescriptorPath (directory: string) (service: string) =
+    Path.Combine(directory, "ui-control-" + service + ".json")
+
+let private sendUiRequest (endpoint: UiEndpoint) (method: HttpMethod) (path: string) =
+    use client = new HttpClient()
+    client.DefaultRequestHeaders.Authorization <- AuthenticationHeaderValue("Bearer", endpoint.Token)
+    let request = new HttpRequestMessage(method, endpoint.BaseUrl.TrimEnd('/') + path)
+    use response = client.SendAsync(request).GetAwaiter().GetResult()
+    let body = response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+    if not response.IsSuccessStatusCode then
+        failwithf "%s returned HTTP %d: %s" endpoint.Service (int response.StatusCode) body
+    body
+
+let private isUiOk (body: string) =
+    use document = JsonDocument.Parse(body)
+    match document.RootElement.TryGetProperty("ok") with
+    | true, value -> value.GetBoolean()
+    | _ -> false
+
+type private PacketBoundary =
+    { Mode: string
+      Quality: string
+      Reason: string
+      SessionUuid: string
+      MessageId: uint64 }
+
+let private readPacketBoundary () =
+    match ConnectionProbe.boundaryCapability() with
+    | Ok hello ->
+        { Mode = "exact"
+          Quality = "exact"
+          Reason = ""
+          SessionUuid = hello.session_uuid
+          MessageId = hello.last_message_id }
+    | Error reason ->
+        { Mode = "degraded"
+          Quality = "unavailable"
+          Reason = reason
+          SessionUuid = ""
+          MessageId = 0UL }
+
+let private runUiControl (action: string) (directory: string) (requireExact: bool) =
+    let endpoints =
+        [ "kparser"; "kparser2" ]
+        |> List.map (fun service -> readUiEndpoint (uiDescriptorPath directory service))
+
+    match action with
+    | "status" ->
+        endpoints
+        |> List.iter (fun endpoint ->
+            printfn "%s: %s" endpoint.Service (sendUiRequest endpoint HttpMethod.Get "/status"))
+        0
+    | "reset" ->
+        let boundary = readPacketBoundary ()
+        if requireExact && boundary.Mode <> "exact" then
+            failwithf "Exact reset boundary required: %s" boundary.Reason
+
+        let resetId = Guid.NewGuid().ToString("N")
+        let boundaryUtc = DateTimeOffset.UtcNow.ToString("O")
+        let mutable failed = false
+        printfn
+            "reset boundary: mode=%s quality=%s session_uuid=%s after_message_id=%d reset_id=%s boundary_utc=%s reason=%s"
+            boundary.Mode
+            boundary.Quality
+            boundary.SessionUuid
+            boundary.MessageId
+            resetId
+            boundaryUtc
+            boundary.Reason
+        for endpoint in endpoints do
+            try
+                let response =
+                    sendUiRequest
+                        endpoint
+                        HttpMethod.Post
+                        ("/reset?reset_id="
+                         + Uri.EscapeDataString(resetId)
+                         + "&boundary_mode="
+                         + Uri.EscapeDataString(boundary.Mode)
+                         + "&boundary_quality="
+                         + Uri.EscapeDataString(boundary.Quality)
+                         + "&boundary_reason="
+                         + Uri.EscapeDataString(boundary.Reason)
+                         + "&session_uuid="
+                         + Uri.EscapeDataString(boundary.SessionUuid)
+                         + "&after_message_id="
+                         + string boundary.MessageId)
+                printfn "%s reset: %s" endpoint.Service response
+                if not (isUiOk response) then
+                    failed <- true
+            with ex ->
+                failed <- true
+                eprintfn "%s reset failed: %s" endpoint.Service ex.Message
+
+        if failed then 1 else 0
+    | _ ->
+        eprintfn "Unknown ui action: %s (expected status or reset)" action
+        2
+
 let private runProbe () =
     match ConnectionProbe.helloInfo() with
     | None -> printfn "command socket (:5556): OFFLINE"
@@ -293,7 +413,13 @@ let private runReport (queryId: string) (path: string) (live: bool) =
 
         0
 
-let private runRecord (output: string) (durationMs: int) (prompt: string option) (idleMs: int) (checkpointMs: int) =
+let private runRecord
+    (output: string)
+    (durationMs: int)
+    (prompt: string option)
+    (idleMs: int)
+    (checkpointMs: int)
+    (requestedBoundary: PacketBoundary option) =
     ConnectionProbe.tryBootstrapLocalPlayerName ()
     use source = LivePacketSource("tcp://localhost:5555") :> IPacketSource
     use writer = new StreamWriter(output)
@@ -301,8 +427,49 @@ let private runRecord (output: string) (durationMs: int) (prompt: string option)
 
     let recordStartMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
     let playerName = ConnectionProbe.playerName()
+    let boundary =
+        match requestedBoundary with
+        | Some value -> value
+        | None ->
+            match ConnectionProbe.helloInfo() with
+            | Some hello when ConnectionProbe.hasMessageCursor hello ->
+                { Mode = "exact"
+                  Quality = "exact"
+                  Reason = ""
+                  SessionUuid = hello.session_uuid
+                  MessageId = hello.last_message_id }
+            | Some _ ->
+                { Mode = "degraded"
+                  Quality = "unavailable"
+                  Reason = "kpacket does not advertise message_id_cursor"
+                  SessionUuid = ""
+                  MessageId = 0UL }
+            | None ->
+                { Mode = "degraded"
+                  Quality = "unavailable"
+                  Reason = "kpacket hello unavailable"
+                  SessionUuid = ""
+                  MessageId = 0UL }
 
-    Ndjson.writeSessionHeader writer playerName recordStartMs
+    if boundary.Mode = "exact" &&
+       (boundary.Quality <> "exact" || String.IsNullOrWhiteSpace boundary.SessionUuid) then
+        failwith "record exact boundary requires exact quality and session_uuid"
+
+    let boundaryMode = boundary.Mode
+    let boundaryQuality = boundary.Quality
+    let boundaryReason = boundary.Reason
+    let mutable initialUuid = boundary.SessionUuid
+    let initialMessageId = boundary.MessageId
+
+    Ndjson.writeSessionHeaderWithBoundary
+        writer
+        playerName
+        recordStartMs
+        initialUuid
+        initialMessageId
+        boundaryMode
+        boundaryQuality
+        boundaryReason
 
     let secs = max 1 (durationMs / 1000)
     tryPluginEcho $"Recording started ({secs}s)" |> ignore
@@ -313,7 +480,6 @@ let private runRecord (output: string) (durationMs: int) (prompt: string option)
 
     let deadline = DateTime.UtcNow.AddMilliseconds(float durationMs)
     let mutable count = 0
-    let mutable initialUuid = ConnectionProbe.sessionUuid () |> Option.defaultValue ""
     let mutable helloMisses = 0
     let mutable lastPublished = ConnectionProbe.publishedCount ()
     let mutable lastProgressUtc = DateTime.UtcNow
@@ -363,7 +529,11 @@ let private runRecord (output: string) (durationMs: int) (prompt: string option)
             if source.Packets.WaitToReadAsync().AsTask().Wait(100) && source.Packets.TryRead(&evt) then
                 considerUuid evt.SessionUuid
 
-                if stopReason.IsNone then
+                let isAfterBoundary =
+                    (boundaryMode <> "exact" || evt.MessageId > initialMessageId)
+                    && (String.IsNullOrWhiteSpace initialUuid || evt.SessionUuid = initialUuid)
+
+                if stopReason.IsNone && isAfterBoundary then
                     let meta =
                         JsonSerializer.Serialize(
                             {| timestamp = evt.Timestamp
@@ -412,27 +582,12 @@ let private runRecord (output: string) (durationMs: int) (prompt: string option)
 
 let private jsonOptions = JsonSerializerOptions(WriteIndented = true)
 
-let private chatParityRows (snap: AnalyticsSnapshotDto) =
-    snap.ChatMessages
-    |> Seq.filter (fun m ->
-        String.IsNullOrWhiteSpace m.Direction
-        || m.Direction.Equals("incoming", StringComparison.OrdinalIgnoreCase))
-    |> Seq.map (fun m ->
-        let speaker =
-            if String.IsNullOrWhiteSpace m.Speaker then
-                "System"
-            else
-                m.Speaker
-
-        {| speaker = speaker
-           mode = m.Mode
-           message = m.Message |})
-    |> Seq.toList
-
 let private runAnalyticsSnapshot
     (path: string)
     (asJson: bool)
     (parityChat: bool)
+    (parityInteractions: bool)
+    (parityAll: bool)
     (output: string option)
     (assertCombat: bool)
     (minBattles: int option)
@@ -446,10 +601,19 @@ let private runAnalyticsSnapshot
     use session = PacketSessionFactory.fromReplayDefault path
     session.WaitForReplayComplete()
     let snap = (session :> IAnalyticsSession).GetSnapshot()
+    let fSnap = AnalyticsDtoMapping.fromSnapshotDto snap
 
     let jsonText =
-        if parityChat then
-            JsonSerializer.Serialize(chatParityRows snap, jsonOptions)
+        if parityAll then
+            JsonSerializer.Serialize(
+                {| interactions = ParityProjection.interactions fSnap
+                   chat = ParityProjection.chat fSnap |},
+                jsonOptions
+            )
+        elif parityInteractions then
+            JsonSerializer.Serialize(ParityProjection.interactions fSnap, jsonOptions)
+        elif parityChat then
+            JsonSerializer.Serialize(ParityProjection.chat fSnap, jsonOptions)
         else
             JsonSerializer.Serialize(snap, jsonOptions)
 
@@ -457,7 +621,7 @@ let private runAnalyticsSnapshot
     | Some outPath -> File.WriteAllText(outPath, jsonText)
     | None -> ()
 
-    if parityChat || asJson then
+    if parityChat || parityInteractions || parityAll || asJson then
         printfn "%s" jsonText
     else
         let fSnap = AnalyticsDtoMapping.fromSnapshotDto snap
@@ -485,7 +649,6 @@ let private runAnalyticsSnapshot
             for row in offense do
                 printfn "  %s: %d (%d hits)" row.Label row.Total row.Count
 
-    let fSnap = AnalyticsDtoMapping.fromSnapshotDto snap
     let mutable ok = true
 
     if assertChat || minChat.IsSome then
@@ -682,14 +845,16 @@ let main argv =
         printfn "  kparser2.cli hello"
         printfn "  kparser2.cli probe"
         printfn "  kparser2.cli echo <text>"
+        printfn "  kparser2.cli ui status [--descriptor-dir <dir>]"
+        printfn "  kparser2.cli ui reset [--descriptor-dir <dir>] [--require-exact]"
         printfn "  kparser2.cli watch [--duration-ms 30000] [--interval-ms 2000] [--analytics]"
-        printfn "  kparser2.cli record <file.ndjson> [--duration-ms 5000] [--idle-ms 180000] [--checkpoint-ms 0] [--prompt text]"
+        printfn "  kparser2.cli record <file.ndjson> [--duration-ms 5000] [--idle-ms 180000] [--checkpoint-ms 0] [--prompt text] [--boundary-mode exact|degraded --boundary-session-uuid UUID --after-message-id N]"
         printfn "  kparser2.cli decode <file.ndjson> [--filter 0x17] [--json]"
         printfn "  kparser2.cli report <queryId> <file.ndjson> [--live]"
         printfn "  kparser2.cli export-items [--sql <path>] [--output <path>]"
         printfn "  kparser2.cli export-actions [--sql <path>] [--output <path>]"
         printfn "  kparser2.cli export-spells [--sql <path>] [--output <path>]"
-        printfn "  kparser2.cli analytics snapshot <file.ndjson> [--json] [--parity-chat] [-o|--output out.json] [--assert-combat] [--assert-chat] [--assert-names] [--min-battles N] [--min-chat N] [--assert-settled] [--assert-settled-code CODE] [--skip-code CODE]"
+        printfn "  kparser2.cli analytics snapshot <file.ndjson> [--json] [--parity-chat|--parity-interactions|--parity] [-o|--output out.json] [--assert-combat] [--assert-chat] [--assert-names] [--min-battles N] [--min-chat N] [--assert-settled] [--assert-settled-code CODE] [--skip-code CODE]"
         printfn "  kparser2.cli export report <file.ndjson> -o <file.kparse2.json>"
         printfn "  kparser2.cli import report <file.kparse2.json> [--validate]"
         printfn "  kparser2.cli import packetviewer [--full path.log | --incoming in.log [--outgoing out.log]] -o capture.ndjson [--session-id name]"
@@ -734,6 +899,24 @@ let main argv =
             | "hello" ->
                 runHello ()
                 0
+            | "ui" when argv.Length >= 2 ->
+                let action = argv.[1].ToLowerInvariant()
+                let mutable directory = Path.Combine(Directory.GetCurrentDirectory(), "ffxi-captures", "ndjson")
+                let mutable requireExact = false
+                let mutable i = 2
+
+                while i < argv.Length do
+                    match argv.[i] with
+                    | "--descriptor-dir" when i + 1 < argv.Length ->
+                        directory <- Path.GetFullPath argv.[i + 1]
+                        i <- i + 2
+                    | "--require-exact" ->
+                        requireExact <- true
+                        i <- i + 1
+                    | _ ->
+                        i <- i + 1
+
+                runUiControl action directory requireExact
             | "echo" when argv.Length >= 2 ->
                 let text = String.Join(" ", argv.[1..])
 
@@ -767,6 +950,11 @@ let main argv =
                 let mutable idleMs = 180_000
                 let mutable checkpointMs = 0
                 let mutable prompt = None
+                let mutable boundaryMode = None
+                let mutable boundaryQuality = None
+                let mutable boundaryReason = None
+                let mutable boundarySessionUuid = None
+                let mutable boundaryMessageId = None
                 let mutable i = 2
 
                 while i < argv.Length do
@@ -783,9 +971,33 @@ let main argv =
                     | "--prompt" when i + 1 < argv.Length ->
                         prompt <- Some argv.[i + 1]
                         i <- i + 2
+                    | "--boundary-mode" when i + 1 < argv.Length ->
+                        boundaryMode <- Some(argv.[i + 1].ToLowerInvariant())
+                        i <- i + 2
+                    | "--boundary-quality" when i + 1 < argv.Length ->
+                        boundaryQuality <- Some argv.[i + 1]
+                        i <- i + 2
+                    | "--boundary-reason" when i + 1 < argv.Length ->
+                        boundaryReason <- Some argv.[i + 1]
+                        i <- i + 2
+                    | "--boundary-session-uuid" when i + 1 < argv.Length ->
+                        boundarySessionUuid <- Some argv.[i + 1]
+                        i <- i + 2
+                    | "--after-message-id" when i + 1 < argv.Length ->
+                        boundaryMessageId <- Some(UInt64.Parse argv.[i + 1])
+                        i <- i + 2
                     | _ -> i <- i + 1
 
-                runRecord output duration prompt idleMs checkpointMs
+                let requestedBoundary =
+                    boundaryMode
+                    |> Option.map (fun mode ->
+                        { Mode = mode
+                          Quality = boundaryQuality |> Option.defaultValue "unavailable"
+                          Reason = boundaryReason |> Option.defaultValue ""
+                          SessionUuid = boundarySessionUuid |> Option.defaultValue ""
+                          MessageId = boundaryMessageId |> Option.defaultValue 0UL })
+
+                runRecord output duration prompt idleMs checkpointMs requestedBoundary
                 0
             | "report" when argv.Length >= 3 ->
                 let queryId = argv.[1]
@@ -824,6 +1036,8 @@ let main argv =
                 let path = argv.[2]
                 let mutable asJson = false
                 let mutable parityChat = false
+                let mutable parityInteractions = false
+                let mutable parityAll = false
                 let mutable output = None
                 let mutable assertCombat = false
                 let mutable assertNames = false
@@ -842,6 +1056,12 @@ let main argv =
                         i <- i + 1
                     | "--parity-chat" ->
                         parityChat <- true
+                        i <- i + 1
+                    | "--parity-interactions" ->
+                        parityInteractions <- true
+                        i <- i + 1
+                    | "--parity" ->
+                        parityAll <- true
                         i <- i + 1
                     | arg when (arg = "-o" || arg = "--output") && i + 1 < argv.Length ->
                         output <- Some argv.[i + 1]
@@ -878,6 +1098,8 @@ let main argv =
                     path
                     asJson
                     parityChat
+                    parityInteractions
+                    parityAll
                     output
                     assertCombat
                     minBattles
