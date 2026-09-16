@@ -132,12 +132,7 @@ module EntityRegistry =
 
             applyPendingLocalPlayerName ()
 
-            if evt.Data.Length >= 94 then
-                let mainJob = int evt.Data.[86]
-                let subJob = int evt.Data.[87]
-
-                if mainJob > 0 then
-                    registerJob entityId $"Job {mainJob}/{subJob}"
+            // 0x00D bytes 86/87 belong to GrapIDTbl, not main/sub job.
 
         | 0x000Dus when evt.Data.Length >= 91 ->
             let entityId = BitConverter.ToUInt32(evt.Data, 4)
@@ -152,12 +147,7 @@ module EntityRegistry =
 
             applyPendingLocalPlayerName ()
 
-            if evt.Data.Length >= 94 then
-                let mainJob = int evt.Data.[86]
-                let subJob = int evt.Data.[87]
-
-                if mainJob > 0 then
-                    registerJob entityId $"Job {mainJob}/{subJob}"
+            // Short name updates also carry model bytes, not job metadata.
 
         | 0x00DDus when evt.Data.Length >= 54 ->
             let playerId = BitConverter.ToUInt32(evt.Data, 4)
@@ -308,10 +298,11 @@ module EntityRegistry =
             | Some EntityKind.Player | Some EntityKind.Pet -> ()
             | _ ->
                 match localJugPetName with
-                | Some petName ->
+                | Some petName when tryGetName entityId |> Option.forall ((=) petName) ->
                     localPetEntityIds.Add entityId |> ignore
                     registerName entityId petName EntityKind.Pet
-                | None -> ()
+                // Interaction heuristics cannot overwrite an observed NPC name.
+                | _ -> ()
 
     let tryLocalJugPetName () = localJugPetName
 

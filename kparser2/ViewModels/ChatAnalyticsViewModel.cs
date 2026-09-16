@@ -12,7 +12,10 @@ public sealed partial class ChatAnalyticsViewModel : ObservableObject, IDisposab
 {
     private readonly IAnalyticsSession _session;
     private readonly IDisposable _subscription;
+    private readonly bool _summary;
     private bool _isRefreshing;
+    private bool _disposed;
+    private readonly ViewSettingsService.ReportPreferences _preferences;
 
     public ObservableCollection<string> ModeOptions { get; } =
     [
@@ -30,9 +33,13 @@ public sealed partial class ChatAnalyticsViewModel : ObservableObject, IDisposab
     [ObservableProperty]
     private FlowDocument _reportDocument = new();
 
-    public ChatAnalyticsViewModel(IAnalyticsSession session)
+    public ChatAnalyticsViewModel(IAnalyticsSession session, bool summary = false)
     {
         _session = session;
+        _summary = summary;
+        _preferences = ViewSettingsService.Shared.Report(summary ? "chat-summary" : "chat");
+        _selectedMode = _preferences.Mode;
+        _selectedSpeaker = _preferences.Speaker ?? "All";
         Refresh(session.GetSnapshot());
 
         _subscription = session.Analytics.Subscribe(snapshot =>
@@ -47,6 +54,8 @@ public sealed partial class ChatAnalyticsViewModel : ObservableObject, IDisposab
         }
 
         Refresh(_session.GetSnapshot());
+        _preferences.Mode = value;
+        ViewSettingsService.Shared.Save();
     }
 
     partial void OnSelectedSpeakerChanged(string value)
@@ -57,6 +66,8 @@ public sealed partial class ChatAnalyticsViewModel : ObservableObject, IDisposab
         }
 
         Refresh(_session.GetSnapshot());
+        _preferences.Speaker = value;
+        ViewSettingsService.Shared.Save();
     }
 
     private static bool IsAll(string? value) =>
@@ -66,6 +77,7 @@ public sealed partial class ChatAnalyticsViewModel : ObservableObject, IDisposab
 
     private void Refresh(AnalyticsSnapshotDto snapshot)
     {
+        if (_disposed) return;
         _isRefreshing = true;
         try
         {
@@ -79,26 +91,24 @@ public sealed partial class ChatAnalyticsViewModel : ObservableObject, IDisposab
                 .OrderBy(s => s)
                 .ToList();
 
-            SpeakerOptions.Clear();
-            SpeakerOptions.Add("All");
-
+            foreach (var mode in snapshot.ChatMessages.Select(c => c.Mode).Distinct())
+                if (!ModeOptions.Contains(mode)) ModeOptions.Add(mode);
             foreach (var speaker in speakers)
-            {
-                SpeakerOptions.Add(speaker);
-            }
+                if (!SpeakerOptions.Contains(speaker)) SpeakerOptions.Add(speaker);
 
             SelectedMode = IsAll(previousMode) || ModeOptions.Contains(previousMode)
                 ? (IsAll(previousMode) ? "All" : previousMode)
                 : "All";
 
-            SelectedSpeaker = !IsAll(previousSpeaker) && speakers.Contains(previousSpeaker, StringComparer.OrdinalIgnoreCase)
-                ? previousSpeaker
-                : "All";
+            SelectedSpeaker = IsAll(previousSpeaker)
+                ? "All"
+                : speakers.FirstOrDefault(s => s.Equals(previousSpeaker, StringComparison.OrdinalIgnoreCase)) ?? "All";
 
-            var report = AnalyticsReportService.formatChat(
-                snapshot,
-                ToFilter(SelectedMode),
-                ToFilter(SelectedSpeaker));
+            var modeFilter = ToFilter(SelectedMode);
+            var speakerFilter = ToFilter(SelectedSpeaker);
+            var report = _summary
+                ? AnalyticsReportService.formatChatSummary(snapshot, modeFilter, speakerFilter)
+                : AnalyticsReportService.formatChat(snapshot, modeFilter, speakerFilter);
 
             ReportDocument = AnalyticsReportRenderer.ToFlowDocument(report);
         }
@@ -108,5 +118,5 @@ public sealed partial class ChatAnalyticsViewModel : ObservableObject, IDisposab
         }
     }
 
-    public void Dispose() => _subscription.Dispose();
+    public void Dispose() { _disposed = true; _subscription.Dispose(); }
 }

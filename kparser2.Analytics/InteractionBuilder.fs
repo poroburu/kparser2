@@ -55,7 +55,8 @@ module InteractionBuilder =
           IsProc = isProc
           ProcValue = procValue
           IsLocalPlayerActor = isLocalPlayer actorId
-          IsLocalPlayerTarget = isLocalPlayer targetId }
+          IsLocalPlayerTarget = isLocalPlayer targetId
+          SourcePacketId = None }
 
     let fromCombatAction (timestampMs: int64) (battleId: int option) (action: CombatActionDecoded) =
         action.Targets
@@ -68,7 +69,7 @@ module InteractionBuilder =
                     let interactionType, harmType, aidType =
                         BattleMessageCatalog.classifyActionEffect action.CommandNo effect.MessageId effect.Miss effect.Value
 
-                    if interactionType = InteractionType.Unknown && effect.Value = 0 && effect.Miss = 0 then
+                    if interactionType = InteractionType.Unknown && effect.Value = 0 && effect.Miss = 0 && effect.MessageId <> 106 then
                         None
                     else
                         Some(
@@ -81,7 +82,7 @@ module InteractionBuilder =
                                 harmType
                                 aidType
                                 (BattleMessageCatalog.actionName action.CommandNo (int action.CommandArg) effect.MessageId)
-                                effect.Value
+                                (if effect.MessageId = 31 && effect.Miss <> 0 then 0 else effect.Value)
                                 (BattleMessageCatalog.successLabelForEffect effect.MessageId effect.Miss effect.Value)
                                 action.CommandNo
                                 effect.MessageId
@@ -125,7 +126,8 @@ module InteractionBuilder =
             IsProc = false
             ProcValue = 0
             IsLocalPlayerActor = isLocalPlayer message.CasterId
-            IsLocalPlayerTarget = isLocalPlayer message.TargetId } ]
+            IsLocalPlayerTarget = isLocalPlayer message.TargetId
+            SourcePacketId = None } ]
 
     let fromDecoderEvents (timestampMs: int64) (battleId: int option) (events: DecoderEvent list) =
         events

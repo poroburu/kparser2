@@ -15,7 +15,12 @@ type NdjsonRecord =
 type NdjsonSessionHeader =
     { ``type``: string
       player_name: string
-      record_start_ms: int64 }
+      record_start_ms: int64
+      boundary_mode: string
+      boundary_quality: string
+      boundary_reason: string
+      boundary_session_uuid: string
+      boundary_message_id: uint64 }
 
 module Ndjson =
     let private options = JsonSerializerOptions(PropertyNameCaseInsensitive = true)
@@ -50,7 +55,33 @@ module Ndjson =
         let header =
             { ``type`` = sessionHeaderType
               player_name = playerName |> Option.defaultValue ""
-              record_start_ms = recordStartMs }
+              record_start_ms = recordStartMs
+              boundary_mode = "none"
+              boundary_quality = "unavailable"
+              boundary_reason = "no reset boundary"
+              boundary_session_uuid = ""
+              boundary_message_id = 0UL }
+
+        writer.WriteLine(JsonSerializer.Serialize(header, options))
+
+    let writeSessionHeaderWithBoundary
+        (writer: TextWriter)
+        (playerName: string option)
+        (recordStartMs: int64)
+        (boundarySessionUuid: string)
+        (boundaryMessageId: uint64)
+        (boundaryMode: string)
+        (boundaryQuality: string)
+        (boundaryReason: string) =
+        let header =
+            { ``type`` = sessionHeaderType
+              player_name = playerName |> Option.defaultValue ""
+              record_start_ms = recordStartMs
+              boundary_mode = boundaryMode
+              boundary_quality = boundaryQuality
+              boundary_reason = boundaryReason
+              boundary_session_uuid = boundarySessionUuid
+              boundary_message_id = boundaryMessageId }
 
         writer.WriteLine(JsonSerializer.Serialize(header, options))
 

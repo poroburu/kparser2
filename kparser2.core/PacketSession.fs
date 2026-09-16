@@ -11,7 +11,7 @@ open kparser2.Decoders
 open kparser2.Ingest
 open kparser2.Protocol
 
-type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int, ?replayPath: string) =
+type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int, ?replayPath: string, ?monitorConnection: bool) =
     let maxEntries = defaultArg maxEntries 5000
     let store = PacketStore(maxEntries)
     let packetSubject = new Subject<PacketRowDto>()
@@ -21,6 +21,8 @@ type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int, 
     let analyticsSubject = new Subject<AnalyticsSnapshotDto>()
     let cts = new CancellationTokenSource()
     let mutable disposed = false
+    let mutable importedSnapshot: AnalyticsSnapshotDto option = None
+    let snapshot () = importedSnapshot |> Option.defaultWith store.GetAnalyticsSnapshot
     let liveSource =
         match source with
         | :? LivePacketSource as live -> Some live
@@ -43,7 +45,7 @@ type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int, 
     let analyticsFlushIntervalMs = 300
 
     let publishAnalyticsSnapshot () =
-        analyticsSubject.OnNext(store.GetAnalyticsSnapshot())
+        analyticsSubject.OnNext(snapshot())
 
     let markAnalyticsDirty () =
         lock analyticsGate (fun () -> analyticsDirty <- true)
@@ -115,12 +117,12 @@ type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int, 
             | ex -> printfn "PacketSession ingest error: %s" ex.Message
         }
 
-    let _ingestTask = ingestLoop()
-    let _analyticsFlushTask = analyticsFlushLoop()
+    let _ingestTask = Task.Run(Func<Task>(fun () -> ingestLoop() :> Task))
+    let _analyticsFlushTask = Task.Run(Func<Task>(fun () -> analyticsFlushLoop() :> Task))
     let _monitorTask =
         match liveSource with
-        | Some _ -> monitorPluginSession() :> Task
-        | None -> Task.CompletedTask
+        | Some _ when defaultArg monitorConnection true -> monitorPluginSession() :> Task
+        | _ -> Task.CompletedTask
 
     member _.WaitForReplayComplete() =
         source.WaitForCompletion()
@@ -133,9 +135,10 @@ type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int, 
     interface IAnalyticsSession with
         member _.Analytics = analyticsSubject :> IObservable<_>
 
-        member _.GetSnapshot() = store.GetAnalyticsSnapshot()
+        member _.GetSnapshot() = snapshot()
 
         member _.LoadSnapshot snapshot =
+            importedSnapshot <- Some snapshot
             store.LoadAnalyticsSnapshot snapshot
             publishAnalyticsSnapshot ()
 
@@ -204,29 +207,36 @@ type PacketSession(source: IPacketSource, sourceName: string, ?maxEntries: int, 
             if not disposed then
                 disposed <- true
                 cts.Cancel()
+                try
+                    (source :> IDisposable).Dispose()
+                with _ ->
+                    ()
+                Task.WhenAll(_ingestTask, _analyticsFlushTask, _monitorTask).GetAwaiter().GetResult()
                 packetSubject.OnCompleted()
                 analyticsSubject.OnCompleted()
                 chatSubject.OnCompleted()
                 lootSubject.OnCompleted()
                 combatSubject.OnCompleted()
-
-                try
-                    (source :> IDisposable).Dispose()
-                with _ ->
-                    ()
-
                 cts.Dispose()
 
 module PacketSessionFactory =
+    let fromSnapshot(snapshot: AnalyticsSnapshotDto) =
+        let session = new PacketSession(new SnapshotPacketSource() :> IPacketSource, "report")
+        (session :> IAnalyticsSession).LoadSnapshot(snapshot)
+        session
+
+    let fromDesktopSource(source: DesktopPacketSource) =
+        new PacketSession(source :> IPacketSource, "live:tcp://localhost:5555", monitorConnection = false)
+
     let fromLive(subEndpoint: string) =
-        new PacketSession(LivePacketSource(subEndpoint) :> IPacketSource, $"live:{subEndpoint}")
+        new PacketSession(new LivePacketSource(subEndpoint) :> IPacketSource, $"live:{subEndpoint}")
 
     let fromLiveDefault() =
         fromLive "tcp://localhost:5555"
 
     let fromReplay(path: string, speed: float) =
         new PacketSession(
-            ReplayPacketSource(path, speed = speed) :> IPacketSource,
+            new ReplayPacketSource(path, speed = speed) :> IPacketSource,
             $"replay:{path}",
             replayPath = path)
 

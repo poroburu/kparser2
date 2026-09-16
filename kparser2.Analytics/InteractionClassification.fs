@@ -4,12 +4,12 @@ open kparser2.Decoders
 
 module InteractionClassification =
     let private criticalMessageIds =
-        Set.ofList [ 0x1C; 0x1D; 0x1E; 0x1F; 0x6D; 0xB9 ]
+        Set.ofList [ 0x1C; 0x1D; 0x1E; 0x1F; 67; 0x6D ]
 
-    let classifyDamageModifier (messageId: int) (hasProc: bool) =
+    let classifyDamageModifier (messageId: int) (_hasProc: bool) =
         if criticalMessageIds.Contains messageId then
             DamageModifier.Critical
-        elif hasProc then
+        elif messageId = 252 || messageId = 274 then
             DamageModifier.MagicBurst
         else
             DamageModifier.Normal

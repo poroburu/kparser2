@@ -197,10 +197,14 @@ module AnalyticsQueries =
             { Label = action; Value = "enfeeble"; Count = rows.Length; Total = rows.Length })
 
     let lootSummary (snap: AnalyticsSnapshot) =
-        snap.LootRecords
-        |> List.groupBy (fun l -> l.ItemName)
+        LootResolution.resolve snap.LootRecords
+        |> List.filter LootResolution.isMeaningful
+        |> List.groupBy (fun row -> row.ItemName)
         |> List.map (fun (item, rows) ->
-            { Label = item; Value = "drops"; Count = rows.Length; Total = rows |> List.sumBy (fun r -> r.Quantity) })
+            { Label = item
+              Value = "drops"
+              Count = rows.Length
+              Total = rows |> List.sumBy (fun row -> row.Loot.Quantity) })
 
     let performance (snap: AnalyticsSnapshot) (filter: MobFilter) =
         let offense = offenseSummary snap filter |> List.sumBy (fun r -> r.Total)

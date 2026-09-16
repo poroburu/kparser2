@@ -8,6 +8,50 @@ open Xunit
 [<Collection("EntityRegistry")>]
 module DecoderTests =
     [<Fact>]
+    let ``character model bytes cannot become job metadata`` () =
+        EntityRegistry.reset()
+        let data = Fixtures.charPcPacket "Alice" 100u
+        data.[86] <- 178uy
+        data.[87] <- 112uy
+        EntityRegistry.observe
+            { Topic = "test"; Timestamp = 1UL; Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"; PacketId = 0x000Dus; PacketName = "CHAR_PC"
+              Size = uint32 data.Length; Injected = false; Blocked = false
+              SessionUuid = "synthetic"; Version = "v1"; MessageId = 1UL; Data = data }
+        Assert.True(EntityRegistry.tryGetJob 100u |> Option.isNone)
+
+    [<Theory>]
+    [<InlineData(5, "blindness")>]
+    [<InlineData(7, "petrification")>]
+    [<InlineData(42, "Regen")>]
+    [<InlineData(66, "Copy Image")>]
+    [<InlineData(148, "Evasion Down")>]
+    let ``synthetic status expiry templates preserve system speaker`` (effect: int, label: string) =
+        let message = Fixtures.battleMessagePacket 100u 100u 206us (uint32 effect) 0u 0uy |> Battle0x29.decode |> Option.get
+        let chat = ParameterizedChat.statusExpiry message |> Option.get
+        Assert.Equal("System", chat.Speaker)
+        Assert.Equal("System", chat.Mode)
+        Assert.EndsWith($"'s {label} effect wears off.", chat.Message)
+        Assert.True(ParameterizedChat.statusExpiry {message with MessageNum = 205us} |> Option.isNone)
+        Assert.True(ParameterizedChat.statusExpiry {message with Param1 = 999u} |> Option.isNone)
+
+    [<Fact>]
+    let ``synthetic stare emote rejects truncated and unsupported templates`` () =
+        let data = Array.zeroCreate<byte> 24
+        BitConverter.GetBytes(100u).CopyTo(data, 4)
+        BitConverter.GetBytes(200u).CopyTo(data, 8)
+        BitConverter.GetBytes(23us).CopyTo(data, 16)
+        let chat = ParameterizedChat.emote data |> Option.get
+        Assert.Equal("Emote", chat.Mode)
+        Assert.Contains(" stares at ", chat.Message)
+        Assert.True(ParameterizedChat.emote data.[0..22] |> Option.isNone)
+        data.[22] <- 2uy
+        Assert.True(ParameterizedChat.emote data |> Option.isNone)
+        data.[22] <- 0uy
+        data.[16] <- 24uy
+        Assert.True(ParameterizedChat.emote data |> Option.isNone)
+
+    [<Fact>]
     let ``Chat0x17 decodes speaker and message`` () =
         let data = Fixtures.chatPacket "Alice" "Hello world" 0x00uy
 
@@ -658,6 +702,27 @@ module DecoderTests =
         Assert.Equal(Some "LullabyMelodia", EntityRegistry.tryLocalJugPetName ())
         Assert.Equal("Entity 629145", EntityRegistry.formatEntity 0x99999u)
         Assert.True(EntityRegistry.tryGetEntityKind 99999u |> Option.isNone)
+
+        EntityRegistry.observe
+            { Topic = "test"
+              Timestamp = 4UL
+              Direction = PacketDirection.Incoming
+              PacketType = "world_s2c"
+              PacketId = 0x000Eus
+              PacketName = "GP_SERV_COMMAND_CHAR_NPC"
+              Size = 68u
+              Injected = false
+              Blocked = false
+              SessionUuid = "test"
+              Version = "v1"
+              MessageId = 4UL
+              Data = Fixtures.npcUpdatePacket "Desert_Beetle" 99999u }
+        EntityRegistry.registerLocalPetActor 99999u
+        Assert.Equal(Some "Desert_Beetle", EntityRegistry.tryGetName 99999u)
+        Assert.Equal(Some EntityRegistry.EntityKind.Mob, EntityRegistry.tryGetEntityKind 99999u)
+        Assert.False(EntityRegistry.isLocalPet 99999u)
+        EntityRegistry.registerLocalPetActor 88888u
+        Assert.Equal(Some "LullabyMelodia", EntityRegistry.tryGetName 88888u)
 
     [<Fact>]
     let ``party member update registers player name from 0xDD`` () =

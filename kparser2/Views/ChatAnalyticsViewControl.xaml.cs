@@ -8,10 +8,10 @@ public partial class ChatAnalyticsViewControl : UserControl
 {
     private readonly ChatAnalyticsViewModel _viewModel;
 
-    public ChatAnalyticsViewControl(IAnalyticsSession session)
+    public ChatAnalyticsViewControl(IAnalyticsSession session, bool summary = false)
     {
         InitializeComponent();
-        _viewModel = new ChatAnalyticsViewModel(session);
+        _viewModel = new ChatAnalyticsViewModel(session, summary);
         DataContext = _viewModel;
         Unloaded += (_, _) => _viewModel.Dispose();
     }

@@ -136,3 +136,17 @@ type ParseCodesParityTests() =
             BattleMessageCatalog.classifyActionEffect 8 327 0 43
 
         Assert.Equal(InteractionType.Unknown, interactionType)
+
+    [<Theory>]
+    [<InlineData(1, 67, 98, "Melee")>]
+    [<InlineData(3, 185, 405, "Weaponskill")>]
+    [<InlineData(11, 185, 236, "Ability")>]
+    member _.``live BST wire damage is not a legacy chat code`` (command: int, message: int, amount: int, expected: string) =
+        let interaction, harm, aid = BattleMessageCatalog.classifyActionEffect command message 0 amount
+        Assert.Equal(InteractionType.Harm, interaction)
+        Assert.Equal(expected, string harm.Value)
+        Assert.Equal(None, aid)
+        if message = 67 then
+            Assert.Equal(DamageModifier.Critical, InteractionClassification.classifyDamageModifier message false)
+        else
+            Assert.Equal(DamageModifier.Normal, InteractionClassification.classifyDamageModifier message false)

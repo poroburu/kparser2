@@ -4,6 +4,32 @@ All notable changes to kparser2 are documented here. The format follows [Keep a 
 
 ## [Unreleased]
 
+## [0.1.0-rc.3] - 2026-09-15
+
+Third pre-release. Saved HorizonXI BST session reconciliation on `develop` since rc.2. Limited public RC: `docs/RELEASING.md` is the release gate; legacy kparser comparison is a read-only oracle, not a gate.
+
+### Added
+
+- Detailed analytics report pipeline and configurable report controls (modes, player/enemy filters, detail, crystal, zero-XP, base-attack)
+- Session coordinator: report workspace with **Session → Open NDJSON / Use Live Feed / Import PacketViewer**, `--replay` / `--report` / `--live` command line
+- Parameterized chat decoding for verified status-expiry and stare templates (`ParameterizedChat.fs`)
+- Live boundary metadata in the NDJSON session header; `kparser2.Ui.Qa` offline WPF replay runner and `scripts/test-ui-replay.ps1`
+- Saved-session parity tooling (read-only against kparser v1): `scripts/run-session-parity.cjs`, `align-oracle-window.cjs`, `oracle-dataset.cjs`, `compare-synchronized.ps1`; workflow in `docs/saved-session-parity.md` and `docs/oracle-datasets.md`
+
+### Fixed
+
+- BST wire damage classes: critical (67) and weapon-skill / pet-move (185) messages classified as damage
+- Pet inference no longer overwrites an observed NPC name
+- Character model bytes are no longer read as player jobs
+- Deaths report distinguishes defeated enemies from player/pet deaths
+- Gil recipient attribution, action names for unknown ids, local outgoing chat echo merged with its incoming copy (500 ms window)
+- Empty reports render their placeholder; base-attack default resets to one; report columns and graph presentation state persist across refresh
+
+### Notes
+
+- Pair with [kpacket2 v0.1.0-rc.1](https://github.com/poroburu/kpacket2/releases/tag/v0.1.0-rc.1); wire `kpacket.v1` unchanged
+- Known limitations: not every legacy report mode is verified (#4); ordinary live chat channels and party/alliance pet ownership are unvalidated; no human-acceptance layer; exact synchronized dual capture needs an unreleased kpacket2 cursor build; #6 QA-runner persistence flake and #7 retail `bcmn30` attribution remain open
+
 ## [0.1.0-rc.2] - 2026-08-26
 
 Second pre-release. Live HorizonXI parity work on `develop` since rc.1.
@@ -86,6 +112,7 @@ First pre-release of the packet-native FFXI parser and analytics tool for the kp
 
 Planned first stable release. Scope matches the RC feature set above; GA will drop the `-rc.N` suffix and incorporate RC feedback.
 
+[0.1.0-rc.3]: https://github.com/poroburu/kparser2/releases/tag/v0.1.0-rc.3
 [0.1.0-rc.2]: https://github.com/poroburu/kparser2/releases/tag/v0.1.0-rc.2
 [0.1.0-rc.1]: https://github.com/poroburu/kparser2/releases/tag/v0.1.0-rc.1
 [0.1.0]: https://github.com/poroburu/kparser2/releases/tag/v0.1.0

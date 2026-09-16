@@ -55,9 +55,15 @@ module PlayersReport =
                 ReportBuilder.empty
 
 module ChatSummaryReport =
+    let private normalizeFilter (value: string option) =
+        match value with
+        | Some value when String.IsNullOrWhiteSpace(value) || value.Trim().Equals("All", StringComparison.OrdinalIgnoreCase) -> None
+        | Some value -> Some(value.Trim())
+        | None -> None
+
     let format (snap: AnalyticsSnapshot) modeFilter speakerFilter =
-        let modeOpt = if modeFilter = Some "All" then None else modeFilter
-        let speakerOpt = if speakerFilter = Some "All" then None else speakerFilter
+        let modeOpt = normalizeFilter modeFilter
+        let speakerOpt = normalizeFilter speakerFilter
 
         let rows =
             snap.ChatMessages
@@ -96,8 +102,14 @@ module ChatReport =
         | _ -> ReportColors.black
 
     let format (snap: AnalyticsSnapshot) modeFilter speakerFilter =
-        let modeOpt = if modeFilter = Some "All" then None else modeFilter
-        let speakerOpt = if speakerFilter = Some "All" then None else speakerFilter
+        let normalizeFilter (value: string option) =
+            match value with
+            | Some value when String.IsNullOrWhiteSpace(value) || value.Trim().Equals("All", StringComparison.OrdinalIgnoreCase) -> None
+            | Some value -> Some(value.Trim())
+            | None -> None
+
+        let modeOpt = normalizeFilter modeFilter
+        let speakerOpt = normalizeFilter speakerFilter
 
         snap.ChatMessages
         |> List.filter (fun c ->
@@ -152,6 +164,16 @@ module DeathsReport =
     let format (snap: AnalyticsSnapshot) (filter: MobFilter) =
         let deaths =
             ReportAggregators.filterInteractions snap filter (fun i -> i.InteractionType = InteractionType.Death)
+            |> List.map (fun d ->
+                // Message 6 is killer defeats target; message 20 names the fallen actor.
+                if d.MessageId = 6 then
+                    { d with ActorId = d.TargetId; ActorName = d.TargetName
+                             TargetId = d.ActorId; TargetName = d.ActorName }
+                elif d.MessageId = 20 then { d with TargetName = "" }
+                else d)
+            |> List.filter (fun d ->
+                snap.Combatants |> List.exists (fun c ->
+                    c.Id = d.ActorId && (c.Kind = EntityKind.Player || c.Kind = EntityKind.Pet || c.Kind = EntityKind.Fellow)))
 
         if deaths.IsEmpty then
             ReportBuilder.empty |> ReportBuilder.appendTitle ReportTemplates.Death.title
@@ -587,11 +609,12 @@ module LootReport =
         let kills = snap.Battles |> List.filter (fun b -> b.Killed) |> List.length
 
         let items =
-            snap.LootRecords
-            |> List.groupBy (fun l -> l.ItemName)
+            LootResolution.resolve snap.LootRecords
+            |> List.filter LootResolution.isMeaningful
+            |> List.groupBy (fun row -> row.ItemName)
             |> List.map (fun (item, rows) ->
-                let qty = rows |> List.sumBy (fun r -> r.Quantity)
-                let maxQty = rows |> List.maxBy (fun r -> r.Quantity) |> fun r -> r.Quantity
+                let qty = rows |> List.sumBy (fun row -> row.Loot.Quantity)
+                let maxQty = rows |> List.maxBy (fun row -> row.Loot.Quantity) |> fun row -> row.Loot.Quantity
                 item, qty, maxQty)
             |> List.sortByDescending (fun (_, qty, _) -> qty)
 
