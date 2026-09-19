@@ -58,21 +58,40 @@ module InteractionBuilder =
           IsLocalPlayerTarget = isLocalPlayer targetId
           SourcePacketId = None }
 
+    let private isHpDrain messageId =
+        messageId = MsgBasicCatalog.MagicDrainHp || messageId = 0x16
+
     let fromCombatAction (timestampMs: int64) (battleId: int option) (action: CombatActionDecoded) =
         action.Targets
         |> List.collect (fun target ->
             target.Effects
-            |> List.choose (fun effect ->
+            |> List.collect (fun effect ->
+                let actionName = BattleMessageCatalog.actionName action.CommandNo (int action.CommandArg) effect.MessageId
+
                 if BattleMessageCatalog.isActionStartCommand action.CommandNo then
-                    None
+                    [ buildInteraction
+                        timestampMs
+                        battleId
+                        action.ActorId
+                        target.TargetId
+                        InteractionType.Unknown
+                        None
+                        None
+                        actionName
+                        0
+                        "preparing"
+                        action.CommandNo
+                        effect.MessageId
+                        false
+                        0 ]
                 else
                     let interactionType, harmType, aidType =
                         BattleMessageCatalog.classifyActionEffect action.CommandNo effect.MessageId effect.Miss effect.Value
 
                     if interactionType = InteractionType.Unknown && effect.Value = 0 && effect.Miss = 0 && effect.MessageId <> 106 then
-                        None
+                        []
                     else
-                        Some(
+                        let primary =
                             buildInteraction
                                 timestampMs
                                 battleId
@@ -81,14 +100,55 @@ module InteractionBuilder =
                                 interactionType
                                 harmType
                                 aidType
-                                (BattleMessageCatalog.actionName action.CommandNo (int action.CommandArg) effect.MessageId)
+                                actionName
                                 (if effect.MessageId = 31 && effect.Miss <> 0 then 0 else effect.Value)
                                 (BattleMessageCatalog.successLabelForEffect effect.MessageId effect.Miss effect.Value)
                                 action.CommandNo
                                 effect.MessageId
                                 effect.HasProc
                                 effect.ProcValue
-                        )))
+
+                        let drainAid =
+                            if interactionType = InteractionType.Harm && isHpDrain effect.MessageId && effect.Value > 0 then
+                                [ buildInteraction
+                                    timestampMs
+                                    battleId
+                                    action.ActorId
+                                    action.ActorId
+                                    InteractionType.Aid
+                                    None
+                                    (Some AidType.Recovery)
+                                    actionName
+                                    effect.Value
+                                    "hit"
+                                    action.CommandNo
+                                    effect.MessageId
+                                    false
+                                    0 ]
+                            else
+                                []
+
+                        let spike =
+                            if effect.HasReact && effect.ReactValue > 0 then
+                                [ buildInteraction
+                                    timestampMs
+                                    battleId
+                                    target.TargetId
+                                    action.ActorId
+                                    InteractionType.Harm
+                                    (Some HarmType.Other)
+                                    None
+                                    "Spikes"
+                                    effect.ReactValue
+                                    "hit"
+                                    action.CommandNo
+                                    (if effect.ReactMessageId > 0 then effect.ReactMessageId else effect.MessageId)
+                                    false
+                                    0 ]
+                            else
+                                []
+
+                        primary :: drainAid @ spike))
 
     let fromCombatMessage (timestampMs: int64) (battleId: int option) (message: CombatMessageDecoded) =
         let interactionType, harmType, aidType =

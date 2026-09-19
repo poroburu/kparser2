@@ -25,15 +25,15 @@ module Battle0x28 =
 
         let hasReact, state = BitstreamReader.readBitFlag state
 
-        let reactValue, state =
+        let reactValue, reactMessageId, state =
             if hasReact then
                 let _, state = BitstreamReader.readBits state 6
                 let _, state = BitstreamReader.readBits state 4
                 let reactValue, state = BitstreamReader.readBits state 14
-                let _, state = BitstreamReader.readBits state 10
-                int reactValue, state
+                let reactMessageId, state = BitstreamReader.readBits state 10
+                int reactValue, int reactMessageId, state
             else
-                0, state
+                0, 0, state
 
         let effect =
             { Miss = int miss
@@ -45,7 +45,8 @@ module Battle0x28 =
               HasProc = hasProc
               ProcValue = procValue
               HasReact = hasReact
-              ReactValue = reactValue }
+              ReactValue = reactValue
+              ReactMessageId = reactMessageId }
 
         effect, state
 
