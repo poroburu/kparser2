@@ -205,6 +205,14 @@ module MsgBasicCatalog =
     let SkillDrainTp = 226
     let MagicDrainHp = 227
     let MagicDrainMp = 228
+    // xi.msg.basic MAGIC_ABSORB_*; live stop 20260919_105549 cmd 4 used 329-332 (STR/DEX/VIT/AGI).
+    let MagicAbsorbStr = 329
+    let MagicAbsorbDex = 330
+    let MagicAbsorbVit = 331
+    let MagicAbsorbAgi = 332
+    let MagicAbsorbInt = 333
+    let MagicAbsorbMnd = 334
+    let MagicAbsorbChr = 335
     let MagicNoEffect = 75
     let MagicFail = 114
     let MagicGainEffect = 230
@@ -276,7 +284,9 @@ module MsgBasicCatalog =
         || n = CannotAttackTarget
 
     let private isMagicDrain n =
-        n = MagicDrainHp || n = MagicDrainMp
+        n = MagicDrainHp
+        || n = MagicDrainMp
+        || (n >= MagicAbsorbStr && n <= MagicAbsorbChr)
 
     let private isSkillDrain n =
         n = SkillDrainMp || n = SkillDrainTp
@@ -371,6 +381,13 @@ module MsgBasicCatalog =
         | 226 -> "Skill Drain TP"
         | 227 -> "Magic Drain HP"
         | 228 -> "Magic Drain MP"
+        | 329 -> "Magic Absorb STR"
+        | 330 -> "Magic Absorb DEX"
+        | 331 -> "Magic Absorb VIT"
+        | 332 -> "Magic Absorb AGI"
+        | 333 -> "Magic Absorb INT"
+        | 334 -> "Magic Absorb MND"
+        | 335 -> "Magic Absorb CHR"
         | 15 -> "Attack Misses"
         | 4 -> "Out Of Range"
         | 5 -> "Unable To See Target"

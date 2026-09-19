@@ -740,6 +740,14 @@ module AnalyticsTests =
         Assert.Equal("Magic Drain HP", MsgBasicCatalog.messageLabel MsgBasicCatalog.MagicDrainHp)
         Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicDrainMp)
         Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicDrainHp)
+        Assert.Equal("Magic Absorb STR", MsgBasicCatalog.messageLabel MsgBasicCatalog.MagicAbsorbStr)
+        Assert.Equal("Magic Absorb CHR", MsgBasicCatalog.messageLabel MsgBasicCatalog.MagicAbsorbChr)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicAbsorbStr)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicAbsorbChr)
+        Assert.Equal(
+            InteractionType.Harm,
+            (MsgBasicCatalog.classify MsgBasicCatalog.MagicAbsorbStr 4 |> fun (t, _, _) -> t)
+        )
         Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.SkillDrainMp)
         Assert.Equal("Magic Erase", MsgBasicCatalog.messageLabel MsgBasicCatalog.MagicErase)
         Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicErase)
