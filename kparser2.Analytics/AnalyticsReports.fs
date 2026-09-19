@@ -169,7 +169,7 @@ module DeathsReport =
                 if d.MessageId = 6 then
                     { d with ActorId = d.TargetId; ActorName = d.TargetName
                              TargetId = d.ActorId; TargetName = d.ActorName }
-                elif d.MessageId = 20 then { d with TargetName = "" }
+                elif d.MessageId = 20 then { d with TargetName = "Unknown" }
                 else d)
             |> List.filter (fun d ->
                 snap.Combatants |> List.exists (fun c ->

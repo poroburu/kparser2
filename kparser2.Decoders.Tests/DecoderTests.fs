@@ -329,6 +329,16 @@ module DecoderTests =
             Assert.NotEmpty action.Targets
 
     [<Fact>]
+    let ``Battle0x28 decodes react spikes`` () =
+        match Battle0x28.decode (Fixtures.combatActionPacketWithReact 1u 2u 1 90 0x14 0 33 44) with
+        | None -> failwith "Expected battle2 react decode"
+        | Some action ->
+            let effect = action.Targets |> List.head |> fun t -> List.head t.Effects
+            Assert.True(effect.HasReact)
+            Assert.Equal(33, effect.ReactValue)
+            Assert.Equal(44, effect.ReactMessageId)
+
+    [<Fact>]
     let ``DecoderRegistry routes chat opcode`` () =
         let evt =
             { Topic = "test"

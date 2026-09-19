@@ -84,6 +84,8 @@ type ParseCodesParityTests() =
             yield ParseCodesParityTests.row "region_skillchain_followup" 1 0x28 0 100 InteractionType.Harm (Some HarmType.Melee) None "hit"
             yield ParseCodesParityTests.row "FailRemoveStatus" 4 0x44 0 0 InteractionType.Aid None (Some AidType.Enhance) "no-effect"
             yield ParseCodesParityTests.row "region_loot_found" 0 0x79 0 0 InteractionType.Aid None (Some AidType.Item) "hit"
+            yield ParseCodesParityTests.row "item_finish" 5 0x51 0 0 InteractionType.Aid None (Some AidType.Item) "hit"
+            yield ParseCodesParityTests.row "magic_start_preparing" 8 327 0 549 InteractionType.Unknown None None "hit"
         }
 
     [<Theory>]

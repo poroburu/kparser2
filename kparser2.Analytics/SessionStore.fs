@@ -266,6 +266,17 @@ module SessionStore =
 
                     recordExperience store ts actorId actorName parsed.Points parsed.Chain true
                 | None -> ()
+            | DecoderEvent.CombatAction action when action.CommandNo = 5 ->
+                let itemId = int action.CommandArg
+
+                store.ItemUses <-
+                    { TimestampMs = ts
+                      ActorId = action.ActorId
+                      ActorName = EntityRegistry.formatEntity action.ActorId
+                      ItemId = itemId
+                      ItemName = ItemLookup.getName itemId
+                      Quantity = 1 }
+                    :: store.ItemUses
             | DecoderEvent.Loot loot ->
                 match loot.ActorId with
                 | Some id when EntityRegistry.isLocalPlayer (uint32 id) ->
