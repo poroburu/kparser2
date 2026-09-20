@@ -238,10 +238,17 @@ module AnalyticsQueries =
             { Label = actor; Value = "swings"; Count = rows.Length; Total = rows |> List.sumBy (fun r -> r.Value) })
 
     let additionalEffects (snap: AnalyticsSnapshot) (filter: MobFilter) =
-        filterInteractions snap filter (fun i -> i.IsProc && i.ProcValue > 0)
-        |> List.groupBy (fun i -> i.ActionName)
-        |> List.map (fun (action, rows) ->
-            { Label = action; Value = "proc"; Count = rows.Length; Total = rows |> List.sumBy (fun r -> r.ProcValue) })
+        let procs =
+            filterInteractions snap filter (fun i -> i.IsProc && i.ProcValue > 0)
+            |> List.groupBy (fun i -> i.ActionName)
+            |> List.map (fun (action, rows) ->
+                { Label = action; Value = "proc"; Count = rows.Length; Total = rows |> List.sumBy (fun r -> r.ProcValue) })
+        let spikes =
+            filterInteractions snap filter InteractionClassification.isSpike
+            |> List.groupBy (fun i -> i.ActorName)
+            |> List.map (fun (actor, rows) ->
+                { Label = actor; Value = "spikes"; Count = rows.Length; Total = rows |> List.sumBy (fun r -> r.Value) })
+        procs @ spikes
 
     let timelineBuffs (snap: AnalyticsSnapshot) (filter: MobFilter) =
         filterInteractions snap filter (fun i -> i.AidType = Some AidType.Enhance)

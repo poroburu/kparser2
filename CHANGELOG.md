@@ -4,6 +4,10 @@ All notable changes to kparser2 are documented here. The format follows [Keep a 
 
 ## [Unreleased]
 
+### Added
+
+- Additional Effects and Offense/Defense now list `0x28` react-bit spike damage (message 44). That is not Offense Absorbed Dmg.
+
 ### Fixed
 
 - Aspir / MP-drain amounts (msg 228, skill 225) stay on the interaction log but are no longer summed into HP damage, DPS, export, or the damage graph. HP Drain still counts and still dual-emits caster recovery.

@@ -109,6 +109,7 @@ Packet payloads include the **4-byte world header**; decoder field offsets start
 | `fixtures/sessions/combat_misses.ndjson` | melee misses (0x15/0x1D) |
 | `fixtures/sessions/combat_ranged.ndjson` | ranged hit + miss |
 | `fixtures/sessions/combat_defense.ndjson` | parry + shadow absorb |
+| `fixtures/sessions/combat_spikes.ndjson` | incoming melee with Blaze Spikes react (msg 44) |
 | `fixtures/sessions/combat_failures.ndjson` | no-effect buff/debuff (0x44/0x3B) |
 | `fixtures/sessions/combat_counters.ndjson` | counter + retaliate |
 | `fixtures/sessions/combat_tp_drain.ndjson` | 0xA3 hit + 0xBB TP drain |

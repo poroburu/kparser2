@@ -33,6 +33,7 @@ module private FixturePaths =
     let combatMeleeHits () = find "combat_melee_hits.ndjson"
     let combatMisses () = find "combat_misses.ndjson"
     let combatDefense () = find "combat_defense.ndjson"
+    let combatSpikes () = find "combat_spikes.ndjson"
     let combatFailures () = find "combat_failures.ndjson"
     let combatTpDrain () = find "combat_tp_drain.ndjson"
     let combatEnfeeble () = find "combat_enfeeble.ndjson"
@@ -1187,6 +1188,50 @@ module FixtureReplayParityTests =
         let snap = ReplayHelpers.ingestFixture (FixturePaths.combatDefense())
         Assert.True(snap.Interactions |> List.exists (fun i -> i.Success = "parry"))
         Assert.True(snap.Interactions |> List.exists (fun i -> i.Success = "shadow-absorb"))
+
+    [<Fact>]
+    let ``combat_spikes reports react damage on add-effect and offense, not absorbed`` () =
+        EntityRegistry.reset()
+        let snap = ReplayHelpers.ingestFixture (FixturePaths.combatSpikes())
+        Assert.True(
+            snap.Interactions
+            |> List.exists (fun i -> i.ActionName = "Spikes" && i.MessageId = 44 && i.Value = 17))
+        let dto = AnalyticsDtoMapping.toSnapshotDto snap
+        let addEffect = ReportTestHelpers.reportText "add-effect" dto
+        ReportTestHelpers.contains "Spikes" addEffect
+        ReportTestHelpers.contains "17" addEffect
+        Assert.DoesNotContain("Absorbed", addEffect, StringComparison.Ordinal)
+        let offense = ReportTestHelpers.reportText "offense" dto
+        ReportTestHelpers.contains "Spikes" offense
+        ReportTestHelpers.contains "17" offense
+        Assert.DoesNotContain("Absorbed Dmg", offense, StringComparison.Ordinal)
+        let defense = ReportTestHelpers.reportText "defense" dto
+        ReportTestHelpers.contains "12" defense
+        Assert.DoesNotContain("Absorbed Dmg", defense, StringComparison.Ordinal)
+
+    [<Fact>]
+    let ``player spikes list on add-effect; enemy spikes list on defense`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 100u "Alice"
+        InteractionTestHelpers.registerMob 200u "Earth Elemental"
+        let store = SessionStore.create ()
+        let ingest data =
+            let evt = InteractionTestHelpers.packetEvent 0x0028us data
+            SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        ingest (Fixtures.combatActionPacketWithReact 200u 100u 1 12 1 0 17 44)
+        ingest (Fixtures.combatActionPacketWithReact 100u 200u 1 90 0x14 0 33 44)
+        let dto = AnalyticsDtoMapping.toSnapshotDto (SessionStore.snapshot store)
+        let addEffect = ReportTestHelpers.reportText "add-effect" dto
+        ReportTestHelpers.contains "Alice" addEffect
+        ReportTestHelpers.contains "Spikes" addEffect
+        ReportTestHelpers.contains "17" addEffect
+        Assert.DoesNotContain("Earth Elemental", addEffect, StringComparison.Ordinal)
+        let defense = ReportTestHelpers.reportText "defense" dto
+        ReportTestHelpers.contains "Spikes" defense
+        ReportTestHelpers.contains "33" defense
+        let offense = ReportTestHelpers.reportText "offense" dto
+        ReportTestHelpers.contains "17" offense
+        Assert.DoesNotContain("Absorbed Dmg", offense, StringComparison.Ordinal)
 
     [<Fact>]
     let ``combat_failures includes no-effect aid`` () =
