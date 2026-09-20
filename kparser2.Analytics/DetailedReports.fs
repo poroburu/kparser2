@@ -120,9 +120,35 @@ module DetailedReports =
         let spikes = section "Spikes" "Player    Action    Hits    Damage    Average" spikeDetails
         let withSpikes report =
             if List.isEmpty spikeDetails then report else append report spikes
-        if mode = "Summary" then a
-        elif mode = "All" || mode = "DamageTaken" then withSpikes (append a b)
-        else withSpikes b
+        let report =
+            if mode = "Summary" then a
+            elif mode = "All" || mode = "DamageTaken" then withSpikes (append a b)
+            else withSpikes b
+        if defense then report
+        else
+            // rows already excludes MP transfers and non-HP harm. Keep misses
+            // for cast costs, but only successful hits contribute damage.
+            let spells =
+                rows |> List.filter (fun i ->
+                    i.CommandNo = 4 && i.SpellId.IsSome
+                    && i.InteractionType = InteractionType.Harm && i.HarmType = Some HarmType.Spell)
+            let known =
+                spells |> List.choose (fun i ->
+                    i.SpellId |> Option.bind SpellLookup.tryGetMpCost |> Option.map (fun cost -> i, cost))
+            let costs =
+                known |> List.groupBy (fun (i, _) -> i.ActorId, i.ActorName, i.SpellId, i.ActionName)
+                |> List.sortBy fst
+                |> List.map (fun ((_, player, _, action), es) ->
+                    let mp = es |> List.distinctBy (fun (i, _) -> i.ActorId, i.TimestampMs, i.SpellId)
+                                |> List.sumBy (snd >> int64)
+                    let hp = es |> List.sumBy (fun (i, _) -> if hit i then int64 (max 0 i.Value) else 0L)
+                    [box player; box action; box mp; box (sprintf "%.2f" (float hp / float mp))])
+                |> section "Spell Costs and Efficiency (estimated)" "Player    Action    Estimated MP    Damage/MP (estimated)"
+            let costs =
+                if spells.Length > known.Length then
+                    costs |> ReportBuilder.appendLine "Spell costs unavailable for some finishes; their damage and MP are excluded from efficiency."
+                else costs
+            append report costs
 
     let defenses mode (snap: AnalyticsSnapshot) filter =
         let rows =
