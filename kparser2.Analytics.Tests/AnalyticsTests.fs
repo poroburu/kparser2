@@ -1283,6 +1283,50 @@ module FixtureReplayParityTests =
         Assert.Empty(AnalyticsQueries.defenseSummary snap filter)
 
     [<Fact>]
+    let ``remote player remains a report participant after a mob attacks their shadows`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 100u "Local"
+        let store = SessionStore.create ()
+        let ingest opcode data =
+            let evt = InteractionTestHelpers.packetEvent opcode data
+            SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        ingest 0x000Dus (Fixtures.charPcPacket "Remote" 200u)
+        ingest 0x000Eus (Fixtures.npcUpdatePacket "Crab" 300u)
+        ingest 0x0028us (Fixtures.combatActionPacketEx 200u 300u 1 0u 76 1 0)
+        // September 19: observed PC is later the target of cmd 1 / msg 31.
+        ingest 0x0028us (Fixtures.combatActionPacketEx 300u 200u 1 0u 0 31 1)
+        Assert.Equal(Some EntityRegistry.EntityKind.Player, EntityRegistry.tryGetEntityKind 200u)
+        ingest 0x000Dus (Fixtures.charPcPacket "Remote" 200u)
+        ingest 0x0028us (Fixtures.combatActionPacketEx 200u 300u 1 0u 24 1 0)
+        let snap = SessionStore.snapshot store
+        Assert.Equal(EntityKind.Player, (snap.Combatants |> List.find (fun c -> c.Id = 200u)).Kind)
+        Assert.Equal(EntityKind.Mob, (snap.Combatants |> List.find (fun c -> c.Id = 300u)).Kind)
+        let offense = ReportAggregators.buildPlayerOffense snap MobFilter.defaultFilter
+        let remote = offense |> List.find (fun p -> p.Name = "Remote")
+        Assert.Equal(100, ReportAggregators.totalCategoryDamage remote.Categories)
+        let text = ReportTestHelpers.reportText "offense" (AnalyticsDtoMapping.toSnapshotDto snap)
+        ReportTestHelpers.contains "Remote" text
+        Assert.DoesNotContain("Crab", text)
+
+    [<Fact>]
+    let ``observed player update repairs a prior combat guess without promoting real mobs`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 100u "Local"
+        EntityRegistry.setEntityKind 200u EntityRegistry.EntityKind.Mob
+        let store = SessionStore.create ()
+        let data = Fixtures.charPcPacket "Remote" 200u
+        let evt = InteractionTestHelpers.packetEvent 0x000Dus data
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        Assert.Equal(Some EntityRegistry.EntityKind.Player, EntityRegistry.tryGetEntityKind 200u)
+        InteractionTestHelpers.registerMob 300u "Crab"
+        EntityRegistry.setEntityKind 300u EntityRegistry.EntityKind.Player
+        Assert.Equal(Some EntityRegistry.EntityKind.Mob, EntityRegistry.tryGetEntityKind 300u)
+        // Explicit pet classification also outranks a subsequent harm-target guess.
+        EntityRegistry.setEntityKind 300u EntityRegistry.EntityKind.Pet
+        EntityRegistry.setEntityKind 300u EntityRegistry.EntityKind.Mob
+        Assert.Equal(Some EntityRegistry.EntityKind.Pet, EntityRegistry.tryGetEntityKind 300u)
+
+    [<Fact>]
     let ``combat_skillchain follow-up is melee harm`` () =
         EntityRegistry.reset()
         let snap = ReplayHelpers.ingestFixture (FixturePaths.combatSkillchain())
