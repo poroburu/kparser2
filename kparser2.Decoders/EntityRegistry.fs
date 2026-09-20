@@ -190,6 +190,8 @@ module EntityRegistry =
             let updateMask = evt.Data.[10]
 
             if updateMask &&& 0x08uy <> 0uy || updateMask = 0x1Fuy then
+                // 16-byte field as sent, including Horizon instance tags (_GC, _EN_GC).
+                // Chat display names omit those tags; do not strip them here.
                 let name = readFixedName evt.Data 52 16
 
                 let claimer =

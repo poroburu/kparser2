@@ -179,6 +179,32 @@ module DecoderTests =
         Assert.Equal(Some EntityRegistry.EntityKind.Mob, EntityRegistry.tryGetEntityKind 0x108A5A5u)
 
     [<Fact>]
+    let ``npc update keeps Horizon instance suffixes distinct from display names`` () =
+        EntityRegistry.reset()
+        let observe entityId name =
+            EntityRegistry.observe
+                { Topic = "test"
+                  Timestamp = 1UL
+                  Direction = PacketDirection.Incoming
+                  PacketType = "world_s2c"
+                  PacketId = 0x000Eus
+                  PacketName = "GP_SERV_COMMAND_CHAR_NPC"
+                  Size = 68u
+                  Injected = false
+                  Blocked = false
+                  SessionUuid = "test"
+                  Version = "v1"
+                  MessageId = uint64 entityId
+                  Data = Fixtures.npcUpdatePacket name entityId }
+
+        observe 1u "Funnel_Bats_GC"
+        observe 2u "Funnel_Bats"
+        observe 3u "Funnel Bats"
+        Assert.Equal(Some "Funnel_Bats_GC", EntityRegistry.tryGetName 1u)
+        Assert.Equal(Some "Funnel_Bats", EntityRegistry.tryGetName 2u)
+        Assert.Equal(Some "Funnel Bats", EntityRegistry.tryGetName 3u)
+
+    [<Fact>]
     let ``EntityRegistry sets local player from group attr`` () =
         EntityRegistry.reset()
 

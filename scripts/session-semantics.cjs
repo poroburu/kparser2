@@ -2,6 +2,9 @@ const fs = require('node:fs');
 const crypto = require('node:crypto');
 const read = p => JSON.parse(fs.readFileSync(p,'utf8').replace(/^\uFEFF/,''));
 const hash = p => crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');
+// Underscores become spaces so Chamber_Beetle matches Chamber Beetle.
+// Packet-only suffixes such as `_GC` stay: they are on the 0x00E wire and
+// distinguish entities that share a chat display name (see #16).
 const name = s => (s??'').replaceAll('_',' ').toLowerCase();
 function provenance(v1,packetPath,chatPath,alignment) {
  const packets={};
