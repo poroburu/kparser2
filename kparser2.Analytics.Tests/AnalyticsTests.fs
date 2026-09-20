@@ -1485,3 +1485,73 @@ module RecoveryMpTests =
             Assert.Matches(@"Caster\s+8\s+43\.75", render mode |> costs)
         for mode in [ReportMode.StatusCuring; ReportMode.StatusCured] do
             Assert.DoesNotContain("Estimated MP", render mode)
+
+[<Collection("EntityRegistry")>]
+module OffenseNukeMpTests =
+    let private createStore () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 100u "Caster"
+        InteractionTestHelpers.registerMob 200u "Crab"
+        InteractionTestHelpers.registerMob 300u "Beetle"
+        SessionStore.create ()
+
+    let private ingest store timestamp target command spell value message miss =
+        let data = Fixtures.combatActionPacketEx 100u target command spell value message miss
+        let evt = { InteractionTestHelpers.packetEvent 0x0028us data with Timestamp = timestamp }
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+
+    let private report query store =
+        SessionStore.snapshot store |> AnalyticsDtoMapping.toSnapshotDto |> ReportTestHelpers.reportText query
+
+    let private costs (text: string) =
+        text.Substring(text.IndexOf("Spell Costs and Efficiency (estimated)", StringComparison.Ordinal))
+
+    [<Fact>]
+    let ``Blizzard IV finish uses existing SQL cost in live Offense`` () =
+        Assert.Equal(Some 162, SpellLookup.tryGetMpCost 152)
+        let store = createStore ()
+        ingest store 10UL 200u 4 152u 324 2 0
+        Assert.Matches(@"Caster\s+Blizzard Iv\s+162\s+2\.00", report "offense" store |> costs)
+        Assert.DoesNotContain("Spell Costs and Efficiency", report "defense" store)
+
+    [<Fact>]
+    let ``same-time targets charge once and a later miss still spends MP`` () =
+        let store = createStore ()
+        ingest store 10UL 200u 4 152u 324 2 0
+        ingest store 10UL 300u 4 152u 162 2 0
+        Assert.Matches(@"Caster\s+Blizzard Iv\s+162\s+3\.00", report "offense" store |> costs)
+        ingest store 20UL 200u 4 152u 0 2 1
+        Assert.Matches(@"Caster\s+Blizzard Iv\s+324\s+1\.50", report "offense" store |> costs)
+
+    [<Fact>]
+    let ``MP transfers prepares cures and enfeebles cannot alter nuke efficiency`` () =
+        let store = createStore ()
+        ingest store 10UL 200u 4 152u 324 2 0
+        let baseline = report "offense" store |> costs
+        ingest store 20UL 200u 4 247u 70 228 0
+        ingest store 30UL 200u 13 0u 30 225 0
+        ingest store 40UL 200u 8 152u 324 2 0
+        ingest store 50UL 100u 4 1u 350 7 0
+        ingest store 60UL 200u 4 266u 136 329 0
+        Assert.Equal(baseline, report "offense" store |> costs)
+
+    [<Fact>]
+    let ``Drain harm counts once without its recovery dual emit`` () =
+        let store = createStore ()
+        ingest store 10UL 200u 4 245u 42 227 0
+        let snap = SessionStore.snapshot store
+        Assert.Equal(2, snap.Interactions.Length)
+        Assert.Single(snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery)) |> ignore
+        Assert.Matches(@"Caster\s+Drain\s+21\s+2\.00", report "offense" store |> costs)
+
+    [<Theory>]
+    [<InlineData(9999)>]
+    [<InlineData(305)>]
+    let ``unknown and zero SQL costs are unavailable without invented MP`` spell =
+        let store = createStore ()
+        ingest store 10UL 200u 4 (uint32 spell) 500 2 0
+        let text = report "offense" store |> costs
+        Assert.Contains("costs unavailable", text)
+        Assert.DoesNotMatch(@"Caster\s+\S", text)
+        ingest store 20UL 200u 4 152u 324 2 0
+        Assert.Matches(@"Caster\s+Blizzard Iv\s+162\s+2\.00", report "offense" store |> costs)

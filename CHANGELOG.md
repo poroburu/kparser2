@@ -6,6 +6,8 @@ All notable changes to kparser2 are documented here. The format follows [Keep a 
 
 ### Added
 
+- Live Offense shows per-player and per-spell estimated MP and observed HP damage per estimated MP, charging multi-target finishes once and excluding MP transfers and unknown costs.
+
 - Live Recovery shows estimated spell MP and observed HP per estimated MP using generated SQL spell costs, charging each cmd-4 cast once across targets. Unknown costs are excluded; no actual MP or unobserved Regen healing is inferred.
 
 ### Fixed
