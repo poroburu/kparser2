@@ -304,7 +304,7 @@ Do:
 
 - `record … --checkpoint-ms 120000` and `notify_on_output` on `record checkpoint:` / `recording stopped:`
 - `kparser.cli capture` to a sibling chatlines file; notify on its checkpoint/stop too. Prove RAM attach before the first heat classify.
-- On checkpoint, run `scripts/opcode-heat.ps1` on the live NDJSON (FileShare read). **`HEAT unchanged` (exit 0): skip reconcile and snapshot.** Fingerprint is **shape**, not volume: extra `0x0015` / entity spam, extra known yells of the same Kind, extra `0x28` of an already-seen `commandNo`, and extra `0x00D2` rows do not count.
+- On intermediate checkpoints, run `scripts/opcode-heat.ps1` on the live NDJSON (FileShare read). **`HEAT unchanged` (exit 0): skip reconcile and snapshot, except at the first checkpoint or stop/completion.** Fingerprint is **shape**, not volume: extra `0x0015` / entity spam, extra known yells of the same Kind, extra `0x28` of an already-seen `commandNo`, and extra `0x00D2` rows do not count.
 - Reconcile + both-side snapshot only when heat **changed**, on first checkpoint, or on `recording stopped:`
 - Optional `watch --analytics` only if you need live plugin health and it is not a synthetic prompt injector
 

@@ -1,10 +1,12 @@
-# Live parity status
+# Historical live parity snapshot
 
 Snapshot: **2026-09-08**
 
-This is the current state of live parity QA. It is a work-status note, not a
-decoder oracle. Live packet bytes remain authoritative; do not edit legacy
-kparser to make a comparison pass.
+This records the September 8 run only; it is not current readiness or backlog.
+Use [report-oracle.md](report-oracle.md) for the current process and GitHub
+issues #4/#9 for work and decisions. Later evidence does not retroactively
+validate this window. Live packet bytes remain authoritative; do not edit
+legacy kparser to make a comparison pass.
 
 ## Green
 

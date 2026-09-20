@@ -53,8 +53,8 @@ Horizon loaded, `/load kpacket`.
 
 On `record checkpoint:` or `recording stopped:`:
 
-1. `scripts/opcode-heat.ps1` on the live NDJSON (FileShare read). Exit 0 (`HEAT unchanged`) → skip reconcile/snapshot and say so. Shape, not volume.
-2. Heat changed, first checkpoint, or stop → `scripts/reconcile-capture.ps1` (drop truncated last lines), then snapshot **both** sides for the shared window with existing compare tools. Do not add scripts or a `PARITY.md` tracker.
+1. First checkpoint and recording stop/completion **always** reconcile and compare, regardless of heat. At other checkpoints, run `scripts/opcode-heat.ps1` on the live NDJSON (FileShare read); exit 0 (`HEAT unchanged`) skips reconcile/snapshot. Shape, not volume. Heat sees `0x28` command numbers, not finish-message IDs: a new ID on an existing command can wait until the final comparison. Keep this policy; a cool checkpoint is not a parity verdict.
+2. Heat changed, first checkpoint, or stop → `scripts/reconcile-capture.ps1` (drop truncated last lines), then freeze **both** inputs under a new private checkpoint directory. Normalize, align, and snapshot as described below. Never overwrite a snapshot referenced by a comparison. Do not add scripts or a `PARITY.md` tracker.
 3. Classify **before coding** (see [parity-inequalities.md](parity-inequalities.md)):
 
 | Bucket | Meaning | Action |
@@ -68,6 +68,34 @@ On `record checkpoint:` or `recording stopped:`:
 4. One family per commit on `cursor/session-yyyymmdd-hhmm` from `develop`. Prove with an existing fixture plus `--assert-settled-code` when it is an ingest id. `dotnet test --filter Category!=Integration` after freeze, not every packet. Draft PR into **`develop`**, never `main`. No kdev pin bump from the scan agent. Search open PRs for the same `code` first.
 
 Zone change (`0x000B` LogoutState `2`) keeps **both** files. Real logout / DC / plugin gone ends that pair: `wait-kpacket-session.ps1`, then a **new** NDJSON and a **new** chatlines capture together. Stop if the tester says stop.
+
+### Product evidence preflight
+
+Use the existing [saved-session workflow](saved-session-parity.md). Keep raw inputs,
+normalization provenance, declared UTC interval/offset, input/output hashes, and
+the tested commit and executable hashes together in private evidence. Preserve
+earlier failed attempts. A path to a mutable snapshot is not reproducible evidence.
+
+Normalize only a derived ChatLine file with `oracle-dataset.cjs normalize-chat`.
+The adapter preserves headers, body content, order, and duplicates; its sidecar
+records the observed checker continuation rows whose timestamp comes from the
+immediately preceding wrapped message. Unknown untimestamped forms still block
+alignment. Do not remove rows to make the comparison pass or edit legacy kparser.
+
+Align a declared shared half-open interval; disclose initialization packets and
+excluded tails. Before interpreting report differences, check legacy parse counts,
+source tracing, and distinct beginning/middle/end anchors. RAM attach alone does
+not prove usable parsing. Correlation is approximate (-1500 through +10000 ms),
+not an exact packet boundary. Joined legacy messages can span interleaved actors;
+each matching source fragment is consumed once without consuming intervening rows.
+
+Use a full `analytics snapshot --json` for report comparison; `--parity` alone is
+an interaction projection. A settled pass only says ranked classification checks
+passed. Verify the meaning of values in reports (for example, status IDs must not
+be summed as damage). Keep unexplained differences visible and classify only
+those supported by source evidence. Keep state, automated UI, inspected screenshots,
+and human acceptance separate; a UI execution failure must retain completed state
+results. A passing rerun does not resolve an intermittent failure.
 
 ## GitHub
 
@@ -92,11 +120,13 @@ kparser RAM capture is required. Do not mark v1 “unobserved” and proceed.
 
 Start: probe; record last-green develop exe to ffxi-captures/ndjson with --checkpoint-ms 120000 --idle-ms 180000 (attach if already writing); kparser.cli capture to a sibling chatlines file. Notify only on record checkpoint: / recording stopped: and the capture’s checkpoint/stop. No Start-Sleep, AGENT_LOOP_WAKE, or Cursor /loop timer. Prove RAM attach before the first heat classify. Ask once for Administrator elevation if attach fails; retry; block product work until it works. Town idle with a live attach is OK. NDJSON combat/chat with a dead chatlines file is capture broken.
 
-Each checkpoint: opcode-heat.ps1 (exit 0 → skip and say so). Heat change / first checkpoint / stop → reconcile, snapshot both sides, classify ingest | report | kparser-only | extra | fork before coding. Search open PRs. Draft PR into develop, never main. Do not close #4/#6/#9. Do not reopen #10–#13. Do not touch #6. Do not ask me to cast. echo only if one sample is blocking a family already in progress. Zone change keep both files; real logout/DC ends the pair. Stop if I say stop.
+First checkpoint and stop: always freeze, normalize, align, and compare both sides. Other checkpoints: opcode-heat.ps1 (exit 0 → skip and say so); heat change → the same paired preflight. Prove usable parsing and source anchors before classifying ingest | report | kparser-only | extra | fork. Search open PRs. Draft PR into develop, never main. Do not close #4/#6/#9. Do not reopen #10–#13. Do not touch #6. Do not ask me to cast. echo only if one sample is blocking a family already in progress. Zone change keep both files; real logout/DC ends the pair. Stop if I say stop.
 ```
 
 ## Current pass
 
 Append a dated bullet when a scan starts or a family lands. Do not turn this into a cast list.
+
+- **2026-09-20** — Offline review of the September 19 pair at `2a6fa6d`, with frozen inputs and repaired timestamp/source tracing. The earlier timestamp blocker is recoverable through existing tools. Stat-absorb values 136–139 are status IDs, not damage: `0e9d809` corrects the classification and damage aggregators, superseding the Harm/Spell interpretation below. Private reproducible evidence: `artifacts/parity-review-20260920/` (final manifest, failed attempts, anchors, hashes, and replays). Product mismatches remain; follow-up ownership is [#4](https://github.com/poroburu/kparser2/issues/4), [#16](https://github.com/poroburu/kparser2/issues/16), and [#17](https://github.com/poroburu/kparser2/issues/17). No new live run or human acceptance.
 
 - **2026-09-19** — Live dual-capture (`ffxi-captures/ndjson/20260919_105549.ndjson` + sibling chatlines; last-green `v0.1.0-rc.3` / `16f7651`; RAM attach proven). Heat stayed cool until **recording stopped**, which flushed cmd-4 leftover **329–332** (`msg.lua` MAGIC_ABSORB_STR/DEX/VIT/AGI). [PR #15](https://github.com/poroburu/kparser2/pull/15) now classifies the contiguous **329–335** region as Harm/Spell (no Recovery dual-emit). Live prove: session CLI `--assert-settled-code unclassified_message` then `--assert-settled` actionable 0 on the complete NDJSON. Cmd-5 tuna sushi ItemUses already in this PR. Freeze after this leftover: recast/range/`/check` stay extra; product Offense still blocked on kparser CLI timestamped `ChatText`. [#4](https://github.com/poroburu/kparser2/issues/4) / [#9](https://github.com/poroburu/kparser2/issues/9) unchanged.

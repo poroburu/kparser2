@@ -4,6 +4,7 @@ Run from the child checkout. Keep inputs and outputs private. The legacy CLI is
 read-only; the runner never builds or edits kparser v1.
 
 ```powershell
+node scripts/oracle-dataset.cjs normalize-chat RAW_CHAT NEW_NORMALIZED_CHAT
 node scripts/align-oracle-window.cjs PACKETS NORMALIZED_CHAT NEW_ALIGNMENT_DIR START_UTC END_UTC LOCAL_OFFSET_MINUTES
 node scripts/run-session-parity.cjs ALIGNED_PACKETS ALIGNED_CHAT ALIGNMENT_JSON NEW_OUTPUT_DIR
 ```
@@ -21,7 +22,13 @@ hashes, commit and working diff. `anchors.json` records distinct beginning,
 middle and end events with packet IDs, capture line numbers and ChatLine
 positions. Chat display can trail packet receipt through animation; correlation
 uses -1500 through +10000 ms and is approximate. Repeated anchor signatures are
-not eligible as anchors. Missing source provenance fails the run.
+not eligible as anchors. Missing source provenance fails the run. Joined legacy
+messages can contain nonadjacent fragments within ten seconds; matching consumes
+each fragment once and preserves intervening messages for their own provenance.
+Normalization records inherited timestamps for the observed checker-addon wrap
+in its sidecar; unknown untimestamped forms remain invalid for alignment.
+If UI execution fails, completed state/chat results and source hashes remain in
+`session-qa.json`; the overall run still fails.
 
 Alignment retains earlier entity initialization packets and every packet inside
 the declared half-open interval. Excluded capture tails are counted separately.
@@ -62,6 +69,13 @@ rows (eight status expirations and one emote); fourteen observed addon-only rows
 are explicit exclusions. Ordinary incoming channel traffic is absent. Tests for
 echoes, repeated messages, ordering, speakers, channels, control codes and
 auto-translate are synthetic coverage, not observed live-channel parity.
+
+That automated baseline is tied to `b440683`, not an evergreen green result.
+PR #15 retains additional preparation rows, which the unchanged comparison
+scope reports as extra. Preserve those rows and classify the difference rather
+than widening exclusions. The focused Beetle window also exposes an unresolved
+entity-name difference in a status-expiry message; its UI totals passing does
+not establish chat equality. See #4 for the current work and evidence disposition.
 
 Parameterized text supports the verified expiry effects and stare template only.
 Unknown action IDs retain explicit namespace-qualified names. Other templates,
