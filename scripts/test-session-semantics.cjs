@@ -69,6 +69,16 @@ test('only declared addon forms are excluded',()=>{
  assert.equal(compare({parity:{chat:[chat('','something else','Party')]}},{}).chat.status,'mismatch');
  assert.equal(compare({parity:{chat:[chat('Alice','Fight','Party')]}},{}).chat.status,'mismatch');
 });
+
+test('legacy stat drain target enfeeble is compared as an effect, not HP damage',()=>{
+ const left={messages:[{text:'Actor casts Absorb-STR.',combat:{actorName:'Actor',interactionType:'Harm',
+   actionType:'Spell',harmType:'Drain',successLevel:'Successful',targets:[{name:'Mob',harmType:'Enfeeble',amount:0}]}}]};
+ const right={Interactions:[{ActorName:'Actor',TargetName:'Mob',InteractionType:'Harm',HarmType:'Enfeeble',
+   CommandNo:4,MessageId:329,Value:136,Success:'hit'}]};
+ const result=compare(left,right);assert.equal(result.interactions.status,'equal');
+ assert.equal(result.interactions.matched[0].left.kind,'enfeeble');
+ right.Interactions[0].HarmType='Spell';assert.equal(compare(left,right).interactions.status,'mismatch');
+});
 test('different speakers and modified encoding remain differences',()=>{
  const [a,b]=pair([chat('Alice','hello\xfd')]);b.ChatMessages[0].Speaker='Bob';
  assert.equal(compare(a,b).chat.status,'mismatch');b.ChatMessages[0].Speaker='Alice';b.ChatMessages[0].Message='hello';

@@ -49,7 +49,7 @@ function compare(v1,v2,context={}) {
   if(!c.targets?.length){exclusions.push({source,classification:'kparser-only',reason:'Activation without a represented target outcome'});return;}
   for(const t of c.targets){
    const defense=t.defenseType, failure=t.failedActionType;
-   let kind=c.interactionType==='Death'?'death':c.interactionType==='Aid'?(c.aidType==='Recovery'||t.aidType==='Recovery'?'recovery':'enhance'):c.harmType==='Enfeeble'?'enfeeble':'damage';
+   let kind=c.interactionType==='Death'?'death':c.interactionType==='Aid'?(c.aidType==='Recovery'||t.aidType==='Recovery'?'recovery':'enhance'):(c.harmType==='Enfeeble'||t.harmType==='Enfeeble')?'enfeeble':'damage';
    let outcome=kind==='death'?'death':defense==='Shadow'?'shadow-absorb':defense==='Parry'?'parry':defense==='Evasion'?'miss':failure==='NoEffect'?'no-effect':c.successLevel==='Unsuccessful'?'miss':'hit';
    if(failure==='OutOfRange'){kind='out-of-range';outcome='message';}
    if(m.text.includes(' is intimidated by ')){kind='intimidated';outcome='intimidated';}
