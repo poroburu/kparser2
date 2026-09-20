@@ -76,7 +76,9 @@ function New-CombatActionPacket(
     [int]$CommandNo = 1,
     [int]$Damage = 42,
     [int]$MessageId = 1,
-    [int]$Miss = 0
+    [int]$Miss = 0,
+    [int]$ReactValue = 0,
+    [int]$ReactMessageId = 0
 ) {
     $bits = New-Object System.Collections.Generic.List[int]
 
@@ -103,7 +105,14 @@ function New-CombatActionPacket(
     Add-Bits ([uint32]$MessageId) 10
     Add-Bits 0 31
     Add-Bits 0 1
-    Add-Bits 0 1
+    $hasReact = ($ReactValue -gt 0) -or ($ReactMessageId -gt 0)
+    Add-Bits $(if ($hasReact) { 1 } else { 0 }) 1
+    if ($hasReact) {
+        Add-Bits 0 6
+        Add-Bits 0 4
+        Add-Bits ([uint32]$ReactValue) 14
+        Add-Bits ([uint32]$ReactMessageId) 10
+    }
 
     $byteCount = [Math]::Ceiling($bits.Count / 8.0)
     $payloadBytes = New-Object byte[] $byteCount
@@ -291,6 +300,14 @@ $combatDefenseLines = @(
     (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $shadow.Length 3) $shadow)
 )
 Set-Content -Path (Join-Path $OutputDir "combat_defense.ndjson") -Value $combatDefenseLines -Encoding UTF8
+
+# Live Horizon Blaze Spikes: incoming melee (cmd 1) with react bit, message 44, value 17.
+$spikeHit = New-CombatActionPacket -ActorId $mobEntityId -TargetId $playerEntityId -CommandNo 1 -Damage 12 -MessageId 1 -ReactValue 17 -ReactMessageId 44
+$combatSpikesLines = @(
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x00DF" (New-Meta 0xDF "GP_SERV_COMMAND_GROUP_ATTR" $bootstrap.Length 1) $bootstrap)
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $spikeHit.Length 2) $spikeHit)
+)
+Set-Content -Path (Join-Path $OutputDir "combat_spikes.ndjson") -Value $combatSpikesLines -Encoding UTF8
 
 $failBuff = New-CombatActionPacket -ActorId $playerEntityId -TargetId $playerEntityId -CommandNo 4 -Damage 0 -MessageId 0x44 -Miss 0
 $failDebuff = New-CombatActionPacket -ActorId $mobEntityId -TargetId $playerEntityId -CommandNo 4 -Damage 0 -MessageId 0x3B -Miss 0

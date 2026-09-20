@@ -39,14 +39,17 @@ module DetailedReports =
     let private hit (i: Interaction) = i.Success = "hit" || i.Success = "message" || i.Success = "critical" || i.Success = "magic-burst"
     let private damage (i: Interaction) = InteractionClassification.isHpDamage i
     let private category (i: Interaction) =
-        match i.Category with
-        | InteractionCategory.Melee | InteractionCategory.MeleeCrit -> "Melee"
-        | InteractionCategory.Ranged | InteractionCategory.RangedCrit -> "Ranged"
-        | InteractionCategory.Spell -> "Spell"
-        | InteractionCategory.Weaponskill -> "Weaponskill"
-        | InteractionCategory.Ability -> "Ability"
-        | InteractionCategory.Skillchain -> "Skillchain"
-        | _ -> "Other"
+        if InteractionClassification.isSpike i then
+            "Spikes"
+        else
+            match i.Category with
+            | InteractionCategory.Melee | InteractionCategory.MeleeCrit -> "Melee"
+            | InteractionCategory.Ranged | InteractionCategory.RangedCrit -> "Ranged"
+            | InteractionCategory.Spell -> "Spell"
+            | InteractionCategory.Weaponskill -> "Weaponskill"
+            | InteractionCategory.Ability -> "Ability"
+            | InteractionCategory.Skillchain -> "Skillchain"
+            | _ -> "Other"
     let private containsAny (terms: string list) (value: string) =
         let value = value.ToLowerInvariant()
         terms |> List.exists value.Contains
@@ -101,7 +104,25 @@ module DetailedReports =
         let title = if defense then "Damage Taken" else "Damage"
         let a = section (title + " Summary") "Player    Total Dmg    Share" summary
         let b = section (title + " Details") "Player    Category    Action    Damage    Hits    Misses    Accuracy    Low/High    Avg (+0)    Avg (-0)    Crits    Crit%    Bursts" details
-        if mode = "Summary" then a elif mode = "All" || mode = "DamageTaken" then append a b else b
+        let spikeDetails =
+            rows
+            |> List.filter InteractionClassification.isSpike
+            |> List.groupBy (fun i -> name i, i.ActionName)
+            |> List.sortBy fst
+            |> List.map (fun ((n, action), events) ->
+                let hits = events |> List.filter hit
+                let values = hits |> List.map (fun i -> max 0 i.Value)
+                [ box n
+                  box action
+                  box hits.Length
+                  box (values |> List.sumBy int64)
+                  box (average values) ])
+        let spikes = section "Spikes" "Player    Action    Hits    Damage    Average" spikeDetails
+        let withSpikes report =
+            if List.isEmpty spikeDetails then report else append report spikes
+        if mode = "Summary" then a
+        elif mode = "All" || mode = "DamageTaken" then withSpikes (append a b)
+        else withSpikes b
 
     let defenses mode (snap: AnalyticsSnapshot) filter =
         let rows =
@@ -166,12 +187,46 @@ module DetailedReports =
         |> section "Debuff Outcomes" "Caster    Target    Action    Attempts    Successful    Failed    Success%"
 
     let additionalEffects snap filter =
-        let all = ReportAggregators.filterInteractions snap filter (fun i -> category i = "Melee" || category i = "Ranged")
-        all |> List.filter (fun i -> i.IsProc) |> List.groupBy (fun i -> i.ActorName, i.ActionName) |> List.sortBy fst
-        |> List.map (fun ((n, a), es) ->
-            let eligible = all |> List.filter (fun i -> i.ActorName = n && i.ActionName = a && hit i) |> List.length
-            [box n; box a; box es.Length; box (es |> List.sumBy (fun i -> int64 i.ProcValue)); box (percent es.Length eligible)])
-        |> section "Additional Effects" "Player    Attack    Procs    Proc value total    Proc / landed attack"
+        let meleeRanged (i: Interaction) = category i = "Melee" || category i = "Ranged"
+        let scoped = ReportAggregators.filterInteractions snap { filter with SelectedPlayerName = None }
+        let attacks = scoped meleeRanged |> List.filter (fun i -> selected i.ActorName filter)
+        let procs =
+            attacks
+            |> List.filter (fun i -> i.IsProc)
+            |> List.groupBy (fun i -> i.ActorName, i.ActionName)
+            |> List.sortBy fst
+            |> List.map (fun ((n, a), es) ->
+                let eligible = attacks |> List.filter (fun i -> i.ActorName = n && i.ActionName = a && hit i) |> List.length
+                [ box n
+                  box a
+                  box es.Length
+                  box (es |> List.sumBy (fun i -> int64 i.ProcValue))
+                  box (percent es.Length eligible) ])
+        let incomingLanded (actor: string) =
+            scoped meleeRanged
+            |> List.filter (fun i -> hit i && eq i.TargetName actor)
+            |> List.length
+        let spikes =
+            scoped InteractionClassification.isSpike
+            |> List.filter (fun i -> (participant snap i.ActorId || i.IsLocalPlayerActor) && selected i.ActorName filter)
+            |> List.groupBy (fun i -> i.ActorName, i.ActionName)
+            |> List.sortBy fst
+            |> List.map (fun ((n, a), es) ->
+                [ box n
+                  box a
+                  box es.Length
+                  box (es |> List.sumBy (fun i -> int64 (max 0 i.Value)))
+                  box (percent es.Length (incomingLanded n)) ])
+        let procReport =
+            if List.isEmpty procs then ReportBuilder.empty
+            else section "Additional Effects" "Player    Attack    Procs    Proc value total    Proc / landed attack" procs
+        let spikeReport =
+            if List.isEmpty spikes then ReportBuilder.empty
+            else section "Spikes" "Player    Action    Hits    Damage    Rate vs landed melee taken" spikes
+        match List.isEmpty procs, List.isEmpty spikes with
+        | true, true ->
+            section "Additional Effects" "Player    Attack    Procs    Proc value total    Proc / landed attack" []
+        | _ -> append procReport spikeReport
 
     let wsRates snap filter =
         let rows =
