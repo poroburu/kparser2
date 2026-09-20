@@ -101,6 +101,16 @@ module ReportFormatTests =
         ReportTestHelpers.contains "Total Dmg" text
 
     [<Fact>]
+    let ``abyssea report is an unsupported legacy stub`` () =
+        let snap = ReportTestHelpers.replaySnapshot (FixturePaths.combatAction())
+        let text = ReportTestHelpers.reportText "abyssea" snap
+        ReportTestHelpers.contains "Abyssea (unsupported)" text
+        ReportTestHelpers.contains "only if HorizonXI adds Abyssea content" text
+        Assert.DoesNotContain("Total Cruor/XP", text, StringComparison.Ordinal)
+        let row = AnalyticsQueryService.query "abyssea" snap (MobFilterDto()) |> Assert.Single
+        Assert.Equal("Unsupported legacy stub", row.Value)
+
+    [<Fact>]
     let ``offense report keeps summary and detail columns aligned`` () =
         let snap = ReportTestHelpers.replaySnapshot (FixturePaths.combatMeleeHits())
         let lines = ReportTestHelpers.reportText "offense" snap |> fun text -> text.Split('\n')

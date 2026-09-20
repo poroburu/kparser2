@@ -66,7 +66,7 @@ public partial class MainWindow : Window
     }
     private static string GroupFor(string id) => id switch
     {
-        "thief" or "corsair" or "abyssea" => "Jobs",
+        "thief" or "corsair" => "Jobs",
         "recovery" or "buffs" or "debuffs" or "enfeebling" or "buffs-by-time" or "def-by-time" => "Support",
         "chat" or "chat-summary" or "loot" or "items" or "player-info" or "experience" => "Session",
         "raw-data" => "Diagnostics", _ => "Combat"

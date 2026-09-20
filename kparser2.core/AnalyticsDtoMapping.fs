@@ -361,7 +361,7 @@ module AnalyticsQueryBridge =
             | "loot" -> AnalyticsQueries.lootSummary snap
             | "players" -> AnalyticsQueries.players snap
             | "mobs" -> AnalyticsQueries.mobs snap
-            | "abyssea" -> AnalyticsQueries.abysseaChests snap
+            | "abyssea" -> LegacyReportStubs.abysseaRows
             | _ -> []
 
         rows |> List.map AnalyticsDtoMapping.toRowDto

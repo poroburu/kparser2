@@ -49,7 +49,7 @@ public sealed class CombatAnalyticsViewControl : UserControl
         if (modes.Length > 1) Add("Report", mode);
         // These reports have no player attribution in the snapshot; showing a
         // selector here would imply a filter that the report cannot honor.
-        if (queryId is not ("fights" or "players" or "experience" or "abyssea")) Add("Player", players);
+        if (queryId is not ("fights" or "players" or "experience")) Add("Player", players);
         if (combat) { Add("Enemy", mobs); toolbar.Children.Add(grouped); toolbar.Children.Add(zeroXp); toolbar.Children.Add(fightButton); }
         if (queryId == "items") toolbar.Children.Add(detail);
         if (queryId == "loot") toolbar.Children.Add(crystals);
@@ -155,7 +155,6 @@ public sealed class CombatAnalyticsViewControl : UserControl
         "buffs-by-time" => [ReportMode.All, ReportMode.Accuracy, ReportMode.Attack, ReportMode.CriticalRate, ReportMode.Haste],
         "def-by-time" => [ReportMode.All, ReportMode.Accuracy, ReportMode.Attack, ReportMode.CriticalRate],
         "loot" => [ReportMode.Summary, ReportMode.DropRates, ReportMode.Stealing, ReportMode.Helm, ReportMode.Salvage],
-        "abyssea" => [ReportMode.All, ReportMode.Lights, ReportMode.Mobs, ReportMode.Chests],
         _ => [ReportMode.All]
     };
 }

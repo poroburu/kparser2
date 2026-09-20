@@ -279,15 +279,6 @@ module AnalyticsQueries =
         |> List.map (fun (action, rows) ->
             { Label = action; Value = "roll"; Count = rows.Length; Total = rows.Length })
 
-    let abysseaChests (snap: AnalyticsSnapshot) =
-        snap.Battles
-        |> List.filter (fun b -> b.Killed && b.ExperiencePoints > 0)
-        |> List.map (fun b ->
-            { Label = b.EnemyName
-              Value = $"#{b.Id} xp={b.ExperiencePoints} chain={b.ExperienceChain}"
-              Count = 1
-              Total = b.ExperiencePoints })
-
     let players (snap: AnalyticsSnapshot) =
         snap.Combatants
         |> List.filter (fun c -> c.Kind = EntityKind.Player)

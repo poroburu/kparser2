@@ -341,14 +341,6 @@ module DetailedReports =
             |> List.map (fun ((n, item), es) -> [box n; box item; box (es |> List.sumBy (fun i -> i.Quantity))])
             |> section "Items Used" "Player    Item    Quantity"
 
-    let abyssea mode (snap: AnalyticsSnapshot) filter =
-        if mode = "Mobs" then
-            ReportAggregators.filterBattles snap filter |> List.filter (fun b -> b.Killed)
-            |> List.groupBy (fun b -> b.EnemyName) |> List.sortBy fst
-            |> List.map (fun (n, bs) -> [box n; box bs.Length; box (bs |> List.sumBy (fun b -> b.ExperiencePoints))])
-            |> section "Observed Kills (capture-wide)" "Enemy    Kills    Experience points"
-        else unavailable "Abyssea light, chest and cruor events are not retained in this snapshot. Experience points are not cruor."
-
     type private StatusInterval = { Start: Interaction; Finish: int64 }
     let private statusIntervals (snap: AnalyticsSnapshot) =
         let starts = set [203; 205; 230; 236; 237; 242; 243; 266; 267; 278; 319; 320]
@@ -426,5 +418,5 @@ module DetailedReports =
         | "thief" -> thief snap filter
         | "loot" -> loot mode excludeCrystals snap filter
         | "items" -> items (if details then "Details" else mode) snap filter
-        | "abyssea" -> abyssea mode snap filter
+        | "abyssea" -> LegacyReportStubs.abyssea snap filter
         | _ -> AnalyticsReports.format queryId snap filter

@@ -38,7 +38,7 @@ kparser2:  kpacket2 → raw packets → opcode decoders → analytics model → 
 | UI | .NET 8 WPF host + headless CLI for agents and regression |
 | Validation | Golden fixtures, unit tests, PacketViewer import, [VieweD](https://github.com/ZeromusXYZ/VieweD) field oracles |
 
-**Not supported:** legacy KParser `.sdf` databases, Lua kpacket on port 6666, or per-build RAM offsets.
+**Not supported:** legacy KParser `.sdf` databases, Lua kpacket on port 6666, per-build RAM offsets, or Abyssea analytics. Abyssea remains only as an unsupported legacy stub and will be implemented if HorizonXI adds that content to its server.
 
 ## Features (current)
 

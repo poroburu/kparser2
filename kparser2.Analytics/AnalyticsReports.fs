@@ -1044,24 +1044,6 @@ module CorsairReport =
                     |> ReportBuilder.blankLine)
                 report
 
-module AbysseaReport =
-    let format (snap: AnalyticsSnapshot) (_filter: MobFilter) =
-        let killed = snap.Battles |> List.filter (fun b -> b.Killed)
-
-        if killed.IsEmpty then
-            ReportBuilder.empty
-        else
-            let totalXp = killed |> List.sumBy (fun b -> b.ExperiencePoints)
-
-            ReportBuilder.empty
-            |> ReportBuilder.appendTitle "Abyssea"
-            |> ReportBuilder.appendFormatLine ReportTemplates.Experience.xpListFormatNum [| box "Total Cruor/XP"; box totalXp |]
-            |> ReportBuilder.blankLine
-            |> ReportBuilder.appendTitle "Kills"
-            |> ReportBuilder.appendFormatLine
-                ReportTemplates.Treasure.timesKilledFormat
-                [| box (killed.Length.ToString() + " mobs"); box killed.Length |]
-
 module AnalyticsReports =
     let format (queryId: string) (snap: AnalyticsSnapshot) (filter: MobFilter) =
         match queryId with
@@ -1090,7 +1072,7 @@ module AnalyticsReports =
         | "ws-rates" -> WsRatesReport.format snap filter
         | "thief" -> ThiefReport.format snap filter
         | "corsair" -> CorsairReport.format snap filter
-        | "abyssea" -> AbysseaReport.format snap filter
+        | "abyssea" -> LegacyReportStubs.abyssea snap filter
         | _ -> ReportBuilder.empty
 
     let formatChat (snap: AnalyticsSnapshot) (modeFilter: string option) (speakerFilter: string option) =
