@@ -51,6 +51,7 @@ module InteractionBuilder =
           Value = value
           Success = success
           CommandNo = commandNo
+          SpellId = None
           MessageId = messageId
           IsProc = isProc
           ProcValue = procValue
@@ -148,6 +149,8 @@ module InteractionBuilder =
                             else
                                 []
 
+                        let primary =
+                            { primary with SpellId = if action.CommandNo = 4 then Some (int action.CommandArg) else None }
                         primary :: drainAid @ spike))
 
     let fromCombatMessage (timestampMs: int64) (battleId: int option) (message: CombatMessageDecoded) =
@@ -182,6 +185,7 @@ module InteractionBuilder =
                 | None -> int message.Param1
             Success = "message"
             CommandNo = 0
+            SpellId = None
             MessageId = int message.MessageNum
             IsProc = false
             ProcValue = 0

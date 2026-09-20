@@ -7,6 +7,7 @@ All notable changes to kparser2 are documented here. The format follows [Keep a 
 ### Added
 
 - Additional Effects and Offense/Defense now list `0x28` react-bit spike damage (message 44). That is not Offense Absorbed Dmg.
+- Live Recovery shows estimated spell MP and observed HP per estimated MP using generated SQL spell costs, charging each cmd-4 cast once across targets. Unknown costs are excluded; no actual MP or unobserved Regen healing is inferred.
 
 ### Fixed
 

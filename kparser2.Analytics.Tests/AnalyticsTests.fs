@@ -271,6 +271,7 @@ module FightSegmenterTests =
           Value = value
           Success = ""
           CommandNo = 0
+          SpellId = None
           MessageId = 0
           IsProc = false
           ProcValue = 0
@@ -1073,6 +1074,7 @@ module AnalyticsTests =
                 Value = 0
                 Success = "hit"
                 CommandNo = 4
+                SpellId = None
                 MessageId = 7
                 IsProc = false
                 ProcValue = 0
@@ -1433,3 +1435,98 @@ module FixtureReplayParityTests =
         let text = ReportTestHelpers.reportText "extra-attacks" snap
         ReportTestHelpers.contains "Packet rounds" text
         ReportTestHelpers.contains "Extra Attacks" text
+
+[<Collection("EntityRegistry")>]
+module RecoveryMpTests =
+    let private createStore () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 100u "Caster"
+        SessionStore.create ()
+
+    let private ingest store timestamp target command spell value message =
+        let data = Fixtures.combatActionPacketEx 100u target command spell value message 0
+        let evt = { InteractionTestHelpers.packetEvent 0x0028us data with Timestamp = timestamp }
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+
+    let private report snap =
+        snap |> AnalyticsDtoMapping.toSnapshotDto |> ReportTestHelpers.reportText "recovery"
+
+    let private costs (text: string) =
+        text.Substring(text.IndexOf("Curing Costs and Efficiency (estimated)", StringComparison.Ordinal))
+
+    [<Fact>]
+    let ``SQL generated costs preserve spell names and unknown costs`` () =
+        Assert.Equal(Some "Cure", SpellLookup.tryGetName 1)
+        Assert.Equal(Some 8, SpellLookup.tryGetMpCost 1)
+        Assert.Equal(Some 24, SpellLookup.tryGetMpCost 2)
+        Assert.Equal(None, SpellLookup.tryGetMpCost 0)
+        Assert.Equal(None, SpellLookup.tryGetMpCost 305) // SQL zero (Odin)
+        Assert.Equal(Some "Chocobo Hum", SpellLookup.tryGetName 407) // disabled SQL row
+        Assert.Equal(None, SpellLookup.tryGetMpCost 407)
+        Assert.Equal(None, SpellLookup.tryGetMpCost 99999)
+
+    [<Fact>]
+    let ``Cure finish retains spell id through DTO and renders estimated efficiency`` () =
+        let store = createStore ()
+        ingest store 10UL 100u 4 1u 350 7
+        let snap = SessionStore.snapshot store
+        let roundTrip = snap |> AnalyticsDtoMapping.toSnapshotDto |> AnalyticsDtoMapping.fromSnapshotDto
+        Assert.Equal(Some 1, (Assert.Single roundTrip.Interactions).SpellId)
+        Assert.Matches(@"Caster\s+8\s+43\.75", report roundTrip |> costs)
+
+    [<Fact>]
+    let ``Curaga targets at the same time charge once and later casts charge again`` () =
+        let store = createStore ()
+        ingest store 10UL 100u 4 7u 350 7
+        ingest store 10UL 200u 4 7u 250 7
+        let snap = SessionStore.snapshot store
+        Assert.Matches(@"Caster\s+60\s+10\.00", report snap |> costs)
+        // Old snapshots without packet provenance have the same cast semantics.
+        let withoutIdentity = { snap with Interactions = snap.Interactions |> List.map (fun i -> { i with SourcePacketId = None }) }
+        Assert.Equal(report snap |> costs, report withoutIdentity |> costs)
+        ingest store 20UL 100u 4 7u 120 7
+        Assert.Matches(@"Caster\s+120\s+6\.00", SessionStore.snapshot store |> report |> costs)
+
+    [<Fact>]
+    let ``Aspir prepare and abilities do not add spell MP or efficiency HP`` () =
+        let store = createStore ()
+        ingest store 10UL 100u 4 1u 350 7
+        let baseline = SessionStore.snapshot store |> report |> costs
+        ingest store 20UL 200u 4 247u 70 228
+        ingest store 30UL 200u 13 0u 30 225
+        ingest store 40UL 100u 8 1u 350 7
+        ingest store 50UL 100u 6 0u 512 102
+        ingest store 60UL 200u 4 245u 40 227
+        let snap = SessionStore.snapshot store
+        Assert.Equal(baseline, report snap |> costs)
+        Assert.Equal(902, snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery) |> List.sumBy (fun i -> i.Value))
+
+    [<Fact>]
+    let ``unknown spell cost excludes both MP and HP from efficiency`` () =
+        let store = createStore ()
+        ingest store 10UL 100u 4 9999u 500 7
+        let text = SessionStore.snapshot store |> report |> costs
+        Assert.Contains("costs unavailable", text)
+        Assert.DoesNotMatch(@"Caster\s+\d", text)
+        ingest store 20UL 100u 4 1u 350 7
+        Assert.Matches(@"Caster\s+8\s+43\.75", SessionStore.snapshot store |> report |> costs)
+
+    [<Fact>]
+    let ``constructed recovery fixture exposes a Cure finish without costing MsgBasic`` () =
+        let snap = ReplayHelpers.ingestFixture (FixturePaths.combatRecovery())
+        Assert.True(snap.Interactions |> List.exists (fun i -> i.CommandNo = 4 && i.SpellId = Some 1 && i.Value = 350))
+        Assert.Matches(@"Entity 100\s+8\s+43\.75", report snap |> costs)
+
+    [<Fact>]
+    let ``live recovery modes show estimates except status curing`` () =
+        let store = createStore ()
+        ingest store 10UL 100u 4 1u 350 7
+        let dto = SessionStore.snapshot store |> AnalyticsDtoMapping.toSnapshotDto
+        let render mode =
+            let request = AnalyticsReportRequest(QueryId = "recovery", Mode = mode, Filter = MobFilterDto())
+            (AnalyticsReportService.formatRequest request dto).Spans
+            |> Seq.map (fun span -> span.Text) |> String.Concat
+        for mode in [ReportMode.Curing; ReportMode.AverageCuring; ReportMode.Recovery] do
+            Assert.Matches(@"Caster\s+8\s+43\.75", render mode |> costs)
+        for mode in [ReportMode.StatusCuring; ReportMode.StatusCured] do
+            Assert.DoesNotContain("Estimated MP", render mode)
