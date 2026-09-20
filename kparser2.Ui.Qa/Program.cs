@@ -21,6 +21,9 @@ internal static class Program
         }
         Directory.CreateDirectory(output);
         Environment.SetEnvironmentVariable("KPARSER2_VIEW_SETTINGS_PATH", Path.Combine(output, "view-settings.json"));
+        // Real HWND + dispatcher are required for layout and RenderTargetBitmap.
+        // Keep every QA window invisible; Windows will otherwise snap off-screen dialogs onto the desktop.
+        Environment.SetEnvironmentVariable("KPARSER2_UI_QA", "1");
         var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         var exit = 1;
         app.Startup += async (_, _) =>

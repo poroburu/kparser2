@@ -11,6 +11,7 @@ All notable changes to kparser2 are documented here. The format follows [Keep a 
 ### Changed
 
 - Disabled Abyssea analytics for HorizonXI; the legacy identifier remains an explicit unsupported stub and will only be implemented if HorizonXI adds Abyssea content to its server.
+- Offline UI QA records `ViewSettingsService.Error` and copies `view-settings.json` when a report filter fails to persist (#6). Fight-picker dialogs stay invisible under `KPARSER2_UI_QA` so Windows does not snap them onto the desktop.
 
 ### Notes
 
