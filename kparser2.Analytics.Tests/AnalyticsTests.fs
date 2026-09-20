@@ -1241,6 +1241,38 @@ module FixtureReplayParityTests =
         ReportTestHelpers.contains "Curing" text
 
     [<Fact>]
+    let ``stat absorbs retain effects but never add damage or recovery`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 0x268Bu "Caster"
+        InteractionTestHelpers.registerMob 0x2C8Bu "Crab"
+        let store = SessionStore.create ()
+        let ingest actor target spell value message =
+            let data = Fixtures.combatActionPacketEx actor target 4 spell value message 0
+            let evt = InteractionTestHelpers.packetEvent 0x0028us data
+            SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        // Ordinary HP Drain must still produce damage and caster recovery.
+        ingest 0x268Bu 0x2C8Bu 245u 40 227
+        for id in 329 .. 335 do
+            ingest 0x268Bu 0x2C8Bu (uint32 (266 + id - 329)) (id - 193) id
+            ingest 0x2C8Bu 0x268Bu (uint32 (266 + id - 329)) (id - 193) id
+            Assert.Equal((InteractionType.Harm, Some HarmType.Enfeeble, None), BattleMessageCatalog.classifyCombatMessage id 0)
+        let snap = SessionStore.snapshot store
+        let effects = snap.Interactions |> List.filter (fun i -> i.MessageId >= 329 && i.MessageId <= 335)
+        Assert.Equal(14, effects.Length)
+        Assert.All(effects, fun i ->
+            Assert.Equal(Some HarmType.Enfeeble, i.HarmType)
+            Assert.Equal(InteractionCategory.Enfeeble, i.Category)
+            Assert.Equal(i.MessageId - 193, i.Value))
+        Assert.Single(snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery)) |> ignore
+        let withoutEffects = { snap with Interactions = snap.Interactions |> List.filter (fun i -> i.HarmType <> Some HarmType.Enfeeble) }
+        for query in [ "offense"; "offense-detail"; "defense"; "defense-detail"; "performance"; "recovery" ] do
+            Assert.Equal(ReportTestHelpers.reportText query (AnalyticsDtoMapping.toSnapshotDto withoutEffects),
+                         ReportTestHelpers.reportText query (AnalyticsDtoMapping.toSnapshotDto snap))
+        let filter = MobFilter.defaultFilter
+        Assert.Equal(40, AnalyticsQueries.offenseSummary snap filter |> List.sumBy (fun r -> r.Total))
+        Assert.Empty(AnalyticsQueries.defenseSummary snap filter)
+
+    [<Fact>]
     let ``combat_skillchain follow-up is melee harm`` () =
         EntityRegistry.reset()
         let snap = ReplayHelpers.ingestFixture (FixturePaths.combatSkillchain())

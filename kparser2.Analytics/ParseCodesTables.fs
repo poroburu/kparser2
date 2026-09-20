@@ -286,7 +286,9 @@ module MsgBasicCatalog =
     let private isMagicDrain n =
         n = MagicDrainHp
         || n = MagicDrainMp
-        || (n >= MagicAbsorbStr && n <= MagicAbsorbChr)
+
+    // Live 329-332 carry status ids 136-139, not damage amounts.
+    let private isStatAbsorb n = n >= MagicAbsorbStr && n <= MagicAbsorbChr
 
     let private isSkillDrain n =
         n = SkillDrainMp || n = SkillDrainTp
@@ -311,7 +313,7 @@ module MsgBasicCatalog =
         | n when n = MagicDmg || n = MagicBurstDamage || isMagicDrain n ->
             Some(InteractionType.Harm, Some HarmType.Spell, None)
         | n when isSkillDrain n -> Some(InteractionType.Harm, Some HarmType.Ability, None)
-        | n when n = MagicEnfeebIs || n = MagicEnfeeb -> Some(InteractionType.Harm, Some HarmType.Enfeeble, None)
+        | n when n = MagicEnfeebIs || n = MagicEnfeeb || isStatAbsorb n -> Some(InteractionType.Harm, Some HarmType.Enfeeble, None)
         | n when isTargetingBlocked n -> Some(InteractionType.Unknown, None, None)
         | n when
             n = IsStatus
@@ -335,6 +337,7 @@ module MsgBasicCatalog =
         | n when n = AttackHits -> InteractionType.Harm, Some HarmType.Melee, None
         | n when n = MagicDmg || n = MagicBurstDamage || isMagicDrain n ->
             InteractionType.Harm, Some HarmType.Spell, None
+        | n when isStatAbsorb n -> InteractionType.Harm, Some HarmType.Enfeeble, None
         | n when isSkillDrain n -> InteractionType.Harm, Some HarmType.Ability, None
         | n when n = MagicGainEffect || isStatusErase n ->
             InteractionType.Aid, None, Some AidType.Enhance
