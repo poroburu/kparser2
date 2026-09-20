@@ -180,7 +180,7 @@ module InteractionParityTests =
         Assert.True(BattleMessageCatalog.isDefensiveBuff spikes.ActionName)
 
     [<Fact>]
-    let ``magic start cmd 8 does not emit an interaction`` () =
+    let ``magic start cmd 8 emits a preparing interaction`` () =
         InteractionTestHelpers.resetEntities ()
         InteractionTestHelpers.registerLocalPlayer playerId "Motenten"
 
@@ -188,4 +188,81 @@ module InteractionParityTests =
         | None -> failwith "Expected battle action decode"
         | Some action ->
             let rows = InteractionBuilder.fromCombatAction 1000L None action
-            Assert.True(List.isEmpty rows)
+            let i = Assert.Single rows
+            Assert.Equal(InteractionType.Unknown, i.InteractionType)
+            Assert.Equal("preparing", i.Success)
+            Assert.Equal("Magic", i.ActionName)
+            Assert.Equal(8, i.CommandNo)
+            Assert.Equal(0, i.Value)
+
+    [<Fact>]
+    let ``react spikes emit reversed harm from the target`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer playerId "Motenten"
+        InteractionTestHelpers.registerMob mobId "Spiked Crab"
+
+        match Battle0x28.decode (Fixtures.combatActionPacketWithReact playerId mobId 1 90 0x14 0 33 44) with
+        | None -> failwith "Expected battle action decode"
+        | Some action ->
+            let rows = InteractionBuilder.fromCombatAction 1000L None action
+            Assert.Equal(2, rows.Length)
+            let hit = rows |> List.find (fun i -> i.ActionName <> "Spikes")
+            let spike = rows |> List.find (fun i -> i.ActionName = "Spikes")
+            Assert.Equal(InteractionType.Harm, hit.InteractionType)
+            Assert.Equal(playerId, hit.ActorId)
+            Assert.Equal(mobId, hit.TargetId)
+            Assert.Equal(InteractionType.Harm, spike.InteractionType)
+            Assert.Equal(Some HarmType.Other, spike.HarmType)
+            Assert.Equal(mobId, spike.ActorId)
+            Assert.Equal(playerId, spike.TargetId)
+            Assert.Equal(33, spike.Value)
+            Assert.Equal(44, spike.MessageId)
+
+    [<Fact>]
+    let ``hp drain keeps harm and dual-emits caster recovery`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer playerId "Motenten"
+        InteractionTestHelpers.registerMob mobId "Crab"
+
+        match Battle0x28.decode (Fixtures.combatActionPacketEx playerId mobId 4 245u 40 227 0) with
+        | None -> failwith "Expected battle action decode"
+        | Some action ->
+            let rows = InteractionBuilder.fromCombatAction 1000L None action
+            Assert.Equal(2, rows.Length)
+            let harm = rows |> List.find (fun i -> i.InteractionType = InteractionType.Harm)
+            let aid = rows |> List.find (fun i -> i.InteractionType = InteractionType.Aid)
+            Assert.Equal(Some HarmType.Spell, harm.HarmType)
+            Assert.Equal(40, harm.Value)
+            Assert.Equal(mobId, harm.TargetId)
+            Assert.Equal(Some AidType.Recovery, aid.AidType)
+            Assert.Equal(playerId, aid.ActorId)
+            Assert.Equal(playerId, aid.TargetId)
+            Assert.Equal(40, aid.Value)
+
+    [<Fact>]
+    let ``item finish cmd 5 records an item use`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionBuilder.reset ()
+        InteractionTestHelpers.registerLocalPlayer playerId "Motenten"
+        let store = SessionStore.create ()
+        let data = Fixtures.combatActionPacketEx playerId playerId 5 4112u 0 0x51 0
+        let evt = InteractionTestHelpers.packetEvent 0x0028us data
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        let snap = SessionStore.snapshot store
+        let useRow = Assert.Single snap.ItemUses
+        Assert.Equal(4112, useRow.ItemId)
+        Assert.Equal("potion", useRow.ItemName)
+        Assert.Equal(playerId, useRow.ActorId)
+        Assert.True(snap.Interactions |> List.exists (fun i -> i.AidType = Some AidType.Item && i.ActionName = "potion"))
+
+    [<Fact>]
+    let ``incoming 0x0037 server status is not recorded as an item use`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionBuilder.reset ()
+        let store = SessionStore.create ()
+        let data = Array.zeroCreate<byte> 32
+        data.[0] <- 0x20uy
+        data.[2] <- 0x37uy
+        let evt = InteractionTestHelpers.packetEvent 0x0037us data
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        Assert.Empty (SessionStore.snapshot store).ItemUses

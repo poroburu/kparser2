@@ -41,6 +41,11 @@ module private FixturePaths =
     let petrifyingPair () = find "bcmn30_petrifying_pair.ndjson"
     let bstLootName () = find "bst_loot_name.ndjson"
     let bstCampMulti () = find "bst_camp_multi.ndjson"
+    let combatRanged () = find "combat_ranged.ndjson"
+    let combatCounters () = find "combat_counters.ndjson"
+    let combatDrain () = find "combat_drain.ndjson"
+    let combatSkillchain () = find "combat_skillchain.ndjson"
+    let combatJa () = find "combat_ja.ndjson"
 
 module private ReplayHelpers =
     let waitForReplay (session: IAnalyticsSession) =
@@ -94,6 +99,16 @@ module ReportFormatTests =
         let text = ReportTestHelpers.reportText "offense" snap
         ReportTestHelpers.contains "Damage Summary" text
         ReportTestHelpers.contains "Total Dmg" text
+
+    [<Fact>]
+    let ``abyssea report is an unsupported legacy stub`` () =
+        let snap = ReportTestHelpers.replaySnapshot (FixturePaths.combatAction())
+        let text = ReportTestHelpers.reportText "abyssea" snap
+        ReportTestHelpers.contains "Abyssea (unsupported)" text
+        ReportTestHelpers.contains "only if HorizonXI adds Abyssea content" text
+        Assert.DoesNotContain("Total Cruor/XP", text, StringComparison.Ordinal)
+        let row = AnalyticsQueryService.query "abyssea" snap (MobFilterDto()) |> Assert.Single
+        Assert.Equal("Unsupported legacy stub", row.Value)
 
     [<Fact>]
     let ``offense report keeps summary and detail columns aligned`` () =
@@ -220,6 +235,7 @@ module ReportFormatTests =
         ReportTestHelpers.contains "Player Deaths" text
         ReportTestHelpers.contains "Summary" text
         ReportTestHelpers.contains "Entity 200" text
+        ReportTestHelpers.contains "Unknown" text
         let mobDeath = { snap with Combatants = [combatant 100u EntityKind.Pet; combatant 200u EntityKind.Mob] }
         let kills = ReportTestHelpers.reportText "deaths" (AnalyticsDtoMapping.toSnapshotDto mobDeath)
         Assert.DoesNotContain("Summary", kills)
@@ -734,6 +750,14 @@ module AnalyticsTests =
         Assert.Equal("Magic Drain HP", MsgBasicCatalog.messageLabel MsgBasicCatalog.MagicDrainHp)
         Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicDrainMp)
         Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicDrainHp)
+        Assert.Equal("Magic Absorb STR", MsgBasicCatalog.messageLabel MsgBasicCatalog.MagicAbsorbStr)
+        Assert.Equal("Magic Absorb CHR", MsgBasicCatalog.messageLabel MsgBasicCatalog.MagicAbsorbChr)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicAbsorbStr)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicAbsorbChr)
+        Assert.Equal(
+            InteractionType.Harm,
+            (MsgBasicCatalog.classify MsgBasicCatalog.MagicAbsorbStr 4 |> fun (t, _, _) -> t)
+        )
         Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.SkillDrainMp)
         Assert.Equal("Magic Erase", MsgBasicCatalog.messageLabel MsgBasicCatalog.MagicErase)
         Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicErase)
@@ -1198,3 +1222,83 @@ module FixtureReplayParityTests =
         Assert.True(
             snap.Interactions
             |> List.exists (fun i -> i.MessageId = 230 && i.AidType = Some AidType.Enhance))
+
+    [<Fact>]
+    let ``combat_ranged produces ranged hit and miss`` () =
+        EntityRegistry.reset()
+        let snap = ReplayHelpers.ingestFixture (FixturePaths.combatRanged())
+        Assert.True(snap.Interactions |> List.exists (fun i -> i.HarmType = Some HarmType.Ranged && i.Success = "hit" && i.Value = 247))
+        Assert.True(snap.Interactions |> List.exists (fun i -> i.HarmType = Some HarmType.Ranged && i.Success = "miss"))
+        let text = ReportTestHelpers.reportText "offense" (AnalyticsDtoMapping.toSnapshotDto snap)
+        ReportTestHelpers.contains "Ranged" text
+
+    [<Fact>]
+    let ``combat_counters produce melee harm on offense`` () =
+        EntityRegistry.reset()
+        let snap = ReplayHelpers.ingestFixture (FixturePaths.combatCounters())
+        Assert.True(snap.Interactions |> List.exists (fun i -> i.Value = 56 && i.HarmType = Some HarmType.Melee))
+        Assert.True(snap.Interactions |> List.exists (fun i -> i.Value = 52 && i.HarmType = Some HarmType.Melee))
+        let text = ReportTestHelpers.reportText "offense" (AnalyticsDtoMapping.toSnapshotDto snap)
+        ReportTestHelpers.contains "Melee" text
+
+    [<Fact>]
+    let ``combat_drain counts harm and recovery hp`` () =
+        EntityRegistry.reset()
+        let snap = ReplayHelpers.ingestFixture (FixturePaths.combatDrain())
+        Assert.True(snap.Interactions |> List.exists (fun i -> i.InteractionType = InteractionType.Harm && i.MessageId = 0x16 && i.Value = 50))
+        Assert.True(snap.Interactions |> List.exists (fun i -> i.AidType = Some AidType.Recovery && i.Value = 50))
+        let text = ReportTestHelpers.reportText "recovery" (AnalyticsDtoMapping.toSnapshotDto snap)
+        ReportTestHelpers.contains "Curing" text
+
+    [<Fact>]
+    let ``stat absorbs retain effects but never add damage or recovery`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 0x268Bu "Caster"
+        InteractionTestHelpers.registerMob 0x2C8Bu "Crab"
+        let store = SessionStore.create ()
+        let ingest actor target spell value message =
+            let data = Fixtures.combatActionPacketEx actor target 4 spell value message 0
+            let evt = InteractionTestHelpers.packetEvent 0x0028us data
+            SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        // Ordinary HP Drain must still produce damage and caster recovery.
+        ingest 0x268Bu 0x2C8Bu 245u 40 227
+        for id in 329 .. 335 do
+            ingest 0x268Bu 0x2C8Bu (uint32 (266 + id - 329)) (id - 193) id
+            ingest 0x2C8Bu 0x268Bu (uint32 (266 + id - 329)) (id - 193) id
+            Assert.Equal((InteractionType.Harm, Some HarmType.Enfeeble, None), BattleMessageCatalog.classifyCombatMessage id 0)
+        let snap = SessionStore.snapshot store
+        let effects = snap.Interactions |> List.filter (fun i -> i.MessageId >= 329 && i.MessageId <= 335)
+        Assert.Equal(14, effects.Length)
+        Assert.All(effects, fun i ->
+            Assert.Equal(Some HarmType.Enfeeble, i.HarmType)
+            Assert.Equal(InteractionCategory.Enfeeble, i.Category)
+            Assert.Equal(i.MessageId - 193, i.Value))
+        Assert.Single(snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery)) |> ignore
+        let withoutEffects = { snap with Interactions = snap.Interactions |> List.filter (fun i -> i.HarmType <> Some HarmType.Enfeeble) }
+        for query in [ "offense"; "offense-detail"; "defense"; "defense-detail"; "performance"; "recovery" ] do
+            Assert.Equal(ReportTestHelpers.reportText query (AnalyticsDtoMapping.toSnapshotDto withoutEffects),
+                         ReportTestHelpers.reportText query (AnalyticsDtoMapping.toSnapshotDto snap))
+        let filter = MobFilter.defaultFilter
+        Assert.Equal(40, AnalyticsQueries.offenseSummary snap filter |> List.sumBy (fun r -> r.Total))
+        Assert.Empty(AnalyticsQueries.defenseSummary snap filter)
+
+    [<Fact>]
+    let ``combat_skillchain follow-up is melee harm`` () =
+        EntityRegistry.reset()
+        let snap = ReplayHelpers.ingestFixture (FixturePaths.combatSkillchain())
+        Assert.True(snap.Interactions |> List.exists (fun i -> i.MessageId = 287))
+        Assert.True(snap.Interactions |> List.exists (fun i -> i.MessageId = 0x28 && i.Value = 100 && i.InteractionType = InteractionType.Harm))
+
+    [<Fact>]
+    let ``combat_ja produces ability harm`` () =
+        EntityRegistry.reset()
+        let snap = ReplayHelpers.ingestFixture (FixturePaths.combatJa())
+        Assert.True(snap.Interactions |> List.exists (fun i -> i.HarmType = Some HarmType.Ability && i.Value = 80))
+
+    [<Fact>]
+    let ``extra-attacks report groups melee by packet identity`` () =
+        EntityRegistry.reset()
+        let snap = ReplayHelpers.ingestFixtureDto (FixturePaths.combatMeleeHits())
+        let text = ReportTestHelpers.reportText "extra-attacks" snap
+        ReportTestHelpers.contains "Packet rounds" text
+        ReportTestHelpers.contains "Extra Attacks" text

@@ -1,14 +1,14 @@
 # Agent guide — kparser2
 
-This document helps Cursor agents iterate on kparser2 **without Ashita running**.
+This document helps Cursor agents iterate on kparser2 **without Ashita running**. Live report-oracle scan (dual capture): [docs/report-oracle.md](docs/report-oracle.md).
 
 ## Release gate and harness freeze
 
 Decided in [#10](https://github.com/poroburu/kparser2/issues/10) (2026-09-15); tracker [#9](https://github.com/poroburu/kparser2/issues/9).
 
 - The **only** RC gate is [docs/RELEASING.md](docs/RELEASING.md): Release build, `dotnet test` including `Category=Integration`, the five fixture smokes, three publish outputs launched from the publish directory, one short live `probe`/`record` when the game is up (else record untested).
-- **kparser v1 comparison is not a gate.** It is a read-only, on-demand oracle. A scan or PR is complete without a paired RAM ChatLine capture.
-- **Harness frozen** until the current RC ships: do not add oracle, evidence, alignment, dataset, or UI-QA scripts/docs under `scripts/` or `docs/`. Fix decoders/reports from live Horizon bytes; add a fixture and a test. New harness work needs a written release-risk reason on #9 first.
+- **kparser v1 comparison is not an RC gate.** A release PR can ship without a paired RAM ChatLine capture. The **report-oracle scan** ([#4](https://github.com/poroburu/kparser2/issues/4)) is different: dual capture is required — see [docs/report-oracle.md](docs/report-oracle.md). Do not mark v1 unobserved and continue.
+- **Harness:** do not add a second compare tracker under `scripts/` or `docs/` (no `PARITY.md` cast list). Fix decoders/reports from live Horizon bytes; add a fixture and a test. New compare **scripts** need a written reason on [#9](https://github.com/poroburu/kparser2/issues/9) first. Updating [docs/report-oracle.md](docs/report-oracle.md) when the loop changes is the runbook, not a new harness.
 - [#4](https://github.com/poroburu/kparser2/issues/4) is a capability inventory, not the definition of done. Unchecked tabs ship as release-note limitations. [#6](https://github.com/poroburu/kparser2/issues/6) and [#7](https://github.com/poroburu/kparser2/issues/7) are deferred backlog, not RC blockers.
 - One status comment per decision on the owning issue. Do not cross-post the same checkpoint to several issues.
 
@@ -187,7 +187,7 @@ does not compare entity or battle IDs. Use `--parity-chat` or
 
 These fixture dumps do not load kpacket. They only prove both CLIs agree on **constructed** bytes/text (`generate-fixtures.ps1`), not that HorizonXI sends that layout. Combat still diffs `parity.interactions` by **name** (not IDs). Schema: [kparser/docs/snapshot-schema.md](../kparser/docs/snapshot-schema.md). kparser `actionType` is Melee/Ranged/Spell; kparser2 `HarmType` uses the same labels. kparser `success` uses `hit` / `miss` / `parry` / `shadow-absorb` / `no-effect`. Chat `message` is body-only; kparser native `chat[]` keeps the full line.
 
-**Oracle policy:** live NDJSON is ground truth. `kparser.cli` is a **read-only** oracle (chatlines / `parity.chat` / `parity.interactions`). It can be wrong. Do **not** change kparser to match kparser2. If they disagree, research XiPackets / VieweD / the capture, then fix kparser2 (or note that kparser omits the event). Dual-dump never authorizes editing kparser.
+**Oracle policy:** live NDJSON is ground truth **on the wire**. `kparser.cli` is read-only (never edit ParseCodes). It can be wrong on classification (`0x28 message` ≠ chatline codes). It is the **product** oracle for tab meaning on a report-oracle scan ([docs/report-oracle.md](docs/report-oracle.md)). Dual-dump of constructed fixtures never authorizes editing kparser and is not Horizon layout.
 
 Long-running parity: observe (`watch` / `record` under `ffxi-captures/ndjson/`). When one pattern fails to reconcile, implement that event in kparser2 only. Prompt in-game with `kparser2.cli echo`, not a Cursor checklist.
 
@@ -217,7 +217,7 @@ Oracle is **live bytes**, then VieweD, then a golden slice. Never the reverse (d
 2. Inspect: `decode --filter 0x17` / `--filter 0x28`, `analytics snapshot --parity-chat`, interaction rows. Open the same file in **VieweD** if opcode fields are ambiguous.
 3. If live disagrees with a synthetic fixture, **live wins**. Fix classifiers or replace the synthetic; do not edit the capture to match the generator.
 4. Copy a short slice into `fixtures/sessions/` and add a test only after that inspection.
-5. Optional second check: kparser RAM chatlines from the same session via `kparser.cli snapshot`. `kparser.cli` cannot attach to the process.
+5. Report-oracle product check: `kparser.cli snapshot` of the **paired** `capture` chatlines from the same window (not a Motenten fixture). `snapshot` reads a file; `capture` is what attaches to the process.
 
 Retail PacketViewer slices (`bcmn30_petrifying_pair`) already follow this gate.
 
@@ -275,20 +275,13 @@ Fixture replay (`analytics snapshot`, `--parity-chat`, `dotnet test`) does **not
 
 ## Agentic parity scan
 
-A **QA parity scan** is packet-only by default: `record`, reconcile,
-`analytics snapshot --assert-settled`, rank gaps. Paired **kparser v1** RAM
-ChatLines (`scripts/compare-synchronized.ps1`, `docs/ui-parity-qa.md`,
-`docs/oracle-datasets.md`, `docs/saved-session-parity.md`) are an **optional
-spot-check** the user requests explicitly; they are not required for scan
-completion and not an RC gate (see *Release gate and harness freeze*). When a
-v1 capture is requested: the RAM reader may need Windows Administrator
-elevation (`RunAs`); a shell sandbox exception alone does not grant it. Verify
-ChatLine growth before declaring the paired capture ready, and mark v1 parity
-unobserved until usable overlapping streams exist.
+A **wire scan** is packet-first: `record`, heat, reconcile, `analytics snapshot --assert-settled`. That is **not** #4 completion.
 
-Testers **only play**. A local Cursor Agent thread on the game PC records last-green CLI and ranks settled gaps. Not a cloud Automation (`:5555` is localhost). Not WPF. No in-game cast checklist.
+A **report-oracle scan** ([docs/report-oracle.md](docs/report-oracle.md)) requires dual capture: last-green `record` **and** `kparser.cli capture`. Do not mark v1 unobserved and proceed. The RAM reader may need Administrator (`RunAs`); a shell sandbox exception alone does not grant it. Failed attach: fix/retry/ask once for elevation. Town idle with a live attach is OK; NDJSON combat/chat with a dead chatlines file is capture broken.
 
-Docs: [docs/parity-inequalities.md](docs/parity-inequalities.md), [docs/metadata-gaps.md](docs/metadata-gaps.md), [docs/ui-parity-qa.md](docs/ui-parity-qa.md).
+Testers **only play**. A local Cursor Agent thread on the game PC runs the loop. Not a cloud Automation (`:5555` is localhost). Not WPF. No in-game cast checklist.
+
+Docs: [docs/report-oracle.md](docs/report-oracle.md), [docs/parity-inequalities.md](docs/parity-inequalities.md), [docs/metadata-gaps.md](docs/metadata-gaps.md), [docs/ui-parity-qa.md](docs/ui-parity-qa.md).
 
 When both desktop applications are visible during a scan, treat them as a
 manual UI-QA layer. Keep the CLI captures authoritative, record user-reported
@@ -297,11 +290,7 @@ JSONL artifact in `scripts/compare-synchronized.ps1` with `-UiObservations`.
 
 ### Paste this (solo, same box)
 
-Horizon loaded, `/load kpacket`. New **Agent** chat (not Plan):
-
-```
-Parity scan while I play. Record last-green kparser2 CLI to ffxi-captures/ndjson with --checkpoint-ms 120000 (or attach if a recorder is already writing). Notify on `record checkpoint:` and `recording stopped:` from that process — do not start a Sleep / AGENT_LOOP_WAKE shell. On each checkpoint, reconcile and analytics snapshot --assert-settled. Rank gaps; skip deferred/spiral/open-PR codes. Classify each ticket with parity-inequalities.md (kparser-only / kparser2-missing / kparser2-extra / deferred) before coding. Lookup XiPackets, VieweD, server/scripts/enum/msg.lua — never edit those pins or kparser. Bootstrap may port a whole message family; later leftover ids. Prove with --assert-settled-code (targeted code gone; leftovers OK) plus dotnet test --filter Category!=Integration after freeze, not on every packet. Commit green work on cursor/session-<yyyymmdd-hhmm> from develop; open a draft PR into develop — never into main. Do not ask me to cast. Stop recording if I say stop or the plugin goes away.
-```
+Horizon loaded, `/load kpacket`. New **Agent** chat (not Plan). Copy the block in [docs/report-oracle.md](docs/report-oracle.md#paste-this-solo-same-box) (dual capture required; do not unobserved-skip v1).
 
 ### Paste this (fork / crowd)
 
@@ -309,13 +298,14 @@ Same play rules. You do **not** share `ffxi-captures`. Search GitHub kparser2 is
 
 ### Scan ticks (no agent sleeper)
 
-The long-running job is **`kparser2.cli record`** (last-green exe). Cursor auto-review treats a second `Start-Sleep` + `AGENT_LOOP_WAKE {"prompt":...}` shell as an unattended agent workflow and will block it. Do not use Cursor `/loop` that way during a scan.
+The long-running jobs are **`kparser2.cli record`** (last-green exe) and **`kparser.cli capture`**. Cursor auto-review treats a second `Start-Sleep` + `AGENT_LOOP_WAKE {"prompt":...}` shell as an unattended agent workflow and will block it. Do not use Cursor `/loop` that way during a scan.
 
 Do:
 
 - `record … --checkpoint-ms 120000` and `notify_on_output` on `record checkpoint:` / `recording stopped:`
-- On checkpoint, run `scripts/opcode-heat.ps1` on the live NDJSON (FileShare read). **`HEAT unchanged` (exit 0): skip reconcile and `--assert-settled`.** Fingerprint is **shape**, not volume: extra `0x0015` / entity spam, extra known yells of the same Kind, extra `0x28` of an already-seen `commandNo`, and extra `0x00D2` rows do not count.
-- Reconcile + `--assert-settled` only when heat **changed**, on first checkpoint, or on `recording stopped:`
+- `kparser.cli capture` to a sibling chatlines file; notify on its checkpoint/stop too. Prove RAM attach before the first heat classify.
+- On intermediate checkpoints, run `scripts/opcode-heat.ps1` on the live NDJSON (FileShare read). **`HEAT unchanged` (exit 0): skip reconcile and snapshot, except at the first checkpoint or stop/completion.** Fingerprint is **shape**, not volume: extra `0x0015` / entity spam, extra known yells of the same Kind, extra `0x28` of an already-seen `commandNo`, and extra `0x00D2` rows do not count.
+- Reconcile + both-side snapshot only when heat **changed**, on first checkpoint, or on `recording stopped:`
 - Optional `watch --analytics` only if you need live plugin health and it is not a synthetic prompt injector
 
 Do not:
@@ -361,11 +351,11 @@ Prove: `--assert-settled-code <code>` (prefix match, e.g. `unclassified_message`
 2. Root `XiPackets/world/server/0xNNNN/README.md` (C2S chat is `client/0x00B5`, not S2C Help Desk `0x00B5`).
 3. VieweD on a PacketViewer `.log` if needed; prefer XiPackets for the `0x28` bitstream.
 4. `server/scripts/enum/msg.lua` + `sql/spell_list.sql` as named ids only (Horizon live bytes still win).
-5. Optional kparser `parity.*` by name. Dual-dump of constructed fixtures ≠ Horizon.
+5. kparser `parity.*` by name from the **paired** RAM `capture` window. Dual-dump of constructed fixtures ≠ Horizon. On the wire, packets still win.
 
 ### Self-heal
 
-Failed prove: discard the working tree; **do not commit**. One retry only if the first attempt skipped an oracle. Same `code` fails twice: stop auto-heal, skip that code, keep recording. Do not weaken tests, edit kparser, retcon NDJSON, or classify everything Unknown. Search open PRs for the same `code` before implementing (dedup).
+Failed prove: discard the working tree; **do not commit**. One retry only if the first attempt skipped a **wire** lookup (XiPackets / VieweD / `msg.lua`). Same `code` fails twice: stop auto-heal, skip that code, keep **both** recorders. Do not skip kparser RAM capture, weaken tests, edit kparser, retcon NDJSON, or classify everything Unknown. Search open PRs for the same `code` before implementing (dedup).
 
 ### Git (scan agents)
 

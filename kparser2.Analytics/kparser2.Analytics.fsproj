@@ -22,6 +22,7 @@
     <Compile Include="SettledDivergence.fs" />
     <Compile Include="AnalyticsQueries.fs" />
     <Compile Include="AnalyticsReport.fs" />
+    <Compile Include="LegacyReportStubs.fs" />
     <Compile Include="ReportTemplates.fs" />
     <Compile Include="ReportAggregators.fs" />
     <Compile Include="AnalyticsReports.fs" />

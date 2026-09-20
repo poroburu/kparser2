@@ -77,7 +77,6 @@ public static class AnalyticsViewCatalog
         new QueryAnalyticsView("thief", "Thief", "thief", combat: true),
         new QueryAnalyticsView("corsair", "Corsair", "corsair", combat: true),
         new QueryAnalyticsView("performance", "Performance", "performance", combat: true),
-        new QueryAnalyticsView("abyssea", "Abyssea", "abyssea", combat: true),
         new QueryAnalyticsView("skillchain", "Skillchain", "skillchain", combat: true),
         new ChatSummaryAnalyticsView(),
         new DamageGraphAnalyticsView(),

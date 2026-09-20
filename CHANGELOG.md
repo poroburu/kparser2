@@ -4,6 +4,10 @@ All notable changes to kparser2 are documented here. The format follows [Keep a 
 
 ## [Unreleased]
 
+### Changed
+
+- Disabled Abyssea analytics for HorizonXI; the legacy identifier remains an explicit unsupported stub and will only be implemented if HorizonXI adds Abyssea content to its server.
+
 ## [0.1.0-rc.3] - 2026-09-15
 
 Third pre-release. Saved HorizonXI BST session reconciliation on `develop` since rc.2. Limited public RC: `docs/RELEASING.md` is the release gate; legacy kparser comparison is a read-only oracle, not a gate.
