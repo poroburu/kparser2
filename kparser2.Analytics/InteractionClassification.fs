@@ -55,6 +55,11 @@ module InteractionClassification =
                 | None -> InteractionCategory.Other
             | _ -> InteractionCategory.Other
 
+    let isHpDamage (i: Interaction) =
+        i.InteractionType = InteractionType.Harm
+        && i.HarmType <> Some HarmType.Enfeeble
+        && not (MsgBasicCatalog.isMpResourceTransfer i.MessageId)
+
     let categoryLabel category =
         match category with
         | InteractionCategory.Melee -> "Melee"

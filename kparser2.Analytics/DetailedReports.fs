@@ -37,7 +37,7 @@ module DetailedReports =
     let private percent n d = if d = 0 then "—" else sprintf "%.2f%%" (100.0 * float n / float d)
     let private average (values: int list) = if values.IsEmpty then "—" else sprintf "%.2f" (values |> List.averageBy float)
     let private hit (i: Interaction) = i.Success = "hit" || i.Success = "message" || i.Success = "critical" || i.Success = "magic-burst"
-    let private damage (i: Interaction) = i.InteractionType = InteractionType.Harm && i.HarmType <> Some HarmType.Enfeeble
+    let private damage (i: Interaction) = InteractionClassification.isHpDamage i
     let private category (i: Interaction) =
         match i.Category with
         | InteractionCategory.Melee | InteractionCategory.MeleeCrit -> "Melee"

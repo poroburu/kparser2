@@ -180,12 +180,10 @@ module ReportAggregators =
           Skillchains = Map.empty }
 
     let offenseInteractions (snap: AnalyticsSnapshot) (filter: MobFilter) =
-        filterInteractions snap filter (fun i ->
-            i.InteractionType = InteractionType.Harm && i.HarmType <> Some HarmType.Enfeeble && i.Value >= 0)
+        filterInteractions snap filter (fun i -> InteractionClassification.isHpDamage i && i.Value >= 0)
 
     let defenseInteractions (snap: AnalyticsSnapshot) (filter: MobFilter) =
-        filterInteractions snap filter (fun i ->
-            i.InteractionType = InteractionType.Harm && i.HarmType <> Some HarmType.Enfeeble && i.Value >= 0)
+        filterInteractions snap filter (fun i -> InteractionClassification.isHpDamage i && i.Value >= 0)
 
     let private isPerformanceParticipant (snap: AnalyticsSnapshot) (name: string) =
         match

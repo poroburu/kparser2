@@ -1283,6 +1283,48 @@ module FixtureReplayParityTests =
         Assert.Empty(AnalyticsQueries.defenseSummary snap filter)
 
     [<Fact>]
+    let ``mp drain retains amounts but never adds hp damage or recovery`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 0x268Bu "Caster"
+        InteractionTestHelpers.registerMob 0x2C8Bu "Crab"
+        let store = SessionStore.create ()
+        let ingest command actor target spell value message =
+            let data = Fixtures.combatActionPacketEx actor target command spell value message 0
+            let evt = InteractionTestHelpers.packetEvent 0x0028us data
+            SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        ingest 4 0x268Bu 0x2C8Bu 144u 100 2
+        ingest 4 0x268Bu 0x2C8Bu 245u 40 227
+        ingest 4 0x268Bu 0x2C8Bu 247u 32 228
+        ingest 4 0x268Bu 0x2C8Bu 247u 38 228
+        ingest 13 0x268Bu 0x2C8Bu 0u 30 225
+        ingest 4 0x268Bu 0x2C8Bu 266u 136 329
+        let snap = SessionStore.snapshot store
+        let mpRows = snap.Interactions |> List.filter (fun i -> i.MessageId = 228)
+        Assert.Equal(2, mpRows.Length)
+        Assert.All(mpRows, fun i ->
+            Assert.Equal(InteractionType.Harm, i.InteractionType)
+            Assert.Equal(Some HarmType.Spell, i.HarmType)
+            Assert.False(InteractionClassification.isHpDamage i))
+        Assert.Equal(70, mpRows |> List.sumBy (fun i -> i.Value))
+        Assert.True(snap.Interactions |> List.exists (fun i -> i.MessageId = 225 && i.Value = 30 && not (InteractionClassification.isHpDamage i)))
+        Assert.Single(snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery && i.MessageId = 227)) |> ignore
+        let withoutMp =
+            { snap with
+                Interactions =
+                    snap.Interactions
+                    |> List.filter (fun i -> not (MsgBasicCatalog.isMpResourceTransfer i.MessageId)) }
+        for query in [ "offense"; "offense-detail"; "defense"; "defense-detail"; "performance"; "recovery" ] do
+            Assert.Equal(
+                ReportTestHelpers.reportText query (AnalyticsDtoMapping.toSnapshotDto withoutMp),
+                ReportTestHelpers.reportText query (AnalyticsDtoMapping.toSnapshotDto snap))
+        let filter = MobFilter.defaultFilter
+        Assert.Equal(140, AnalyticsQueries.offenseSummary snap filter |> List.sumBy (fun r -> r.Total))
+        Assert.Empty(AnalyticsQueries.defenseSummary snap filter)
+        let offense = ReportAggregators.buildPlayerOffense snap filter
+        let caster = offense |> List.find (fun p -> p.Name = "Caster")
+        Assert.Equal(140, ReportAggregators.totalCategoryDamage caster.Categories)
+
+    [<Fact>]
     let ``remote player remains a report participant after a mob attacks their shadows`` () =
         InteractionTestHelpers.resetEntities ()
         InteractionTestHelpers.registerLocalPlayer 100u "Local"

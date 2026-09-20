@@ -287,6 +287,10 @@ module MsgBasicCatalog =
         n = MagicDrainHp
         || n = MagicDrainMp
 
+    /// MP transferred by Aspir (228) or skill drain (225). Keep the rows; do not count as HP.
+    let isMpResourceTransfer n =
+        n = MagicDrainMp || n = SkillDrainMp
+
     // Live 329-332 carry status ids 136-139, not damage amounts.
     let private isStatAbsorb n = n >= MagicAbsorbStr && n <= MagicAbsorbChr
 

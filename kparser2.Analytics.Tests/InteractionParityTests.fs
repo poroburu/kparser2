@@ -240,6 +240,24 @@ module InteractionParityTests =
             Assert.Equal(40, aid.Value)
 
     [<Fact>]
+    let ``mp drain keeps harm and does not dual-emit caster recovery`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer playerId "Motenten"
+        InteractionTestHelpers.registerMob mobId "Crab"
+
+        match Battle0x28.decode (Fixtures.combatActionPacketEx playerId mobId 4 247u 32 228 0) with
+        | None -> failwith "Expected battle action decode"
+        | Some action ->
+            let rows = InteractionBuilder.fromCombatAction 1000L None action
+            let harm = Assert.Single rows
+            Assert.Equal(InteractionType.Harm, harm.InteractionType)
+            Assert.Equal(Some HarmType.Spell, harm.HarmType)
+            Assert.Equal(32, harm.Value)
+            Assert.Equal(228, harm.MessageId)
+            Assert.Equal(mobId, harm.TargetId)
+            Assert.False(InteractionClassification.isHpDamage harm)
+
+    [<Fact>]
     let ``item finish cmd 5 records an item use`` () =
         InteractionTestHelpers.resetEntities ()
         InteractionBuilder.reset ()

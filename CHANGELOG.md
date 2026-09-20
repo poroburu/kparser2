@@ -4,6 +4,10 @@ All notable changes to kparser2 are documented here. The format follows [Keep a 
 
 ## [Unreleased]
 
+### Fixed
+
+- Aspir / MP-drain amounts (msg 228, skill 225) stay on the interaction log but are no longer summed into HP damage, DPS, export, or the damage graph. HP Drain still counts and still dual-emits caster recovery.
+
 ### Changed
 
 - Disabled Abyssea analytics for HorizonXI; the legacy identifier remains an explicit unsupported stub and will only be implemented if HorizonXI adds Abyssea content to its server.
