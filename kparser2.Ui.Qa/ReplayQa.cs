@@ -50,7 +50,7 @@ internal sealed partial class ReplayQa
             Title = "kparser2 offline UI QA", Width = 1200, Height = 800,
             Left = -20000, Top = -20000, WindowStartupLocation = WindowStartupLocation.Manual,
             ShowActivated = false, ShowInTaskbar = false, WindowStyle = WindowStyle.None,
-            Background = Brushes.White
+            Opacity = 0, AllowsTransparency = true, Background = Brushes.White
         };
         _window.Show();
         try

@@ -115,7 +115,23 @@ public sealed class CombatAnalyticsViewControl : UserControl
             var apply = new Button { Content = "Apply selected fights", Padding = new Thickness(10), Margin = new Thickness(0, 8, 0, 0) };
             AutomationProperties.SetAutomationId(apply, "apply-fights");
             DockPanel.SetDock(apply, Dock.Bottom); panel.Children.Add(apply); panel.Children.Add(list);
-            var window = new Window { Owner = Window.GetWindow(this), Title = "Select fights (Ctrl/Shift for multiple)", Content = panel, Width = 460, Height = 420, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+            var qa = Environment.GetEnvironmentVariable("KPARSER2_UI_QA") == "1";
+            var window = new Window
+            {
+                Owner = Window.GetWindow(this),
+                Title = "Select fights (Ctrl/Shift for multiple)",
+                Content = panel,
+                Width = 460,
+                Height = 420,
+                ShowInTaskbar = false,
+                ShowActivated = !qa,
+                WindowStartupLocation = qa ? WindowStartupLocation.Manual : WindowStartupLocation.CenterOwner,
+                Left = qa ? -20000 : double.NaN,
+                Top = qa ? -20000 : double.NaN,
+                Opacity = qa ? 0 : 1,
+                AllowsTransparency = qa,
+                WindowStyle = qa ? WindowStyle.None : WindowStyle.SingleBorderWindow
+            };
             apply.Click += (_, _) => { selectedFights = list.SelectedItems.Cast<EnemyOption>().Select(o => o.Id!.Value).ToArray(); window.DialogResult = true; };
             if (window.ShowDialog() == true) { fightButton.Content = $"{selectedFights!.Count} fights selected"; Apply(); }
         };
