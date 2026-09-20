@@ -24,6 +24,18 @@ test('unrecognized timestamps and body text remain untouched; malformed headers 
  assert.equal(fs.readFileSync(out,'utf8'),raw);
  fs.writeFileSync(input,'bad,header'); assert.throws(()=>normalizeChat(input,path.join(p,'bad')));
 });
+test('observed checker wrapping retains body and records inherited timestamp provenance',t=>{
+ const p=temp(t),input=path.join(p,'raw'),out=path.join(p,'out');
+ const checker='\x1eQ[\x1e\x06checker\x1eQ]\x1e\x01 Mob (Low Evasion, High ';
+ const continuation='\x1e\x01\x81@\x1ejDefense\x1e\x01\x1eQ)\x1e\x01';
+ const raw=header+'\x1ej\x1e\x01\x1eQ[10:00:00]\x1e\x01 '+checker+'\r\n'+header+continuation+'\r\n'+header+continuation+'\r\n';
+ fs.writeFileSync(input,raw); assert.equal(normalizeChat(input,out).changed_lines,2);
+ assert.equal(fs.readFileSync(out,'utf8'),header+'[10:00:00] '+checker+'\r\n'+header+'[10:00:00] '+continuation+'\r\n'+header+continuation+'\r\n');
+ assert.equal(fs.readFileSync(input,'utf8'),raw);
+ const meta=JSON.parse(fs.readFileSync(out+'.provenance.json','utf8'));
+ assert.equal(meta.derived_timestamps.length,1);assert.equal(meta.derived_timestamps[0].line,2);assert.equal(meta.derived_timestamps[0].source_line,1);
+ assert.equal(normalizeChat(out,path.join(p,'again')).changed_lines,0);
+});
 test('export keeps duplicate amounts and shared aliases, drops arbitrary payload and identifiers',t=>{
  const p=temp(t), a=path.join(p,'a'),b=path.join(p,'b'),out=path.join(p,'export');
  const row={actorName:'PrivatePlayer',targetName:'PrivatePet',amount:42,actionType:'Melee',success:'hit',sourcePacketId:'secret',text:'private chat'};

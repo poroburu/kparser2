@@ -12,19 +12,23 @@ function provenance(v1,packetPath,chatPath,alignment) {
  const offset=alignment.local_utc_offset_minutes*60000;
  const day=new Date(Date.parse(alignment.start_utc)+offset).toISOString().slice(0,10);
  // Provenance lookup only: mirror legacy display controls without altering chat comparison.
- const compact=s=>s.replace(/[\x1e\x1f]./g,'').replace(/\x7f[1\xfb\xfc]/g,'').replace(/\x81\xa8/g,'→').replace(/\s/g,'');
+ const compact=s=>s.replace(/[\x1e\x1f]./g,'').replace(/\x7f[1\xfb\xfc]/g,'').replace(/\x81\xa8/g,'→').replace(/\x81@/g,' ').replace(/\s/g,'');
  const rows=fs.readFileSync(chatPath,'utf8').split(/\r?\n/).map((line,index)=>{
   const m=/^(?:[^,]*,){21}\[(\d{2}:\d{2}:\d{2})\]\s*(.*)$/.exec(line);
   return m?{line:index+1,time:Date.parse(day+'T'+m[1]+'Z')-offset,text:compact(m[2])}:null;
  }).filter(Boolean);
- const messages={};let cursor=0;
+ const messages={},used=new Set();
  (v1.messages??[]).forEach((m,index)=>{
   const expected=compact(m.text);if(!expected)return;
-  for(let i=cursor;i<rows.length;i++){
-   let combined='';for(let j=i;j<Math.min(i+5,rows.length);j++){
-    combined+=rows[j].text;
-    if(combined===expected){messages[index]={chat_lines:rows.slice(i,j+1).map(r=>r.line),timestamp_ms:rows[i].time};cursor=j+1;return;}
-    if(!expected.startsWith(combined))break;
+  for(let i=0;i<rows.length;i++){
+   if(used.has(i)||!rows[i].text||!expected.startsWith(rows[i].text))continue;
+   let combined='',parts=[];
+   // Legacy can join a finish/additional effect across interleaved actors.
+   // Consume only matching fragments, once each, within the correlation bound.
+   for(let j=i;j<rows.length&&rows[j].time-rows[i].time<=10000&&parts.length<5;j++){
+    if(used.has(j)||!rows[j].text||!expected.startsWith(combined+rows[j].text))continue;
+    combined+=rows[j].text;parts.push(j);
+    if(combined===expected){messages[index]={chat_lines:parts.map(k=>rows[k].line),timestamp_ms:rows[i].time};parts.forEach(k=>used.add(k));return;}
    }
   }
  });

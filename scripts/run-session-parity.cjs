@@ -75,6 +75,15 @@ function run(packets,chat,manifestPath,output,uiRun=null){
  const defense={status:defenseMissing.length||defenseExtra.length?'mismatch':'equal',missing:defenseMissing,extra:defenseExtra,
   matched:semantics.interactions.matched.filter(r=>allies.has(r.left.target)&&r.left.kind==='damage').length};
  save('defense.json',defense);
+ const statePassed=(reports.fights.equal||partialExplained)&&reports.offense.equal&&reports.experience.equal&&loot.status==='equal'&&defense.status==='equal'&&semantics.interactions.status==='equal';
+ const sources={capture_sha256:hash(frozen),chat_sha256:hash(frozenChat),alignment_sha256:hash(manifestPath),cli_sha256:hash(cli),oracle_sha256:hash(oracle),
+   tools:Object.fromEntries(['run-session-parity.cjs','session-semantics.cjs','check-ui-oracle.cjs','validate-session-ui.ps1','compare-reports.ps1','parity-evidence.ps1'].map(f=>[f,hash(path.join(__dirname,f))])),
+   commit:cp.spawnSync('git',['-C',repo,'rev-parse','HEAD'],{encoding:'utf8',windowsHide:true}).stdout.trim(),
+   diff_sha256:crypto.createHash('sha256').update(cp.spawnSync('git',['-C',repo,'diff','HEAD'],{encoding:'utf8',windowsHide:true}).stdout).digest('hex')};
+ // Preserve completed evidence even if UI execution or manifest validation fails.
+ save('session-qa.json',{schema_version:1,status:'failed',sources,
+   state:{status:statePassed?'passed':'failed',reports:'reports.json',semantics:'semantics.json',loot:'loot.json',defense:'defense.json'},
+   chat:{status:semantics.chat.status,artifact:'semantics.json'},ui:{status:'incomplete',visual_review:'unobserved'},human:{status:'unobserved'}});
  let uiPath=uiRun;
  if(!uiPath){const dir=path.join(output,'ui');invoke('powershell',['-NoProfile','-ExecutionPolicy','Bypass','-File',path.join(__dirname,'test-ui-replay.ps1'),'-CapturePath',frozen,'-OutputDir',dir],'ui.log');uiPath=path.join(dir,'ui-run.json');}
  const ui=read(uiPath);
@@ -84,12 +93,8 @@ function run(packets,chat,manifestPath,output,uiRun=null){
  for(const c of ui.cases??[]){for(const field of ['screenshot','actual_text','expected_text'])if(c[field]&&!fs.existsSync(path.join(uiDir,c[field])))throw Error('Missing UI artifact');}
  const independent=require('./check-ui-oracle.cjs').check(leftPath,uiPath);save('ui-independent.json',independent);
  const contentPassed=ui.status==='passed'&&ui.failure_count===0&&ui.case_count===ui.cases.length&&ui.cases.length>0&&independent.status==='passed';
- const statePassed=(reports.fights.equal||partialExplained)&&reports.offense.equal&&reports.experience.equal&&loot.status==='equal'&&defense.status==='equal'&&semantics.interactions.status==='equal';
  const result={schema_version:1,status:statePassed&&semantics.chat.status==='equal'&&contentPassed?'automated-passed':'failed',
-  sources:{capture_sha256:hash(frozen),chat_sha256:hash(frozenChat),alignment_sha256:hash(manifestPath),cli_sha256:hash(cli),oracle_sha256:hash(oracle),
-   tools:Object.fromEntries(['run-session-parity.cjs','session-semantics.cjs','check-ui-oracle.cjs','validate-session-ui.ps1','compare-reports.ps1','parity-evidence.ps1'].map(f=>[f,hash(path.join(__dirname,f))])),
-   commit:cp.spawnSync('git',['-C',repo,'rev-parse','HEAD'],{encoding:'utf8',windowsHide:true}).stdout.trim(),
-   diff_sha256:crypto.createHash('sha256').update(cp.spawnSync('git',['-C',repo,'diff','HEAD'],{encoding:'utf8',windowsHide:true}).stdout).digest('hex')},
+  sources,
   state:{status:statePassed?'passed':'failed',reports:'reports.json',semantics:'semantics.json',loot:'loot.json',defense:'defense.json'},
   chat:{status:semantics.chat.status,artifact:'semantics.json'},
   ui:{status:contentPassed?'passed':'failed',manifest:path.resolve(uiPath),independent:'ui-independent.json',visual_review:'unobserved'},human:{status:'unobserved'},
@@ -99,8 +104,13 @@ function run(packets,chat,manifestPath,output,uiRun=null){
  save('session-qa.json',result);return result;
 }
 function canonicalItem(item){const s=(item??'').toLowerCase();return s==="beastmen's seal"?'beastmens seal':s;}
+function recordFailure(output,error){
+ const file=path.join(output,'session-qa.json');
+ const result=fs.existsSync(file)?read(file):{schema_version:1,state:{status:'incomplete'},chat:{status:'incomplete'},ui:{status:'incomplete'},human:{status:'unobserved'}};
+ fs.writeFileSync(file,JSON.stringify({...result,status:'failed',error:error.message},null,2)+'\n');
+}
 if(require.main===module){let failureOutput=null;try{const [p,c,m,o,...rest]=process.argv.slice(2);if(!o||rest.length>1)throw Error('Usage: PACKETS NORMALIZED_CHAT ALIGNMENT NEW_OUTPUT [UI_MANIFEST]');
  if(!fs.existsSync(path.resolve(o)))failureOutput=path.resolve(o);
  const result=run(...[p,c,m,o].map(x=>path.resolve(x)),rest[0]?path.resolve(rest[0]):null);console.log(JSON.stringify(result));process.exitCode=result.status==='automated-passed'?0:1;
-}catch(e){if(failureOutput&&fs.existsSync(failureOutput))fs.writeFileSync(path.join(failureOutput,'session-qa.json'),JSON.stringify({schema_version:1,status:'failed',error:e.message,state:{status:'incomplete'},chat:{status:'incomplete'},ui:{status:'incomplete'},human:{status:'unobserved'}},null,2)+'\n');console.error(e.stack);process.exitCode=2;}}
-module.exports={run,trailingPartial,selectAnchors};
+}catch(e){if(failureOutput&&fs.existsSync(failureOutput))recordFailure(failureOutput,e);console.error(e.stack);process.exitCode=2;}}
+module.exports={run,trailingPartial,selectAnchors,recordFailure};
