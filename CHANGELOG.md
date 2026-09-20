@@ -4,6 +4,10 @@ All notable changes to kparser2 are documented here. The format follows [Keep a 
 
 ## [Unreleased]
 
+### Added
+
+- Live Recovery shows estimated spell MP and observed HP per estimated MP using generated SQL spell costs, charging each cmd-4 cast once across targets. Unknown costs are excluded; no actual MP or unobserved Regen healing is inferred.
+
 ### Fixed
 
 - Aspir / MP-drain amounts (msg 228, skill 225) stay on the interaction log but are no longer summed into HP damage, DPS, export, or the damage graph. HP Drain still counts and still dual-emits caster recovery.

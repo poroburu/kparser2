@@ -25,6 +25,7 @@ module ParityProjectionTests =
                         Value = 128
                         Success = "hit"
                         CommandNo = 1
+                        SpellId = None
                         MessageId = 0x14
                         IsProc = false
                         ProcValue = 0

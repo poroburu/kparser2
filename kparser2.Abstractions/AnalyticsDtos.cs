@@ -40,6 +40,7 @@ public sealed class InteractionDto
     public int Value { get; init; }
     public string Success { get; init; } = "";
     public int CommandNo { get; init; }
+    public int? SpellId { get; init; }
     public int MessageId { get; init; }
     public bool IsProc { get; init; }
     public int ProcValue { get; init; }

@@ -139,12 +139,34 @@ module DetailedReports =
             |> List.map (fun ((caster, target, action, effect), es) -> [box caster; box target; box action; box effect; box es.Length])
             |> section "Status Cures" "Caster    Recipient    Action    Status ID    Removals"
         else
-            rows |> List.groupBy (fun i -> (if received then i.TargetName else i.ActorName), i.ActionName) |> List.sortBy fst
-            |> List.map (fun ((n, action), es) ->
-                let values = es |> List.filter hit |> List.map (fun i -> max 0 i.Value)
-                [box n; box action; box (es |> List.distinctBy actionKey |> List.length)
-                 box (values |> List.sumBy int64); box (average values)])
-            |> section (if received then "Recovery Received" else "Curing") "Player    Action    Casts    HP restored    Average per target"
+            let curing =
+                rows |> List.groupBy (fun i -> (if received then i.TargetName else i.ActorName), i.ActionName) |> List.sortBy fst
+                |> List.map (fun ((n, action), es) ->
+                    let values = es |> List.filter hit |> List.map (fun i -> max 0 i.Value)
+                    [box n; box action; box (es |> List.distinctBy actionKey |> List.length)
+                     box (values |> List.sumBy int64); box (average values)])
+                |> section (if received then "Recovery Received" else "Curing") "Player    Action    Casts    HP restored    Average per target"
+            // Costs belong to the caster even in Recovery Received mode. Only the
+            // selected targets' observed HP contributes when a target filter is active.
+            let spells = rows |> List.filter (fun i -> i.CommandNo = 4 && i.SpellId.IsSome)
+            let known =
+                spells |> List.choose (fun i ->
+                    i.SpellId |> Option.bind SpellLookup.tryGetMpCost |> Option.map (fun cost -> i, cost))
+            let costs =
+                known |> List.groupBy (fun (i, _) -> i.ActorId, i.ActorName) |> List.sortBy fst
+                |> List.map (fun ((_, name), es) ->
+                    // One finish can contain several Curaga targets. Coalesce
+                    // equal actor/time/spell observations even without packet identity.
+                    let mp = es |> List.distinctBy (fun (i, _) -> i.ActorId, i.TimestampMs, i.SpellId)
+                                |> List.sumBy (snd >> int64)
+                    let hp = es |> List.sumBy (fun (i, _) -> if hit i then int64 (max 0 i.Value) else 0L)
+                    [box name; box mp; box (sprintf "%.2f" (float hp / float mp))])
+                |> section "Curing Costs and Efficiency (estimated)" "Caster    Estimated MP    HP/MP (estimated)"
+            let costs =
+                if spells.Length > known.Length then
+                    costs |> ReportBuilder.appendLine "Spell costs unavailable for some finishes; their HP and MP are excluded from efficiency."
+                else costs
+            append curing costs
 
     let buffs mode snap filter =
         ReportAggregators.filterInteractions snap { filter with SelectedPlayerName = None } (fun i -> i.AidType = Some AidType.Enhance && not ((set [83; 123; 159; 204; 206; 231; 321; 341; 343; 571]).Contains(i.MessageId)))

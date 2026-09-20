@@ -74,6 +74,7 @@ function New-CombatActionPacket(
     [uint32]$ActorId = 1,
     [uint32]$TargetId = 2,
     [int]$CommandNo = 1,
+    [uint32]$CommandArg = 0,
     [int]$Damage = 42,
     [int]$MessageId = 1,
     [int]$Miss = 0
@@ -90,7 +91,7 @@ function New-CombatActionPacket(
     Add-Bits 1 6
     Add-Bits 0 4
     Add-Bits ([uint32]$CommandNo) 4
-    Add-Bits 0 32
+    Add-Bits $CommandArg 32
     Add-Bits 0 32
     Add-Bits ([uint32]$TargetId) 32
     Add-Bits 1 4
@@ -215,7 +216,7 @@ $combatDeathLines = @(
 Set-Content -Path (Join-Path $OutputDir "combat_death.ndjson") -Value $combatDeathLines -Encoding UTF8
 
 $cureMsg = New-BattleMessagePacket 100 100 7 0 350
-$cureAction = New-CombatActionPacket -ActorId 100 -TargetId 100 -CommandNo 4 -Damage 350 -MessageId 7
+$cureAction = New-CombatActionPacket -ActorId 100 -TargetId 100 -CommandNo 4 -CommandArg 1 -Damage 350 -MessageId 7
 $combatRecoveryLines = @(
     (New-NdjsonLine "kpacket.v1.world.s2c.0x0029" (New-Meta 0x29 "GP_SERV_COMMAND_BATTLE_MESSAGE" $cureMsg.Length 1) $cureMsg)
     (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $cureAction.Length 2) $cureAction)
