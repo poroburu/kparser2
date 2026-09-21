@@ -29,6 +29,7 @@ module InteractionBuilder =
         (messageId: int)
         (isProc: bool)
         (procValue: int)
+        (procMessageId: int)
         =
         let damageModifier = InteractionClassification.classifyDamageModifier messageId isProc
 
@@ -55,12 +56,18 @@ module InteractionBuilder =
           MessageId = messageId
           IsProc = isProc
           ProcValue = procValue
+          ProcMessageId = procMessageId
           IsLocalPlayerActor = isLocalPlayer actorId
           IsLocalPlayerTarget = isLocalPlayer targetId
           SourcePacketId = None }
 
+    /// Wire HP drain is message 227. Chatline code 0x16 is the same number as UNKNOWN_22.
     let private isHpDrain messageId =
-        messageId = MsgBasicCatalog.MagicDrainHp || messageId = 0x16
+        messageId = MsgBasicCatalog.MagicDrainHp
+
+    /// Command 11 message 187 only. Command 1 message 0xBB stays the chatline TP-drain row.
+    let private isMonsterSkillHpDrain commandNo messageId =
+        commandNo = 11 && messageId = MsgBasicCatalog.SkillDrainHp
 
     let fromCombatAction (timestampMs: int64) (battleId: int option) (action: CombatActionDecoded) =
         action.Targets
@@ -84,6 +91,7 @@ module InteractionBuilder =
                         action.CommandNo
                         effect.MessageId
                         false
+                        0
                         0 ]
                 else
                     let interactionType, harmType, aidType =
@@ -108,9 +116,12 @@ module InteractionBuilder =
                                 effect.MessageId
                                 effect.HasProc
                                 effect.ProcValue
+                                effect.ProcMessageId
 
                         let drainAid =
-                            if interactionType = InteractionType.Harm && isHpDrain effect.MessageId && effect.Value > 0 then
+                            if interactionType = InteractionType.Harm
+                               && effect.Value > 0
+                               && (isHpDrain effect.MessageId || isMonsterSkillHpDrain action.CommandNo effect.MessageId) then
                                 [ buildInteraction
                                     timestampMs
                                     battleId
@@ -125,12 +136,39 @@ module InteractionBuilder =
                                     action.CommandNo
                                     effect.MessageId
                                     false
+                                    0
+                                    0 ]
+                            else
+                                []
+
+                        let procHpRecovery =
+                            if effect.HasProc
+                               && effect.ProcValue > 0
+                               && (effect.ProcMessageId = MsgBasicCatalog.AddEffectHpDrain
+                                   || effect.ProcMessageId = MsgBasicCatalog.AddEffectHpHeal) then
+                                [ buildInteraction
+                                    timestampMs
+                                    battleId
+                                    action.ActorId
+                                    action.ActorId
+                                    InteractionType.Aid
+                                    None
+                                    (Some AidType.Recovery)
+                                    actionName
+                                    effect.ProcValue
+                                    "hit"
+                                    action.CommandNo
+                                    effect.ProcMessageId
+                                    false
+                                    0
                                     0 ]
                             else
                                 []
 
                         let spike =
-                            if effect.HasReact && effect.ReactValue > 0 then
+                            if effect.HasReact
+                               && effect.ReactValue > 0
+                               && effect.ReactMessageId = MsgBasicCatalog.SpikesEffectDmg then
                                 [ buildInteraction
                                     timestampMs
                                     battleId
@@ -143,15 +181,16 @@ module InteractionBuilder =
                                     effect.ReactValue
                                     "hit"
                                     action.CommandNo
-                                    (if effect.ReactMessageId > 0 then effect.ReactMessageId else effect.MessageId)
+                                    effect.ReactMessageId
                                     false
+                                    0
                                     0 ]
                             else
                                 []
 
                         let primary =
                             { primary with SpellId = if action.CommandNo = 4 then Some (int action.CommandArg) else None }
-                        primary :: drainAid @ spike))
+                        primary :: drainAid @ procHpRecovery @ spike))
 
     let fromCombatMessage (timestampMs: int64) (battleId: int option) (message: CombatMessageDecoded) =
         let interactionType, harmType, aidType =
@@ -189,6 +228,7 @@ module InteractionBuilder =
             MessageId = int message.MessageNum
             IsProc = false
             ProcValue = 0
+            ProcMessageId = 0
             IsLocalPlayerActor = isLocalPlayer message.CasterId
             IsLocalPlayerTarget = isLocalPlayer message.TargetId
             SourcePacketId = None } ]

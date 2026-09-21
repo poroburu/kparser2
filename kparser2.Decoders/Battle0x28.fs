@@ -13,15 +13,15 @@ module Battle0x28 =
 
         let hasProc, state = BitstreamReader.readBitFlag state
 
-        let procValue, state =
+        let procValue, procMessageId, state =
             if hasProc then
                 let _, state = BitstreamReader.readBits state 6
                 let _, state = BitstreamReader.readBits state 4
                 let procValue, state = BitstreamReader.readBits state 17
-                let _, state = BitstreamReader.readBits state 10
-                int procValue, state
+                let procMessageId, state = BitstreamReader.readBits state 10
+                int procValue, int procMessageId, state
             else
-                0, state
+                0, 0, state
 
         let hasReact, state = BitstreamReader.readBitFlag state
 
@@ -44,6 +44,7 @@ module Battle0x28 =
               Value = int value
               HasProc = hasProc
               ProcValue = procValue
+              ProcMessageId = procMessageId
               HasReact = hasReact
               ReactValue = reactValue
               ReactMessageId = reactMessageId }

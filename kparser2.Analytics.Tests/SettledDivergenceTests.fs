@@ -75,6 +75,7 @@ module private SettledHelpers =
           MessageId = messageId
           IsProc = false
           ProcValue = 0
+          ProcMessageId = 0
           IsLocalPlayerActor = true
           IsLocalPlayerTarget = false; SourcePacketId = None }
 

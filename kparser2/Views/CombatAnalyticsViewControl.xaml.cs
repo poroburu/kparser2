@@ -129,8 +129,8 @@ public sealed class CombatAnalyticsViewControl : UserControl
                 Left = qa ? -20000 : double.NaN,
                 Top = qa ? -20000 : double.NaN,
                 Opacity = qa ? 0 : 1,
-                AllowsTransparency = qa,
-                WindowStyle = qa ? WindowStyle.None : WindowStyle.SingleBorderWindow
+                WindowStyle = qa ? WindowStyle.None : WindowStyle.SingleBorderWindow,
+                AllowsTransparency = qa
             };
             apply.Click += (_, _) => { selectedFights = list.SelectedItems.Cast<EnemyOption>().Select(o => o.Id!.Value).ToArray(); window.DialogResult = true; };
             if (window.ShowDialog() == true) { fightButton.Content = $"{selectedFights!.Count} fights selected"; Apply(); }

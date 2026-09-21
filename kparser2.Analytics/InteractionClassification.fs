@@ -55,15 +55,30 @@ module InteractionClassification =
                 | None -> InteractionCategory.Other
             | _ -> InteractionCategory.Other
 
+    /// Proc values that are additional HP damage. Heals, drains, and status ids are not.
+    let isAdditionalDamageProc (i: Interaction) =
+        i.IsProc && i.ProcValue > 0 && not (MsgBasicCatalog.isNonDamageProc i.ProcMessageId)
+
+    /// Melee finish using chatline code 0xBB. Wire skill HP drain is command 11 message 187.
+    let private isChatlineTpDrain (i: Interaction) =
+        i.CommandNo = 1 && i.MessageId = MsgBasicCatalog.SkillDrainHp
+
     let isHpDamage (i: Interaction) =
         i.InteractionType = InteractionType.Harm
         && i.HarmType <> Some HarmType.Enfeeble
-        && not (MsgBasicCatalog.isMpResourceTransfer i.MessageId)
+        && not (MsgBasicCatalog.isNonHpResourceTransfer i.MessageId)
+        && not (isChatlineTpDrain i)
 
-    /// React-bit spike rows from InteractionBuilder (message 44/132/373/383).
-    /// Not recover-HP absorb and not melee additional-effect procs.
+    /// HP restored to a combatant. Skill MP recovery (224) stays a recovery row and is not curing.
+    let isHpRecovery (i: Interaction) =
+        i.InteractionType = InteractionType.Aid
+        && i.AidType = Some AidType.Recovery
+        && i.MessageId <> MsgBasicCatalog.SkillRecoversMp
+
+    /// React message 44 (SPIKES_EFFECT_DMG) only. Recover-HP and other reacts are not spike HP.
     let isSpike (i: Interaction) =
         i.InteractionType = InteractionType.Harm
+        && i.MessageId = MsgBasicCatalog.SpikesEffectDmg
         && i.ActionName.Equals("Spikes", System.StringComparison.OrdinalIgnoreCase)
 
     let categoryLabel category =

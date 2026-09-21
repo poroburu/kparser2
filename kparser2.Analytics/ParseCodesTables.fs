@@ -191,6 +191,8 @@ module MsgBasicCatalog =
     let FallsToGround = 20
     let ExpChain = 253
     let AttackHits = 1
+    // xi.msg.basic SPIKES_EFFECT_DMG. Other react ids are not spike HP.
+    let SpikesEffectDmg = 44
     let AttackMisses = 15
     let TargOutOfRange = 4
     let UnableToSeeTarg = 5
@@ -203,8 +205,23 @@ module MsgBasicCatalog =
     let SkillRecoversMp = 224
     let SkillDrainMp = 225
     let SkillDrainTp = 226
+    // Live Digest: 0x28 command 11 message 187. Same number as chatline code 0xBB.
+    let SkillDrainHp = 187
     let MagicDrainHp = 227
     let MagicDrainMp = 228
+    // xi.msg.basic additional-effect procs. Live 20260921 Bloody Bolt: proc_message 161, proc_value is HP drained.
+    let AddEffectMpHeal = 152
+    let AddEffectStatus = 160
+    let AddEffectHpDrain = 161
+    let AddEffectMpDrain = 162
+    let AddEffectStatus2 = 164
+    let AddEffectTpDrain = 165
+    let AddEffectSelfBuff = 166
+    let AddEffectHpHeal = 167
+    // Live 20260921: Souleater finish is command 6, message 100, param = effect id 63.
+    let UsesJobAbility = 100
+    // Live 20260921: Weapon Bash finish is command 3, message 110, param = damage.
+    let UsesAbilityTakesDamage = 110
     // xi.msg.basic MAGIC_ABSORB_*; live stop 20260919_105549 cmd 4 used 329-332 (STR/DEX/VIT/AGI).
     let MagicAbsorbStr = 329
     let MagicAbsorbDex = 330
@@ -249,6 +266,9 @@ module MsgBasicCatalog =
     // /check evasion-defense lines; Windower BtlMess 170-178, LSB enum has a hole here. Live camp used 176-178.
     let CheckHighEvaDef = 170
     let CheckLowEvaDef = 178
+    // Live club skillups: 0x29 message 38 rises, 53 reaches a level.
+    let SkillGain = 38
+    let SkillLevelUp = 53
 
     let private isCastInterruptedOrBlocked n =
         n = IsInterrupted
@@ -291,6 +311,23 @@ module MsgBasicCatalog =
     let isMpResourceTransfer n =
         n = MagicDrainMp || n = SkillDrainMp
 
+    /// MP or skill TP (226) moved by a finish. Keep the rows; do not count the amount as HP.
+    let isNonHpResourceTransfer n =
+        isMpResourceTransfer n || n = SkillDrainTp
+
+    /// Additional-effect proc messages that move HP, MP, or TP. Not additional damage.
+    let isResourceDrainProc n =
+        n = AddEffectHpDrain || n = AddEffectMpDrain || n = AddEffectTpDrain
+
+    /// Proc values that are not additional HP damage: resource transfer, heals, and status ids.
+    let isNonDamageProc n =
+        isResourceDrainProc n
+        || n = AddEffectMpHeal
+        || n = AddEffectHpHeal
+        || n = AddEffectStatus
+        || n = AddEffectStatus2
+        || n = AddEffectSelfBuff
+
     // Live 329-332 carry status ids 136-139, not damage amounts.
     let private isStatAbsorb n = n >= MagicAbsorbStr && n <= MagicAbsorbChr
 
@@ -316,6 +353,8 @@ module MsgBasicCatalog =
         | n when n = MagicNoEffect || n = MagicFail -> Some(InteractionType.Aid, None, Some AidType.Enhance)
         | n when n = MagicDmg || n = MagicBurstDamage || isMagicDrain n ->
             Some(InteractionType.Harm, Some HarmType.Spell, None)
+        | n when n = UsesJobAbility -> Some(InteractionType.Unknown, None, None)
+        | n when n = UsesAbilityTakesDamage -> Some(InteractionType.Harm, Some HarmType.Ability, None)
         | n when isSkillDrain n -> Some(InteractionType.Harm, Some HarmType.Ability, None)
         | n when n = MagicEnfeebIs || n = MagicEnfeeb || isStatAbsorb n -> Some(InteractionType.Harm, Some HarmType.Enfeeble, None)
         | n when isTargetingBlocked n -> Some(InteractionType.Unknown, None, None)
@@ -329,6 +368,7 @@ module MsgBasicCatalog =
         | n when n = TimeLeft -> Some(InteractionType.Unknown, None, None)
         | n when isActionBlocked n -> Some(InteractionType.Unknown, None, None)
         | n when isCheckEvasionDefense n -> Some(InteractionType.Unknown, None, None)
+        | n when n = SkillGain || n = SkillLevelUp -> Some(InteractionType.Unknown, None, None)
         | _ -> None
 
     let classify (messageNum: int) (messageType: int) =
@@ -357,6 +397,7 @@ module MsgBasicCatalog =
         | n when n = TimeLeft -> InteractionType.Unknown, None, None
         | n when isActionBlocked n -> InteractionType.Unknown, None, None
         | n when isCheckEvasionDefense n -> InteractionType.Unknown, None, None
+        | n when n = SkillGain || n = SkillLevelUp -> InteractionType.Unknown, None, None
         | _ when messageType >= 4 -> InteractionType.Aid, None, Some AidType.Enhance
         | _ -> InteractionType.Unknown, None, None
 
@@ -386,6 +427,7 @@ module MsgBasicCatalog =
         | 224 -> "Skill Recovers MP"
         | 225 -> "Skill Drain MP"
         | 226 -> "Skill Drain TP"
+        | 187 -> "Skill Drain HP"
         | 227 -> "Magic Drain HP"
         | 228 -> "Magic Drain MP"
         | 329 -> "Magic Absorb STR"
@@ -426,4 +468,6 @@ module MsgBasicCatalog =
         | 176 -> "Check Low Evasion High Defense"
         | 177 -> "Check Low Evasion"
         | 178 -> "Check Low Evasion And Defense"
+        | 38 -> "Skill Gain"
+        | 53 -> "Skill Level Up"
         | n -> $"MsgBasic-{n}"

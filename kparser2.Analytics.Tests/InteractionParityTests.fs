@@ -116,6 +116,8 @@ module InteractionParityTests =
         Assert.Equal(InteractionType.Harm, drain.InteractionType)
         Assert.Equal(Some HarmType.Other, drain.HarmType)
         Assert.Equal(3, drain.Value)
+        Assert.False(InteractionClassification.isHpDamage drain)
+        Assert.True(InteractionClassification.isHpDamage hit)
 
     [<Fact>]
     let ``region_enfeeble builds enfeeble interaction`` () =

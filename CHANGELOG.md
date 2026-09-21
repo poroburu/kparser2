@@ -4,15 +4,20 @@ All notable changes to kparser2 are documented here. The format follows [Keep a 
 
 ## [Unreleased]
 
+## [0.1.0-rc.4] - 2026-09-21
+
 ### Added
 
-- Additional Effects and Offense/Defense now list `0x28` react-bit spike damage (message 44). That is not Offense Absorbed Dmg.
+- Additional Effects and Offense/Defense now list `0x28` react-bit spike damage (message 44 only). Other reacts, including 132, 373, and 383, are not spike HP. That is not Offense Absorbed Dmg.
 - Live Recovery shows estimated spell MP and observed HP per estimated MP using generated SQL spell costs, charging each cmd-4 cast once across targets. Unknown costs are excluded; no actual MP or unobserved Regen healing is inferred.
 - Live Offense shows per-player and per-spell estimated MP and observed HP damage per estimated MP, charging multi-target finishes once and excluding MP transfers and unknown costs.
 
 ### Fixed
 
-- Aspir / MP-drain amounts (msg 228, skill 225) stay on the interaction log but are no longer summed into HP damage, DPS, export, or the damage graph. HP Drain still counts and still dual-emits caster recovery.
+- Aspir / MP-drain amounts (msg 228, skill 225), skill TP drain (msg 226), and chatline TP drain (command 1, message 187 / 0xBB) stay on the interaction log but are no longer summed into HP damage, DPS, export, or the damage graph. HP Drain still counts and still dual-emits caster recovery. Command 11 message 187 remains Digest HP.
+- Additional-effect HP drain (proc message 161, Bloody Bolt) and HP heal (167) are attacker recovery, not proc damage. Proc MP drain (162), TP drain (165), MP heal (152), and status procs (160, 164, 166) stay off additional-effect damage. Souleater (message 100) is an effect id. Weapon Bash (command 3, message 110) is ability damage named from the ability table.
+- Wire message 22 (chatline code 0x16) stays a harm row and no longer invents caster HP recovery. HP Drain recovery remains message 227.
+- Digest (command 11, message 187) is skill HP drain and restores that HP to the actor. Starlight (message 224) stays out of the Recovery report and out of healing summaries. Spirit Taker stays damage-only. Skill messages 38 and 53 stay off combat reports.
 
 ### Changed
 
@@ -22,6 +27,10 @@ All notable changes to kparser2 are documented here. The format follows [Keep a 
 ### Notes
 
 - Horizon 0x00E mob names keep instance suffixes such as `_GC`; chat display names omit them. That is a documented product difference (#16), not an ingest loss. Do not strip those suffixes to force report agreement.
+- Pair with [kpacket2 v0.1.0-rc.1](https://github.com/poroburu/kpacket2/releases/tag/v0.1.0-rc.1); wire `kpacket.v1` unchanged. Ashita 4.3 live load needs kpacket2 `da68567` (`expDestroyPlugin`, chat echo, relay cursor) until that plugin is tagged.
+- `kparser.cli capture` must run as Administrator. An unelevated capture exits 2 and writes no ChatLines. `snapshot` stays unelevated.
+- Estimated spell MP is SQL `spell_list.mpCost`, not observed `0x00DF` spend.
+- This SHA did not re-run a paired report-oracle window or `scripts/test-ui-replay.ps1` after the spike and estimated-MP commits. The last paired window (19–20 Sep) agreed on XP and disagreed on state and chat. Live `probe` / `record` was untested. Inventory row dispositions are on [#4](https://github.com/poroburu/kparser2/issues/4); no row is Verified. Absorbed Dmg ([#27](https://github.com/poroburu/kparser2/issues/27)), [#6](https://github.com/poroburu/kparser2/issues/6), and [#7](https://github.com/poroburu/kparser2/issues/7) stay open.
 
 ## [0.1.0-rc.3] - 2026-09-15
 

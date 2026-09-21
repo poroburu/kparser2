@@ -6,7 +6,7 @@ This document helps Cursor agents iterate on kparser2 **without Ashita running**
 
 Decided in [#10](https://github.com/poroburu/kparser2/issues/10) (2026-09-15); tracker [#9](https://github.com/poroburu/kparser2/issues/9).
 
-- The **only** RC gate is [docs/RELEASING.md](docs/RELEASING.md): Release build, `dotnet test` including `Category=Integration`, the five fixture smokes, three publish outputs launched from the publish directory, one short live `probe`/`record` when the game is up (else record untested).
+- The **only** RC gate is [docs/RELEASING.md](docs/RELEASING.md): Release build, full `dotnet test` (including `Category=Integration`), the five fixture smokes, and the three publish folders launched from their directories. Run that block on the commit you will merge. A later commit starts it over. GitHub CI (`Category!=Integration`) does not replace it. Live `probe` / `record` is a changelog note when the game is down ("record untested"), not a hold. A paired report-oracle window and `scripts/test-ui-replay.ps1` are not part of this gate.
 - **kparser v1 comparison is not an RC gate.** A release PR can ship without a paired RAM ChatLine capture. The **report-oracle scan** ([#4](https://github.com/poroburu/kparser2/issues/4)) is different: dual capture is required — see [docs/report-oracle.md](docs/report-oracle.md). Do not mark v1 unobserved and continue.
 - **Harness:** do not add a second compare tracker under `scripts/` or `docs/` (no `PARITY.md` cast list). Fix decoders/reports from live Horizon bytes; add a fixture and a test. New compare **scripts** need a written reason on [#9](https://github.com/poroburu/kparser2/issues/9) first. Updating [docs/report-oracle.md](docs/report-oracle.md) when the loop changes is the runbook, not a new harness.
 - [#4](https://github.com/poroburu/kparser2/issues/4) is a capability inventory, not the definition of done. Unchecked tabs ship as release-note limitations. [#6](https://github.com/poroburu/kparser2/issues/6) and [#7](https://github.com/poroburu/kparser2/issues/7) are deferred backlog, not RC blockers.
@@ -278,7 +278,7 @@ Fixture replay (`analytics snapshot`, `--parity-chat`, `dotnet test`) does **not
 
 A **wire scan** is packet-first: `record`, heat, reconcile, `analytics snapshot --assert-settled`. That is **not** #4 completion.
 
-A **report-oracle scan** ([docs/report-oracle.md](docs/report-oracle.md)) requires dual capture: last-green `record` **and** `kparser.cli capture`. Do not mark v1 unobserved and proceed. The RAM reader may need Administrator (`RunAs`); a shell sandbox exception alone does not grant it. Failed attach: fix/retry/ask once for elevation. Town idle with a live attach is OK; NDJSON combat/chat with a dead chatlines file is capture broken.
+A **report-oracle scan** ([docs/report-oracle.md](docs/report-oracle.md)) requires dual capture: last-green `record` **and** `kparser.cli capture`. Do not mark v1 unobserved and proceed. `kparser.cli capture` must run as Administrator (`Start-Process -Verb RunAs`). It exits 2 when it is not elevated, before it writes ChatLines. A shell sandbox exception does not elevate it. Town idle with a live attach is OK; NDJSON combat/chat with a dead chatlines file is capture broken.
 
 Testers **only play**. A local Cursor Agent thread on the game PC runs the loop. Not a cloud Automation (`:5555` is localhost). Not WPF. No in-game cast checklist.
 

@@ -29,6 +29,7 @@ module ParityProjectionTests =
                         MessageId = 0x14
                         IsProc = false
                         ProcValue = 0
+                        ProcMessageId = 0
                         IsLocalPlayerActor = true
                         IsLocalPlayerTarget = false
                         SourcePacketId = Some "0x28" } ] }

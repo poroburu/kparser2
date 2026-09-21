@@ -44,9 +44,12 @@ public sealed class InteractionDto
     public int MessageId { get; init; }
     public bool IsProc { get; init; }
     public int ProcValue { get; init; }
+    public int ProcMessageId { get; init; }
     public bool IsLocalPlayerActor { get; init; }
     public bool IsLocalPlayerTarget { get; init; }
     public string? SourcePacketId { get; init; }
+    /// <summary>Derived from message classification. Ignored when a DTO is mapped back to an interaction.</summary>
+    public bool IsHpDamage { get; init; }
 }
 
 public sealed class ChatMessageDto

@@ -47,6 +47,7 @@ type CombatEffectDecoded =
       Value: int
       HasProc: bool
       ProcValue: int
+      ProcMessageId: int
       HasReact: bool
       ReactValue: int
       ReactMessageId: int }
