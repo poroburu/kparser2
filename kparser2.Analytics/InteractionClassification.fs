@@ -64,10 +64,10 @@ module InteractionClassification =
         && i.HarmType <> Some HarmType.Enfeeble
         && not (MsgBasicCatalog.isMpResourceTransfer i.MessageId)
 
-    /// React-bit spike rows from InteractionBuilder (message 44/132/373/383).
-    /// Not recover-HP absorb and not melee additional-effect procs.
+    /// React message 44 (SPIKES_EFFECT_DMG) only. Recover-HP and other reacts are not spike HP.
     let isSpike (i: Interaction) =
         i.InteractionType = InteractionType.Harm
+        && i.MessageId = MsgBasicCatalog.SpikesEffectDmg
         && i.ActionName.Equals("Spikes", System.StringComparison.OrdinalIgnoreCase)
 
     let categoryLabel category =

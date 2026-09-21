@@ -164,7 +164,9 @@ module InteractionBuilder =
                                 []
 
                         let spike =
-                            if effect.HasReact && effect.ReactValue > 0 then
+                            if effect.HasReact
+                               && effect.ReactValue > 0
+                               && effect.ReactMessageId = MsgBasicCatalog.SpikesEffectDmg then
                                 [ buildInteraction
                                     timestampMs
                                     battleId
@@ -177,7 +179,7 @@ module InteractionBuilder =
                                     effect.ReactValue
                                     "hit"
                                     action.CommandNo
-                                    (if effect.ReactMessageId > 0 then effect.ReactMessageId else effect.MessageId)
+                                    effect.ReactMessageId
                                     false
                                     0
                                     0 ]

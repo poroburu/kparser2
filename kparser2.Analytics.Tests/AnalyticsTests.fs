@@ -1245,6 +1245,29 @@ module FixtureReplayParityTests =
         Assert.DoesNotContain("Absorbed Dmg", offense, StringComparison.Ordinal)
 
     [<Fact>]
+    let ``non-44 reacts add no spike HP, curing, or absorbed damage`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 100u "Alice"
+        InteractionTestHelpers.registerMob 200u "Earth Elemental"
+        let store = SessionStore.create ()
+        let ingest data =
+            let evt = InteractionTestHelpers.packetEvent 0x0028us data
+            SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        ingest (Fixtures.combatActionPacketWithReact 100u 200u 1 12 1 0 40 373)
+        ingest (Fixtures.combatActionPacketWithReact 100u 200u 1 15 1 0 61 132)
+        let snap = SessionStore.snapshot store
+        Assert.DoesNotContain(snap.Interactions, fun i -> i.ActionName = "Spikes" || i.MessageId = 373 || i.MessageId = 132)
+        Assert.Equal(27, AnalyticsQueries.offenseSummary snap MobFilter.defaultFilter |> List.sumBy (fun r -> r.Total))
+        Assert.Empty(snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery))
+        let dto = AnalyticsDtoMapping.toSnapshotDto snap
+        for query in [ "offense"; "defense"; "add-effect"; "recovery" ] do
+            let text = ReportTestHelpers.reportText query dto
+            Assert.DoesNotContain("Spikes", text, StringComparison.Ordinal)
+            Assert.DoesNotContain("Absorbed", text, StringComparison.Ordinal)
+            Assert.DoesNotContain("40", text, StringComparison.Ordinal)
+            Assert.DoesNotContain("61", text, StringComparison.Ordinal)
+
+    [<Fact>]
     let ``combat_failures includes no-effect aid`` () =
         EntityRegistry.reset()
         let snap = ReplayHelpers.ingestFixture (FixturePaths.combatFailures())

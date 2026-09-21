@@ -191,6 +191,8 @@ module MsgBasicCatalog =
     let FallsToGround = 20
     let ExpChain = 253
     let AttackHits = 1
+    // xi.msg.basic SPIKES_EFFECT_DMG. Other react ids are not spike HP.
+    let SpikesEffectDmg = 44
     let AttackMisses = 15
     let TargOutOfRange = 4
     let UnableToSeeTarg = 5
