@@ -87,9 +87,11 @@ type Interaction =
       Value: int
       Success: string
       CommandNo: int
+      SpellId: int option
       MessageId: int
       IsProc: bool
       ProcValue: int
+      ProcMessageId: int
       IsLocalPlayerActor: bool
       IsLocalPlayerTarget: bool
       SourcePacketId: string option }

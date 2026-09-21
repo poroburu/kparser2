@@ -8,6 +8,7 @@ open System.Text.Json
 
 module SpellLookup =
     let private spells = Dictionary<int, string>()
+    let private mpCosts = Dictionary<int, int>()
     let private textInfo = CultureInfo.InvariantCulture.TextInfo
 
     let private tryLoad () =
@@ -24,10 +25,22 @@ module SpellLookup =
 
                 for prop in doc.RootElement.EnumerateObject() do
                     if Int32.TryParse prop.Name |> fst then
-                        spells.[Int32.Parse prop.Name] <-
-                            match prop.Value.GetString() with
+                        let id = Int32.Parse prop.Name
+                        let value = prop.Value
+                        let name =
+                            if value.ValueKind = JsonValueKind.String then value.GetString()
+                            else value.GetProperty("name").GetString()
+                        spells.[id] <-
+                            match name with
                             | null -> ""
                             | name -> textInfo.ToTitleCase name
+                        if value.ValueKind = JsonValueKind.Object then
+                            match value.TryGetProperty("mpCost") with
+                            | true, cost when cost.ValueKind = JsonValueKind.Number ->
+                                match cost.TryGetInt32() with
+                                | true, n when n > 0 -> mpCosts.[id] <- n
+                                | _ -> ()
+                            | _ -> ()
             with _ ->
                 ())
 
@@ -36,4 +49,9 @@ module SpellLookup =
     let tryGetName (spellId: int) =
         match spells.TryGetValue spellId with
         | true, name when not (String.IsNullOrWhiteSpace name) -> Some name
+        | _ -> None
+
+    let tryGetMpCost (spellId: int) =
+        match mpCosts.TryGetValue spellId with
+        | true, cost -> Some cost
         | _ -> None

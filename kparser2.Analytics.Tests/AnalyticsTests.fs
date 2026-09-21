@@ -33,6 +33,7 @@ module private FixturePaths =
     let combatMeleeHits () = find "combat_melee_hits.ndjson"
     let combatMisses () = find "combat_misses.ndjson"
     let combatDefense () = find "combat_defense.ndjson"
+    let combatSpikes () = find "combat_spikes.ndjson"
     let combatFailures () = find "combat_failures.ndjson"
     let combatTpDrain () = find "combat_tp_drain.ndjson"
     let combatEnfeeble () = find "combat_enfeeble.ndjson"
@@ -41,6 +42,11 @@ module private FixturePaths =
     let petrifyingPair () = find "bcmn30_petrifying_pair.ndjson"
     let bstLootName () = find "bst_loot_name.ndjson"
     let bstCampMulti () = find "bst_camp_multi.ndjson"
+    let combatRanged () = find "combat_ranged.ndjson"
+    let combatCounters () = find "combat_counters.ndjson"
+    let combatDrain () = find "combat_drain.ndjson"
+    let combatSkillchain () = find "combat_skillchain.ndjson"
+    let combatJa () = find "combat_ja.ndjson"
 
 module private ReplayHelpers =
     let waitForReplay (session: IAnalyticsSession) =
@@ -94,6 +100,16 @@ module ReportFormatTests =
         let text = ReportTestHelpers.reportText "offense" snap
         ReportTestHelpers.contains "Damage Summary" text
         ReportTestHelpers.contains "Total Dmg" text
+
+    [<Fact>]
+    let ``abyssea report is an unsupported legacy stub`` () =
+        let snap = ReportTestHelpers.replaySnapshot (FixturePaths.combatAction())
+        let text = ReportTestHelpers.reportText "abyssea" snap
+        ReportTestHelpers.contains "Abyssea (unsupported)" text
+        ReportTestHelpers.contains "only if HorizonXI adds Abyssea content" text
+        Assert.DoesNotContain("Total Cruor/XP", text, StringComparison.Ordinal)
+        let row = AnalyticsQueryService.query "abyssea" snap (MobFilterDto()) |> Assert.Single
+        Assert.Equal("Unsupported legacy stub", row.Value)
 
     [<Fact>]
     let ``offense report keeps summary and detail columns aligned`` () =
@@ -220,6 +236,7 @@ module ReportFormatTests =
         ReportTestHelpers.contains "Player Deaths" text
         ReportTestHelpers.contains "Summary" text
         ReportTestHelpers.contains "Entity 200" text
+        ReportTestHelpers.contains "Unknown" text
         let mobDeath = { snap with Combatants = [combatant 100u EntityKind.Pet; combatant 200u EntityKind.Mob] }
         let kills = ReportTestHelpers.reportText "deaths" (AnalyticsDtoMapping.toSnapshotDto mobDeath)
         Assert.DoesNotContain("Summary", kills)
@@ -254,9 +271,11 @@ module FightSegmenterTests =
           Value = value
           Success = ""
           CommandNo = 0
+          SpellId = None
           MessageId = 0
           IsProc = false
           ProcValue = 0
+          ProcMessageId = 0
           IsLocalPlayerActor = false
           IsLocalPlayerTarget = false; SourcePacketId = None }
 
@@ -734,7 +753,22 @@ module AnalyticsTests =
         Assert.Equal("Magic Drain HP", MsgBasicCatalog.messageLabel MsgBasicCatalog.MagicDrainHp)
         Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicDrainMp)
         Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicDrainHp)
+        Assert.Equal("Magic Absorb STR", MsgBasicCatalog.messageLabel MsgBasicCatalog.MagicAbsorbStr)
+        Assert.Equal("Magic Absorb CHR", MsgBasicCatalog.messageLabel MsgBasicCatalog.MagicAbsorbChr)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicAbsorbStr)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicAbsorbChr)
+        Assert.Equal(
+            InteractionType.Harm,
+            (MsgBasicCatalog.classify MsgBasicCatalog.MagicAbsorbStr 4 |> fun (t, _, _) -> t)
+        )
         Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.SkillDrainMp)
+        Assert.Equal("Skill Drain HP", MsgBasicCatalog.messageLabel MsgBasicCatalog.SkillDrainHp)
+        Assert.Equal("Skill Gain", MsgBasicCatalog.messageLabel MsgBasicCatalog.SkillGain)
+        Assert.Equal("Skill Level Up", MsgBasicCatalog.messageLabel MsgBasicCatalog.SkillLevelUp)
+        Assert.Equal(InteractionType.Unknown, (MsgBasicCatalog.classify MsgBasicCatalog.SkillGain 4 |> fun (t, _, _) -> t))
+        Assert.Equal(InteractionType.Unknown, (MsgBasicCatalog.classify MsgBasicCatalog.SkillLevelUp 4 |> fun (t, _, _) -> t))
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.SkillGain)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.SkillLevelUp)
         Assert.Equal("Magic Erase", MsgBasicCatalog.messageLabel MsgBasicCatalog.MagicErase)
         Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicErase)
         Assert.Equal("Magic Remove Effect", MsgBasicCatalog.messageLabel MsgBasicCatalog.MagicRemoveEffect)
@@ -1048,9 +1082,11 @@ module AnalyticsTests =
                 Value = 0
                 Success = "hit"
                 CommandNo = 4
+                SpellId = None
                 MessageId = 7
                 IsProc = false
                 ProcValue = 0
+                ProcMessageId = 0
                 IsLocalPlayerActor = false
                 IsLocalPlayerTarget = false; SourcePacketId = None } ]
 
@@ -1165,6 +1201,73 @@ module FixtureReplayParityTests =
         Assert.True(snap.Interactions |> List.exists (fun i -> i.Success = "shadow-absorb"))
 
     [<Fact>]
+    let ``combat_spikes reports react damage on add-effect and offense, not absorbed`` () =
+        EntityRegistry.reset()
+        let snap = ReplayHelpers.ingestFixture (FixturePaths.combatSpikes())
+        Assert.True(
+            snap.Interactions
+            |> List.exists (fun i -> i.ActionName = "Spikes" && i.MessageId = 44 && i.Value = 17))
+        let dto = AnalyticsDtoMapping.toSnapshotDto snap
+        let addEffect = ReportTestHelpers.reportText "add-effect" dto
+        ReportTestHelpers.contains "Spikes" addEffect
+        ReportTestHelpers.contains "17" addEffect
+        Assert.DoesNotContain("Absorbed", addEffect, StringComparison.Ordinal)
+        let offense = ReportTestHelpers.reportText "offense" dto
+        ReportTestHelpers.contains "Spikes" offense
+        ReportTestHelpers.contains "17" offense
+        Assert.DoesNotContain("Absorbed Dmg", offense, StringComparison.Ordinal)
+        let defense = ReportTestHelpers.reportText "defense" dto
+        ReportTestHelpers.contains "12" defense
+        Assert.DoesNotContain("Absorbed Dmg", defense, StringComparison.Ordinal)
+
+    [<Fact>]
+    let ``player spikes list on add-effect; enemy spikes list on defense`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 100u "Alice"
+        InteractionTestHelpers.registerMob 200u "Earth Elemental"
+        let store = SessionStore.create ()
+        let ingest data =
+            let evt = InteractionTestHelpers.packetEvent 0x0028us data
+            SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        ingest (Fixtures.combatActionPacketWithReact 200u 100u 1 12 1 0 17 44)
+        ingest (Fixtures.combatActionPacketWithReact 100u 200u 1 90 0x14 0 33 44)
+        let dto = AnalyticsDtoMapping.toSnapshotDto (SessionStore.snapshot store)
+        let addEffect = ReportTestHelpers.reportText "add-effect" dto
+        ReportTestHelpers.contains "Alice" addEffect
+        ReportTestHelpers.contains "Spikes" addEffect
+        ReportTestHelpers.contains "17" addEffect
+        Assert.DoesNotContain("Earth Elemental", addEffect, StringComparison.Ordinal)
+        let defense = ReportTestHelpers.reportText "defense" dto
+        ReportTestHelpers.contains "Spikes" defense
+        ReportTestHelpers.contains "33" defense
+        let offense = ReportTestHelpers.reportText "offense" dto
+        ReportTestHelpers.contains "17" offense
+        Assert.DoesNotContain("Absorbed Dmg", offense, StringComparison.Ordinal)
+
+    [<Fact>]
+    let ``non-44 reacts add no spike HP, curing, or absorbed damage`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 100u "Alice"
+        InteractionTestHelpers.registerMob 200u "Earth Elemental"
+        let store = SessionStore.create ()
+        let ingest data =
+            let evt = InteractionTestHelpers.packetEvent 0x0028us data
+            SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        ingest (Fixtures.combatActionPacketWithReact 100u 200u 1 12 1 0 40 373)
+        ingest (Fixtures.combatActionPacketWithReact 100u 200u 1 15 1 0 61 132)
+        let snap = SessionStore.snapshot store
+        Assert.DoesNotContain(snap.Interactions, fun i -> i.ActionName = "Spikes" || i.MessageId = 373 || i.MessageId = 132)
+        Assert.Equal(27, AnalyticsQueries.offenseSummary snap MobFilter.defaultFilter |> List.sumBy (fun r -> r.Total))
+        Assert.Empty(snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery))
+        let dto = AnalyticsDtoMapping.toSnapshotDto snap
+        for query in [ "offense"; "defense"; "add-effect"; "recovery" ] do
+            let text = ReportTestHelpers.reportText query dto
+            Assert.DoesNotContain("Spikes", text, StringComparison.Ordinal)
+            Assert.DoesNotContain("Absorbed", text, StringComparison.Ordinal)
+            Assert.DoesNotContain("40", text, StringComparison.Ordinal)
+            Assert.DoesNotContain("61", text, StringComparison.Ordinal)
+
+    [<Fact>]
     let ``combat_failures includes no-effect aid`` () =
         EntityRegistry.reset()
         let snap = ReplayHelpers.ingestFixture (FixturePaths.combatFailures())
@@ -1174,7 +1277,12 @@ module FixtureReplayParityTests =
     let ``combat_tp_drain classifies additional effect harm`` () =
         EntityRegistry.reset()
         let snap = ReplayHelpers.ingestFixture (FixturePaths.combatTpDrain())
-        Assert.True(snap.Interactions |> List.exists (fun i -> i.MessageId = 0xBB && i.InteractionType = InteractionType.Harm))
+        let drains = snap.Interactions |> List.filter (fun i -> i.MessageId = 0xBB)
+        Assert.NotEmpty drains
+        Assert.All(drains, fun i ->
+            Assert.Equal(InteractionType.Harm, i.InteractionType)
+            Assert.Equal(1, i.CommandNo)
+            Assert.False(InteractionClassification.isHpDamage i))
 
     [<Fact>]
     let ``combat_enfeeble classifies enfeeble category`` () =
@@ -1198,3 +1306,613 @@ module FixtureReplayParityTests =
         Assert.True(
             snap.Interactions
             |> List.exists (fun i -> i.MessageId = 230 && i.AidType = Some AidType.Enhance))
+
+    [<Fact>]
+    let ``combat_ranged produces ranged hit and miss`` () =
+        EntityRegistry.reset()
+        let snap = ReplayHelpers.ingestFixture (FixturePaths.combatRanged())
+        Assert.True(snap.Interactions |> List.exists (fun i -> i.HarmType = Some HarmType.Ranged && i.Success = "hit" && i.Value = 247))
+        Assert.True(snap.Interactions |> List.exists (fun i -> i.HarmType = Some HarmType.Ranged && i.Success = "miss"))
+        let text = ReportTestHelpers.reportText "offense" (AnalyticsDtoMapping.toSnapshotDto snap)
+        ReportTestHelpers.contains "Ranged" text
+
+    [<Fact>]
+    let ``combat_counters produce melee harm on offense`` () =
+        EntityRegistry.reset()
+        let snap = ReplayHelpers.ingestFixture (FixturePaths.combatCounters())
+        Assert.True(snap.Interactions |> List.exists (fun i -> i.Value = 56 && i.HarmType = Some HarmType.Melee))
+        Assert.True(snap.Interactions |> List.exists (fun i -> i.Value = 52 && i.HarmType = Some HarmType.Melee))
+        let text = ReportTestHelpers.reportText "offense" (AnalyticsDtoMapping.toSnapshotDto snap)
+        ReportTestHelpers.contains "Melee" text
+
+    [<Fact>]
+    let ``bloody bolt proc recovers HP and adds no additional damage`` () =
+        InteractionTestHelpers.resetEntities ()
+        let data = Fixtures.bloodyBoltDrainPacket ()
+        let action =
+            match Battle0x28.decode data with
+            | None -> failwith "Expected bloody bolt decode"
+            | Some action -> action
+        InteractionTestHelpers.registerLocalPlayer action.ActorId "Caster"
+        let store = SessionStore.create ()
+        let evt = InteractionTestHelpers.packetEvent 0x0028us data
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        let snap = SessionStore.snapshot store
+        Assert.True(snap.Interactions |> List.exists (fun i ->
+            i.InteractionType = InteractionType.Harm && i.HarmType = Some HarmType.Ranged && i.Value = 24 && i.MessageId = 352))
+        Assert.True(snap.Interactions |> List.exists (fun i ->
+            i.AidType = Some AidType.Recovery && i.MessageId = 161 && i.Value = 31 && i.ActorId = action.ActorId))
+        let filter = MobFilter.defaultFilter
+        Assert.Equal(24, AnalyticsQueries.offenseSummary snap filter |> List.sumBy (fun r -> r.Total))
+        Assert.Equal(31, AnalyticsQueries.recovery snap filter |> List.sumBy (fun r -> r.Total))
+        Assert.Equal(0, AnalyticsQueries.additionalEffects snap filter |> List.filter (fun r -> r.Value = "proc") |> List.sumBy (fun r -> r.Total))
+        let addEffect = ReportTestHelpers.reportText "add-effect" (AnalyticsDtoMapping.toSnapshotDto snap)
+        Assert.DoesNotContain("31", addEffect, StringComparison.Ordinal)
+
+    [<Fact>]
+    let ``additional effect damage proc still counts`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 1u "Caster"
+        let store = SessionStore.create ()
+        let data = Fixtures.combatActionPacketWithProc 1u 2u 1 10 1 0 34 163
+        let evt = InteractionTestHelpers.packetEvent 0x0028us data
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        let snap = SessionStore.snapshot store
+        Assert.Empty(snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery))
+        Assert.Equal(34, AnalyticsQueries.additionalEffects snap MobFilter.defaultFilter |> List.filter (fun r -> r.Value = "proc") |> List.sumBy (fun r -> r.Total))
+        Assert.Equal(10, AnalyticsQueries.offenseSummary snap MobFilter.defaultFilter |> List.sumBy (fun r -> r.Total))
+        let addEffect = ReportTestHelpers.reportText "add-effect" (AnalyticsDtoMapping.toSnapshotDto snap)
+        ReportTestHelpers.contains "34" addEffect
+
+    [<Fact>]
+    let ``mp drain proc is not HP recovery or additional damage`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 1u "Caster"
+        let store = SessionStore.create ()
+        let data = Fixtures.combatActionPacketWithProc 1u 2u 1 10 1 0 20 162
+        let evt = InteractionTestHelpers.packetEvent 0x0028us data
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        let snap = SessionStore.snapshot store
+        Assert.Empty(snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery))
+        Assert.Equal(0, AnalyticsQueries.additionalEffects snap MobFilter.defaultFilter |> List.filter (fun r -> r.Value = "proc") |> List.sumBy (fun r -> r.Total))
+        let addEffect = ReportTestHelpers.reportText "add-effect" (AnalyticsDtoMapping.toSnapshotDto snap)
+        Assert.DoesNotContain("20", addEffect, StringComparison.Ordinal)
+
+    [<Fact>]
+    let ``hp heal proc recovers HP and adds no additional damage`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 1u "Caster"
+        let store = SessionStore.create ()
+        let data = Fixtures.combatActionPacketWithProc 1u 2u 1 10 1 0 40 167
+        let evt = InteractionTestHelpers.packetEvent 0x0028us data
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        let snap = SessionStore.snapshot store
+        Assert.True(snap.Interactions |> List.exists (fun i ->
+            i.AidType = Some AidType.Recovery && i.MessageId = 167 && i.Value = 40 && i.ActorId = 1u))
+        Assert.Equal(40, AnalyticsQueries.recovery snap MobFilter.defaultFilter |> List.sumBy (fun r -> r.Total))
+        Assert.Equal(0, AnalyticsQueries.additionalEffects snap MobFilter.defaultFilter |> List.filter (fun r -> r.Value = "proc") |> List.sumBy (fun r -> r.Total))
+        let addEffect = ReportTestHelpers.reportText "add-effect" (AnalyticsDtoMapping.toSnapshotDto snap)
+        Assert.DoesNotContain("40", addEffect, StringComparison.Ordinal)
+
+    [<Fact>]
+    let ``mp heal and status procs are not HP recovery or additional damage`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 1u "Caster"
+        let store = SessionStore.create ()
+        let ingest procValue procMessage =
+            let data = Fixtures.combatActionPacketWithProc 1u 2u 1 10 1 0 procValue procMessage
+            let evt = InteractionTestHelpers.packetEvent 0x0028us data
+            SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        ingest 18 152
+        ingest 136 160
+        let snap = SessionStore.snapshot store
+        Assert.Empty(snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery))
+        Assert.Equal(0, AnalyticsQueries.additionalEffects snap MobFilter.defaultFilter |> List.filter (fun r -> r.Value = "proc") |> List.sumBy (fun r -> r.Total))
+        let addEffect = ReportTestHelpers.reportText "add-effect" (AnalyticsDtoMapping.toSnapshotDto snap)
+        Assert.DoesNotContain("18", addEffect, StringComparison.Ordinal)
+        Assert.DoesNotContain("136", addEffect, StringComparison.Ordinal)
+
+    [<Fact>]
+    let ``weapon bash command 3 uses the ability name`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 1u "Caster"
+        let store = SessionStore.create ()
+        let data = Fixtures.combatActionPacketEx 1u 2u 3 77u 19 MsgBasicCatalog.UsesAbilityTakesDamage 0
+        let evt = InteractionTestHelpers.packetEvent 0x0028us data
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        let snap = SessionStore.snapshot store
+        let hit = Assert.Single snap.Interactions
+        Assert.Equal(InteractionType.Harm, hit.InteractionType)
+        Assert.Equal(Some HarmType.Ability, hit.HarmType)
+        Assert.Equal("weapon bash", hit.ActionName)
+        Assert.Equal(19, hit.Value)
+
+    [<Fact>]
+    let ``combat_drain keeps message 22 harm without invented recovery`` () =
+        EntityRegistry.reset()
+        let snap = ReplayHelpers.ingestFixture (FixturePaths.combatDrain())
+        Assert.True(snap.Interactions |> List.exists (fun i -> i.InteractionType = InteractionType.Harm && i.MessageId = 0x16 && i.Value = 50))
+        Assert.Empty(snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery))
+        let text = ReportTestHelpers.reportText "recovery" (AnalyticsDtoMapping.toSnapshotDto snap)
+        Assert.DoesNotContain("50", text, StringComparison.Ordinal)
+
+    [<Fact>]
+    let ``stat absorbs retain effects but never add damage or recovery`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 0x268Bu "Caster"
+        InteractionTestHelpers.registerMob 0x2C8Bu "Crab"
+        let store = SessionStore.create ()
+        let ingest actor target spell value message =
+            let data = Fixtures.combatActionPacketEx actor target 4 spell value message 0
+            let evt = InteractionTestHelpers.packetEvent 0x0028us data
+            SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        // Ordinary HP Drain must still produce damage and caster recovery.
+        ingest 0x268Bu 0x2C8Bu 245u 40 227
+        for id in 329 .. 335 do
+            ingest 0x268Bu 0x2C8Bu (uint32 (266 + id - 329)) (id - 193) id
+            ingest 0x2C8Bu 0x268Bu (uint32 (266 + id - 329)) (id - 193) id
+            Assert.Equal((InteractionType.Harm, Some HarmType.Enfeeble, None), BattleMessageCatalog.classifyCombatMessage id 0)
+        let snap = SessionStore.snapshot store
+        let effects = snap.Interactions |> List.filter (fun i -> i.MessageId >= 329 && i.MessageId <= 335)
+        Assert.Equal(14, effects.Length)
+        Assert.All(effects, fun i ->
+            Assert.Equal(Some HarmType.Enfeeble, i.HarmType)
+            Assert.Equal(InteractionCategory.Enfeeble, i.Category)
+            Assert.Equal(i.MessageId - 193, i.Value))
+        Assert.Single(snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery)) |> ignore
+        let withoutEffects = { snap with Interactions = snap.Interactions |> List.filter (fun i -> i.HarmType <> Some HarmType.Enfeeble) }
+        for query in [ "offense"; "offense-detail"; "defense"; "defense-detail"; "performance"; "recovery" ] do
+            Assert.Equal(ReportTestHelpers.reportText query (AnalyticsDtoMapping.toSnapshotDto withoutEffects),
+                         ReportTestHelpers.reportText query (AnalyticsDtoMapping.toSnapshotDto snap))
+        let filter = MobFilter.defaultFilter
+        Assert.Equal(40, AnalyticsQueries.offenseSummary snap filter |> List.sumBy (fun r -> r.Total))
+        Assert.Empty(AnalyticsQueries.defenseSummary snap filter)
+
+    [<Fact>]
+    let ``mp drain retains amounts but never adds hp damage or recovery`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 0x268Bu "Caster"
+        InteractionTestHelpers.registerMob 0x2C8Bu "Crab"
+        let store = SessionStore.create ()
+        let ingest command actor target spell value message =
+            let data = Fixtures.combatActionPacketEx actor target command spell value message 0
+            let evt = InteractionTestHelpers.packetEvent 0x0028us data
+            SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        ingest 4 0x268Bu 0x2C8Bu 144u 100 2
+        ingest 4 0x268Bu 0x2C8Bu 245u 40 227
+        ingest 4 0x268Bu 0x2C8Bu 247u 32 228
+        ingest 4 0x268Bu 0x2C8Bu 247u 38 228
+        ingest 13 0x268Bu 0x2C8Bu 0u 30 225
+        ingest 4 0x268Bu 0x2C8Bu 266u 136 329
+        let snap = SessionStore.snapshot store
+        let mpRows = snap.Interactions |> List.filter (fun i -> i.MessageId = 228)
+        Assert.Equal(2, mpRows.Length)
+        Assert.All(mpRows, fun i ->
+            Assert.Equal(InteractionType.Harm, i.InteractionType)
+            Assert.Equal(Some HarmType.Spell, i.HarmType)
+            Assert.False(InteractionClassification.isHpDamage i))
+        Assert.Equal(70, mpRows |> List.sumBy (fun i -> i.Value))
+        Assert.True(snap.Interactions |> List.exists (fun i -> i.MessageId = 225 && i.Value = 30 && not (InteractionClassification.isHpDamage i)))
+        Assert.Single(snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery && i.MessageId = 227)) |> ignore
+        let withoutMp =
+            { snap with
+                Interactions =
+                    snap.Interactions
+                    |> List.filter (fun i -> not (MsgBasicCatalog.isMpResourceTransfer i.MessageId)) }
+        for query in [ "offense"; "offense-detail"; "defense"; "defense-detail"; "performance"; "recovery" ] do
+            Assert.Equal(
+                ReportTestHelpers.reportText query (AnalyticsDtoMapping.toSnapshotDto withoutMp),
+                ReportTestHelpers.reportText query (AnalyticsDtoMapping.toSnapshotDto snap))
+        let filter = MobFilter.defaultFilter
+        Assert.Equal(140, AnalyticsQueries.offenseSummary snap filter |> List.sumBy (fun r -> r.Total))
+        Assert.Empty(AnalyticsQueries.defenseSummary snap filter)
+        let offense = ReportAggregators.buildPlayerOffense snap filter
+        let caster = offense |> List.find (fun p -> p.Name = "Caster")
+        Assert.Equal(140, ReportAggregators.totalCategoryDamage caster.Categories)
+
+    [<Fact>]
+    let ``skill TP drain keeps the row and stays off HP offense and defense`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 1u "Caster"
+        InteractionTestHelpers.registerMob 2u "Crab"
+        let store = SessionStore.create ()
+        let ingest actor target command value message =
+            let data = Fixtures.combatActionPacketEx actor target command 0u value message 0
+            let evt = InteractionTestHelpers.packetEvent 0x0028us data
+            SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        ingest 1u 2u 13 80 MsgBasicCatalog.SkillDrainTp
+        ingest 2u 1u 13 50 MsgBasicCatalog.SkillDrainTp
+        ingest 1u 2u 1 40 1
+        let snap = SessionStore.snapshot store
+        let tpRows = snap.Interactions |> List.filter (fun i -> i.MessageId = MsgBasicCatalog.SkillDrainTp)
+        Assert.Equal(2, tpRows.Length)
+        Assert.All(tpRows, fun i ->
+            Assert.Equal(InteractionType.Harm, i.InteractionType)
+            Assert.Equal(Some HarmType.Ability, i.HarmType)
+            Assert.False(InteractionClassification.isHpDamage i))
+        let filter = MobFilter.defaultFilter
+        Assert.Equal(40, AnalyticsQueries.offenseSummary snap filter |> List.sumBy (fun r -> r.Total))
+        Assert.Empty(AnalyticsQueries.defenseSummary snap filter)
+        let dto = AnalyticsDtoMapping.toSnapshotDto snap
+        let tpDamage = dto.Interactions |> Seq.filter (fun (i: InteractionDto) -> i.MessageId = MsgBasicCatalog.SkillDrainTp)
+        Assert.All(tpDamage, fun i -> Assert.False i.IsHpDamage)
+        let hit = dto.Interactions |> Seq.find (fun (i: InteractionDto) -> i.MessageId = 1 && i.Value = 40)
+        Assert.True hit.IsHpDamage
+
+    [<Fact>]
+    let ``chatline command 1 message 187 stays off HP offense and defense`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 1u "Caster"
+        InteractionTestHelpers.registerMob 2u "Crab"
+        let store = SessionStore.create ()
+        let ingest actor target command value message =
+            let data = Fixtures.combatActionPacketEx actor target command 0u value message 0
+            let evt = InteractionTestHelpers.packetEvent 0x0028us data
+            SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        ingest 1u 2u 1 3 MsgBasicCatalog.SkillDrainHp
+        ingest 2u 1u 1 7 MsgBasicCatalog.SkillDrainHp
+        ingest 1u 2u 1 40 1
+        let snap = SessionStore.snapshot store
+        let tpRows = snap.Interactions |> List.filter (fun i -> i.MessageId = MsgBasicCatalog.SkillDrainHp)
+        Assert.Equal(2, tpRows.Length)
+        Assert.All(tpRows, fun i ->
+            Assert.Equal(1, i.CommandNo)
+            Assert.Equal(InteractionType.Harm, i.InteractionType)
+            Assert.Equal(Some HarmType.Other, i.HarmType)
+            Assert.False(InteractionClassification.isHpDamage i))
+        Assert.Empty(snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery))
+        let filter = MobFilter.defaultFilter
+        Assert.Equal(40, AnalyticsQueries.offenseSummary snap filter |> List.sumBy (fun r -> r.Total))
+        Assert.Empty(AnalyticsQueries.defenseSummary snap filter)
+        let dto = AnalyticsDtoMapping.toSnapshotDto snap
+        let tpDamage = dto.Interactions |> Seq.filter (fun (i: InteractionDto) -> i.MessageId = MsgBasicCatalog.SkillDrainHp)
+        Assert.All(tpDamage, fun i -> Assert.False i.IsHpDamage)
+
+    [<Fact>]
+    let ``remote player remains a report participant after a mob attacks their shadows`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 100u "Local"
+        let store = SessionStore.create ()
+        let ingest opcode data =
+            let evt = InteractionTestHelpers.packetEvent opcode data
+            SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        ingest 0x000Dus (Fixtures.charPcPacket "Remote" 200u)
+        ingest 0x000Eus (Fixtures.npcUpdatePacket "Crab" 300u)
+        ingest 0x0028us (Fixtures.combatActionPacketEx 200u 300u 1 0u 76 1 0)
+        // September 19: observed PC is later the target of cmd 1 / msg 31.
+        ingest 0x0028us (Fixtures.combatActionPacketEx 300u 200u 1 0u 0 31 1)
+        Assert.Equal(Some EntityRegistry.EntityKind.Player, EntityRegistry.tryGetEntityKind 200u)
+        ingest 0x000Dus (Fixtures.charPcPacket "Remote" 200u)
+        ingest 0x0028us (Fixtures.combatActionPacketEx 200u 300u 1 0u 24 1 0)
+        let snap = SessionStore.snapshot store
+        Assert.Equal(EntityKind.Player, (snap.Combatants |> List.find (fun c -> c.Id = 200u)).Kind)
+        Assert.Equal(EntityKind.Mob, (snap.Combatants |> List.find (fun c -> c.Id = 300u)).Kind)
+        let offense = ReportAggregators.buildPlayerOffense snap MobFilter.defaultFilter
+        let remote = offense |> List.find (fun p -> p.Name = "Remote")
+        Assert.Equal(100, ReportAggregators.totalCategoryDamage remote.Categories)
+        let text = ReportTestHelpers.reportText "offense" (AnalyticsDtoMapping.toSnapshotDto snap)
+        ReportTestHelpers.contains "Remote" text
+        Assert.DoesNotContain("Crab", text)
+
+    [<Fact>]
+    let ``observed player update repairs a prior combat guess without promoting real mobs`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 100u "Local"
+        EntityRegistry.setEntityKind 200u EntityRegistry.EntityKind.Mob
+        let store = SessionStore.create ()
+        let data = Fixtures.charPcPacket "Remote" 200u
+        let evt = InteractionTestHelpers.packetEvent 0x000Dus data
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        Assert.Equal(Some EntityRegistry.EntityKind.Player, EntityRegistry.tryGetEntityKind 200u)
+        InteractionTestHelpers.registerMob 300u "Crab"
+        EntityRegistry.setEntityKind 300u EntityRegistry.EntityKind.Player
+        Assert.Equal(Some EntityRegistry.EntityKind.Mob, EntityRegistry.tryGetEntityKind 300u)
+        // Explicit pet classification also outranks a subsequent harm-target guess.
+        EntityRegistry.setEntityKind 300u EntityRegistry.EntityKind.Pet
+        EntityRegistry.setEntityKind 300u EntityRegistry.EntityKind.Mob
+        Assert.Equal(Some EntityRegistry.EntityKind.Pet, EntityRegistry.tryGetEntityKind 300u)
+
+    [<Fact>]
+    let ``combat_skillchain follow-up is melee harm`` () =
+        EntityRegistry.reset()
+        let snap = ReplayHelpers.ingestFixture (FixturePaths.combatSkillchain())
+        Assert.True(snap.Interactions |> List.exists (fun i -> i.MessageId = 287))
+        Assert.True(snap.Interactions |> List.exists (fun i -> i.MessageId = 0x28 && i.Value = 100 && i.InteractionType = InteractionType.Harm))
+
+    [<Fact>]
+    let ``combat_ja produces ability harm`` () =
+        EntityRegistry.reset()
+        let snap = ReplayHelpers.ingestFixture (FixturePaths.combatJa())
+        Assert.True(snap.Interactions |> List.exists (fun i -> i.HarmType = Some HarmType.Ability && i.Value = 80))
+
+    [<Fact>]
+    let ``extra-attacks report groups melee by packet identity`` () =
+        EntityRegistry.reset()
+        let snap = ReplayHelpers.ingestFixtureDto (FixturePaths.combatMeleeHits())
+        let text = ReportTestHelpers.reportText "extra-attacks" snap
+        ReportTestHelpers.contains "Packet rounds" text
+        ReportTestHelpers.contains "Extra Attacks" text
+
+[<Collection("EntityRegistry")>]
+module RecoveryMpTests =
+    let private createStore () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 100u "Caster"
+        SessionStore.create ()
+
+    let private ingest store timestamp target command spell value message =
+        let data = Fixtures.combatActionPacketEx 100u target command spell value message 0
+        let evt = { InteractionTestHelpers.packetEvent 0x0028us data with Timestamp = timestamp }
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+
+    let private report snap =
+        snap |> AnalyticsDtoMapping.toSnapshotDto |> ReportTestHelpers.reportText "recovery"
+
+    let private costs (text: string) =
+        text.Substring(text.IndexOf("Curing Costs and Efficiency (estimated)", StringComparison.Ordinal))
+
+    [<Fact>]
+    let ``SQL generated costs preserve spell names and unknown costs`` () =
+        Assert.Equal(Some "Cure", SpellLookup.tryGetName 1)
+        Assert.Equal(Some 8, SpellLookup.tryGetMpCost 1)
+        Assert.Equal(Some 24, SpellLookup.tryGetMpCost 2)
+        Assert.Equal(None, SpellLookup.tryGetMpCost 0)
+        Assert.Equal(None, SpellLookup.tryGetMpCost 305) // SQL zero (Odin)
+        Assert.Equal(Some "Chocobo Hum", SpellLookup.tryGetName 407) // disabled SQL row
+        Assert.Equal(None, SpellLookup.tryGetMpCost 407)
+        Assert.Equal(None, SpellLookup.tryGetMpCost 99999)
+
+    [<Fact>]
+    let ``Cure finish retains spell id through DTO and renders estimated efficiency`` () =
+        let store = createStore ()
+        ingest store 10UL 100u 4 1u 350 7
+        let snap = SessionStore.snapshot store
+        let roundTrip = snap |> AnalyticsDtoMapping.toSnapshotDto |> AnalyticsDtoMapping.fromSnapshotDto
+        Assert.Equal(Some 1, (Assert.Single roundTrip.Interactions).SpellId)
+        Assert.Matches(@"Caster\s+8\s+43\.75", report roundTrip |> costs)
+
+    [<Fact>]
+    let ``Curaga targets at the same time charge once and later casts charge again`` () =
+        let store = createStore ()
+        ingest store 10UL 100u 4 7u 350 7
+        ingest store 10UL 200u 4 7u 250 7
+        let snap = SessionStore.snapshot store
+        Assert.Matches(@"Caster\s+60\s+10\.00", report snap |> costs)
+        // Old snapshots without packet provenance have the same cast semantics.
+        let withoutIdentity = { snap with Interactions = snap.Interactions |> List.map (fun i -> { i with SourcePacketId = None }) }
+        Assert.Equal(report snap |> costs, report withoutIdentity |> costs)
+        ingest store 20UL 100u 4 7u 120 7
+        Assert.Matches(@"Caster\s+120\s+6\.00", SessionStore.snapshot store |> report |> costs)
+
+    [<Fact>]
+    let ``Aspir prepare and abilities do not add spell MP or efficiency HP`` () =
+        let store = createStore ()
+        ingest store 10UL 100u 4 1u 350 7
+        let baseline = SessionStore.snapshot store |> report |> costs
+        ingest store 20UL 200u 4 247u 70 228
+        ingest store 30UL 200u 13 0u 30 225
+        ingest store 40UL 100u 8 1u 350 7
+        ingest store 50UL 100u 6 0u 512 102
+        ingest store 60UL 200u 4 245u 40 227
+        let snap = SessionStore.snapshot store
+        Assert.Equal(baseline, report snap |> costs)
+        Assert.Equal(902, snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery) |> List.sumBy (fun i -> i.Value))
+
+    [<Fact>]
+    let ``unknown spell cost excludes both MP and HP from efficiency`` () =
+        let store = createStore ()
+        ingest store 10UL 100u 4 9999u 500 7
+        let text = SessionStore.snapshot store |> report |> costs
+        Assert.Contains("costs unavailable", text)
+        Assert.DoesNotMatch(@"Caster\s+\d", text)
+        ingest store 20UL 100u 4 1u 350 7
+        Assert.Matches(@"Caster\s+8\s+43\.75", SessionStore.snapshot store |> report |> costs)
+
+    [<Fact>]
+    let ``constructed recovery fixture exposes a Cure finish without costing MsgBasic`` () =
+        let snap = ReplayHelpers.ingestFixture (FixturePaths.combatRecovery())
+        Assert.True(snap.Interactions |> List.exists (fun i -> i.CommandNo = 4 && i.SpellId = Some 1 && i.Value = 350))
+        Assert.Matches(@"Entity 100\s+8\s+43\.75", report snap |> costs)
+
+    [<Fact>]
+    let ``live recovery modes show estimates except status curing`` () =
+        let store = createStore ()
+        ingest store 10UL 100u 4 1u 350 7
+        let dto = SessionStore.snapshot store |> AnalyticsDtoMapping.toSnapshotDto
+        let render mode =
+            let request = AnalyticsReportRequest(QueryId = "recovery", Mode = mode, Filter = MobFilterDto())
+            (AnalyticsReportService.formatRequest request dto).Spans
+            |> Seq.map (fun span -> span.Text) |> String.Concat
+        for mode in [ReportMode.Curing; ReportMode.AverageCuring; ReportMode.Recovery] do
+            Assert.Matches(@"Caster\s+8\s+43\.75", render mode |> costs)
+        for mode in [ReportMode.StatusCuring; ReportMode.StatusCured] do
+            Assert.DoesNotContain("Estimated MP", render mode)
+
+[<Collection("EntityRegistry")>]
+module OffenseNukeMpTests =
+    let private createStore () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 100u "Caster"
+        InteractionTestHelpers.registerMob 200u "Crab"
+        InteractionTestHelpers.registerMob 300u "Beetle"
+        SessionStore.create ()
+
+    let private ingest store timestamp target command spell value message miss =
+        let data = Fixtures.combatActionPacketEx 100u target command spell value message miss
+        let evt = { InteractionTestHelpers.packetEvent 0x0028us data with Timestamp = timestamp }
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+
+    let private report query store =
+        SessionStore.snapshot store |> AnalyticsDtoMapping.toSnapshotDto |> ReportTestHelpers.reportText query
+
+    let private costs (text: string) =
+        text.Substring(text.IndexOf("Spell Costs and Efficiency (estimated)", StringComparison.Ordinal))
+
+    [<Fact>]
+    let ``Blizzard IV finish uses existing SQL cost in live Offense`` () =
+        Assert.Equal(Some 162, SpellLookup.tryGetMpCost 152)
+        let store = createStore ()
+        ingest store 10UL 200u 4 152u 324 2 0
+        Assert.Matches(@"Caster\s+Blizzard Iv\s+162\s+2\.00", report "offense" store |> costs)
+        Assert.DoesNotContain("Spell Costs and Efficiency", report "defense" store)
+
+    [<Fact>]
+    let ``same-time targets charge once and a later miss still spends MP`` () =
+        let store = createStore ()
+        ingest store 10UL 200u 4 152u 324 2 0
+        ingest store 10UL 300u 4 152u 162 2 0
+        Assert.Matches(@"Caster\s+Blizzard Iv\s+162\s+3\.00", report "offense" store |> costs)
+        ingest store 20UL 200u 4 152u 0 2 1
+        Assert.Matches(@"Caster\s+Blizzard Iv\s+324\s+1\.50", report "offense" store |> costs)
+
+    [<Fact>]
+    let ``MP transfers prepares cures and enfeebles cannot alter nuke efficiency`` () =
+        let store = createStore ()
+        ingest store 10UL 200u 4 152u 324 2 0
+        let baseline = report "offense" store |> costs
+        ingest store 20UL 200u 4 247u 70 228 0
+        ingest store 30UL 200u 13 0u 30 225 0
+        ingest store 40UL 200u 8 152u 324 2 0
+        ingest store 50UL 100u 4 1u 350 7 0
+        ingest store 60UL 200u 4 266u 136 329 0
+        Assert.Equal(baseline, report "offense" store |> costs)
+
+    [<Fact>]
+    let ``Drain harm counts once without its recovery dual emit`` () =
+        let store = createStore ()
+        ingest store 10UL 200u 4 245u 42 227 0
+        let snap = SessionStore.snapshot store
+        Assert.Equal(2, snap.Interactions.Length)
+        Assert.Single(snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery)) |> ignore
+        Assert.Matches(@"Caster\s+Drain\s+21\s+2\.00", report "offense" store |> costs)
+
+    [<Theory>]
+    [<InlineData(9999)>]
+    [<InlineData(305)>]
+    let ``unknown and zero SQL costs are unavailable without invented MP`` spell =
+        let store = createStore ()
+        ingest store 10UL 200u 4 (uint32 spell) 500 2 0
+        let text = report "offense" store |> costs
+        Assert.Contains("costs unavailable", text)
+        Assert.DoesNotMatch(@"Caster\s+\S", text)
+        ingest store 20UL 200u 4 152u 324 2 0
+        Assert.Matches(@"Caster\s+Blizzard Iv\s+162\s+2\.00", report "offense" store |> costs)
+
+[<Collection("EntityRegistry")>]
+module SlimeCampTests =
+    let private ingest opcode data store =
+        let evt = InteractionTestHelpers.packetEvent opcode data
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+
+    [<Fact>]
+    let ``Digest command 11 message 187 is ability HP drain plus actor recovery`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionBuilder.reset ()
+        InteractionTestHelpers.registerLocalPlayer 0x268Bu "Poroburu"
+        InteractionTestHelpers.registerMob 0x2C8Bu "Gloop"
+        let meleeType, meleeHarm, _ = BattleMessageCatalog.classifyActionEffect 1 MsgBasicCatalog.SkillDrainHp 0 3
+        Assert.Equal(InteractionType.Harm, meleeType)
+        Assert.Equal(Some HarmType.Other, meleeHarm)
+        let store = SessionStore.create ()
+        ingest 0x0028us (Fixtures.combatActionPacketEx 0x2C8Bu 0x268Bu 11 433u 11 MsgBasicCatalog.SkillDrainHp 0) store
+        ingest 0x0028us (Fixtures.combatActionPacketEx 0x268Bu 0x2C8Bu 1 0u 3 MsgBasicCatalog.SkillDrainHp 0) store
+        let snap = SessionStore.snapshot store
+        let harm =
+            snap.Interactions
+            |> List.find (fun i -> i.CommandNo = 11 && i.InteractionType = InteractionType.Harm)
+        Assert.Equal(Some HarmType.Ability, harm.HarmType)
+        Assert.Equal("Digest", harm.ActionName)
+        Assert.Equal(11, harm.Value)
+        Assert.Equal(0x268Bu, harm.TargetId)
+        Assert.True(InteractionClassification.isHpDamage harm)
+        let chatline =
+            snap.Interactions
+            |> List.find (fun i -> i.CommandNo = 1 && i.MessageId = MsgBasicCatalog.SkillDrainHp)
+        Assert.Equal(3, chatline.Value)
+        Assert.Equal(Some HarmType.Other, chatline.HarmType)
+        Assert.False(InteractionClassification.isHpDamage chatline)
+        let filter = MobFilter.defaultFilter
+        Assert.Equal(0, AnalyticsQueries.offenseSummary snap filter |> List.sumBy (fun r -> r.Total))
+        Assert.Equal(11, AnalyticsQueries.defenseSummary snap filter |> List.sumBy (fun r -> r.Total))
+        let recover =
+            Assert.Single(snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery))
+        Assert.Equal(0x2C8Bu, recover.ActorId)
+        Assert.Equal(0x2C8Bu, recover.TargetId)
+        Assert.Equal(11, recover.Value)
+        Assert.Equal("Digest", recover.ActionName)
+
+    [<Fact>]
+    let ``Spirit Taker stays weaponskill damage without an invented MP recovery`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionBuilder.reset ()
+        InteractionTestHelpers.registerLocalPlayer 0x268Bu "Poroburu"
+        InteractionTestHelpers.registerMob 0x2C8Bu "Gloop"
+        let store = SessionStore.create ()
+        ingest 0x0028us (Fixtures.combatActionPacketEx 0x268Bu 0x2C8Bu 3 183u 51 185 0) store
+        let snap = SessionStore.snapshot store
+        let hit = Assert.Single snap.Interactions
+        Assert.Equal(InteractionType.Harm, hit.InteractionType)
+        Assert.Equal(Some HarmType.Weaponskill, hit.HarmType)
+        Assert.Equal("Spirit Taker", hit.ActionName)
+        Assert.Equal(51, hit.Value)
+        Assert.True(InteractionClassification.isHpDamage hit)
+
+    [<Fact>]
+    let ``Souleater message 100 keeps the effect id off HP damage`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionBuilder.reset ()
+        InteractionTestHelpers.registerLocalPlayer 0x268Bu "Poroburu"
+        let store = SessionStore.create ()
+        ingest 0x0028us (Fixtures.combatActionPacketEx 0x268Bu 0x2C8Bu 6 0u 63 MsgBasicCatalog.UsesJobAbility 0) store
+        let snap = SessionStore.snapshot store
+        let row = Assert.Single snap.Interactions
+        Assert.Equal(InteractionType.Unknown, row.InteractionType)
+        Assert.Equal(MsgBasicCatalog.UsesJobAbility, row.MessageId)
+        Assert.Equal(63, row.Value)
+        Assert.False(InteractionClassification.isHpDamage row)
+        Assert.Equal(0, AnalyticsQueries.offenseSummary snap MobFilter.defaultFilter |> List.sumBy (fun r -> r.Total))
+
+    [<Fact>]
+    let ``Starlight message 224 is MP recovery and stays out of HP curing`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionBuilder.reset ()
+        InteractionTestHelpers.registerLocalPlayer 0x268Bu "Poroburu"
+        let store = SessionStore.create ()
+        ingest 0x0028us (Fixtures.combatActionPacketEx 0x268Bu 0x268Bu 3 163u 26 MsgBasicCatalog.SkillRecoversMp 0) store
+        let snap = SessionStore.snapshot store
+        let row = Assert.Single snap.Interactions
+        Assert.Equal(InteractionType.Aid, row.InteractionType)
+        Assert.Equal(Some AidType.Recovery, row.AidType)
+        Assert.Equal("Starlight", row.ActionName)
+        Assert.Equal(26, row.Value)
+        Assert.Equal(0x268Bu, row.TargetId)
+        Assert.False(InteractionClassification.isHpDamage row)
+        let text = ReportTestHelpers.reportText "recovery" (AnalyticsDtoMapping.toSnapshotDto snap)
+        Assert.DoesNotContain("Starlight", text, StringComparison.Ordinal)
+        Assert.DoesNotContain("26", text, StringComparison.Ordinal)
+        let filter = MobFilter.defaultFilter
+        Assert.Equal(0, AnalyticsQueries.recovery snap filter |> List.sumBy (fun r -> r.Total))
+        Assert.Empty(ReportAggregators.recoveryByPlayer snap filter)
+
+    [<Fact>]
+    let ``club skill messages stay off buff and damage reports`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionBuilder.reset ()
+        InteractionTestHelpers.registerLocalPlayer 0x268Bu "Poroburu"
+        let store = SessionStore.create ()
+        ingest 0x0029us (Fixtures.battleMessagePacket 0x268Bu 0x268Bu (uint16 MsgBasicCatalog.SkillGain) 2u 0u 4uy) store
+        ingest 0x0029us (Fixtures.battleMessagePacket 0x268Bu 0x268Bu (uint16 MsgBasicCatalog.SkillLevelUp) 90u 0u 4uy) store
+        let snap = SessionStore.snapshot store
+        Assert.Equal(2, snap.Interactions.Length)
+        Assert.All(snap.Interactions, fun i ->
+            Assert.Equal(InteractionType.Unknown, i.InteractionType)
+            Assert.False(InteractionClassification.isHpDamage i))
+        Assert.Contains(snap.Interactions, fun i -> i.ActionName = "Skill Gain" && i.MessageId = 38)
+        Assert.Contains(snap.Interactions, fun i -> i.ActionName = "Skill Level Up" && i.MessageId = 53)
+        let dto = AnalyticsDtoMapping.toSnapshotDto snap
+        let buffs = ReportTestHelpers.reportText "buffs" dto
+        let offense = ReportTestHelpers.reportText "offense" dto
+        Assert.DoesNotContain("Skill Gain", buffs, StringComparison.Ordinal)
+        Assert.DoesNotContain("Skill Level Up", buffs, StringComparison.Ordinal)
+        Assert.DoesNotContain("Skill Gain", offense, StringComparison.Ordinal)
+        Assert.DoesNotContain("90", offense, StringComparison.Ordinal)

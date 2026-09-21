@@ -53,7 +53,7 @@ module EntityRegistry =
 
             match kinds.TryGetValue entityId, kind with
             | (true, EntityKind.Player), k when k <> EntityKind.Player && localPlayerId = Some entityId -> ()
-            | (true, EntityKind.Mob), EntityKind.Player -> ()
+            // Packet-observed PC/party identity can repair a prior combat guess.
             | (true, EntityKind.Pet), (EntityKind.Player | EntityKind.Mob) -> kinds.[entityId] <- kind
             | _ -> kinds.[entityId] <- kind
 
@@ -190,6 +190,8 @@ module EntityRegistry =
             let updateMask = evt.Data.[10]
 
             if updateMask &&& 0x08uy <> 0uy || updateMask = 0x1Fuy then
+                // 16-byte field as sent, including Horizon instance tags (_GC, _EN_GC).
+                // Chat display names omit those tags; do not strip them here.
                 let name = readFixedName evt.Data 52 16
 
                 let claimer =
@@ -241,7 +243,8 @@ module EntityRegistry =
 
     let setEntityKind (entityId: uint32) (kind: EntityKind) =
         match kinds.TryGetValue entityId, kind with
-        | (true, EntityKind.Player), k when k <> EntityKind.Player && localPlayerId = Some entityId -> ()
+        // Combat roles are weak evidence: being attacked does not make a PC a mob.
+        | (true, (EntityKind.Player | EntityKind.Fellow)), _ -> ()
         | (true, EntityKind.Mob), EntityKind.Player -> ()
         | (true, EntityKind.Pet), EntityKind.Mob -> ()
         | _ -> kinds.[entityId] <- kind

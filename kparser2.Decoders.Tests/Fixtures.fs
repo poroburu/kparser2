@@ -248,6 +248,94 @@ module Fixtures =
         =
         combatActionPacketEx actorId targetId commandNo 0u damage messageId miss
 
+    let combatActionPacketWithReact
+        (actorId: uint32)
+        (targetId: uint32)
+        (commandNo: int)
+        (damage: int)
+        (messageId: int)
+        (miss: int)
+        (reactValue: int)
+        (reactMessage: int)
+        =
+        let bits = ResizeArray<int>()
+
+        let addBits (value: uint32) (count: int) =
+            for i in 0 .. count - 1 do
+                bits.Add(int ((value >>> i) &&& 1u))
+
+        addBits actorId 32
+        addBits 1u 6
+        addBits 0u 4
+        addBits (uint32 commandNo) 4
+        addBits 0u 32
+        addBits 0u 32
+        addBits targetId 32
+        addBits 1u 4
+        addBits (uint32 miss) 3
+        addBits 0u 2
+        addBits 0u 12
+        addBits 0u 5
+        addBits 0u 5
+        addBits (uint32 damage) 17
+        addBits (uint32 messageId) 10
+        addBits 0u 31
+        addBits 0u 1
+        addBits 1u 1
+        addBits 0u 6
+        addBits 0u 4
+        addBits (uint32 reactValue) 14
+        addBits (uint32 reactMessage) 10
+
+        let payloadBytes = bitsToBytes bits
+        Array.concat [ [| 0x20uy; 0uy; 0x28uy; 0uy; byte payloadBytes.Length |]; payloadBytes ]
+
     /// Default melee hit fixture (actor=1, target=2, damage=42).
     let battle2Packet () =
         combatActionPacket 1u 2u 1 42 1 0
+
+    /// Live Horizon 20260921 Bloody Bolt. Ranged hit 24 with proc message 161 and proc value 31.
+    let bloodyBoltDrainPacket () =
+        Convert.FromHexString "28146C05276D15000001C81C1ADB1900000000392043404000000003005800000080157C00080500"
+
+    let combatActionPacketWithProc
+        (actorId: uint32)
+        (targetId: uint32)
+        (commandNo: int)
+        (damage: int)
+        (messageId: int)
+        (miss: int)
+        (procValue: int)
+        (procMessage: int)
+        =
+        let bits = ResizeArray<int>()
+
+        let addBits (value: uint32) (count: int) =
+            for i in 0 .. count - 1 do
+                bits.Add(int ((value >>> i) &&& 1u))
+
+        addBits actorId 32
+        addBits 1u 6
+        addBits 0u 4
+        addBits (uint32 commandNo) 4
+        addBits 0u 32
+        addBits 0u 32
+        addBits targetId 32
+        addBits 1u 4
+        addBits (uint32 miss) 3
+        addBits 0u 2
+        addBits 0u 12
+        addBits 0u 5
+        addBits 0u 5
+        addBits (uint32 damage) 17
+        addBits (uint32 messageId) 10
+        addBits 0u 31
+        addBits 1u 1
+        addBits 0u 6
+        addBits 0u 4
+        addBits (uint32 procValue) 17
+        addBits (uint32 procMessage) 10
+        addBits 0u 1
+
+        let payloadBytes = bitsToBytes bits
+        Array.concat [ [| 0x20uy; 0uy; 0x28uy; 0uy; byte payloadBytes.Length |]; payloadBytes ]

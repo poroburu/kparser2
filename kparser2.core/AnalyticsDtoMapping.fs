@@ -107,12 +107,15 @@ module AnalyticsDtoMapping =
             Value = i.Value,
             Success = i.Success,
             CommandNo = i.CommandNo,
+            SpellId = Option.toNullable i.SpellId,
             MessageId = i.MessageId,
             IsProc = i.IsProc,
             ProcValue = i.ProcValue,
+            ProcMessageId = i.ProcMessageId,
             IsLocalPlayerActor = i.IsLocalPlayerActor,
             IsLocalPlayerTarget = i.IsLocalPlayerTarget,
-            SourcePacketId = Option.toObj i.SourcePacketId
+            SourcePacketId = Option.toObj i.SourcePacketId,
+            IsHpDamage = InteractionClassification.isHpDamage i
         )
 
     let private toChat (c: ChatMessageRecord) =
@@ -234,9 +237,11 @@ module AnalyticsDtoMapping =
           Value = i.Value
           Success = i.Success
           CommandNo = i.CommandNo
+          SpellId = Option.ofNullable i.SpellId
           MessageId = i.MessageId
           IsProc = i.IsProc
           ProcValue = i.ProcValue
+          ProcMessageId = i.ProcMessageId
           IsLocalPlayerActor = i.IsLocalPlayerActor
           IsLocalPlayerTarget = i.IsLocalPlayerTarget
           SourcePacketId = Option.ofObj i.SourcePacketId }
@@ -361,7 +366,7 @@ module AnalyticsQueryBridge =
             | "loot" -> AnalyticsQueries.lootSummary snap
             | "players" -> AnalyticsQueries.players snap
             | "mobs" -> AnalyticsQueries.mobs snap
-            | "abyssea" -> AnalyticsQueries.abysseaChests snap
+            | "abyssea" -> LegacyReportStubs.abysseaRows
             | _ -> []
 
         rows |> List.map AnalyticsDtoMapping.toRowDto

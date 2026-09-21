@@ -74,9 +74,12 @@ function New-CombatActionPacket(
     [uint32]$ActorId = 1,
     [uint32]$TargetId = 2,
     [int]$CommandNo = 1,
+    [uint32]$CommandArg = 0,
     [int]$Damage = 42,
     [int]$MessageId = 1,
-    [int]$Miss = 0
+    [int]$Miss = 0,
+    [int]$ReactValue = 0,
+    [int]$ReactMessageId = 0
 ) {
     $bits = New-Object System.Collections.Generic.List[int]
 
@@ -90,7 +93,7 @@ function New-CombatActionPacket(
     Add-Bits 1 6
     Add-Bits 0 4
     Add-Bits ([uint32]$CommandNo) 4
-    Add-Bits 0 32
+    Add-Bits $CommandArg 32
     Add-Bits 0 32
     Add-Bits ([uint32]$TargetId) 32
     Add-Bits 1 4
@@ -103,7 +106,14 @@ function New-CombatActionPacket(
     Add-Bits ([uint32]$MessageId) 10
     Add-Bits 0 31
     Add-Bits 0 1
-    Add-Bits 0 1
+    $hasReact = ($ReactValue -gt 0) -or ($ReactMessageId -gt 0)
+    Add-Bits $(if ($hasReact) { 1 } else { 0 }) 1
+    if ($hasReact) {
+        Add-Bits 0 6
+        Add-Bits 0 4
+        Add-Bits ([uint32]$ReactValue) 14
+        Add-Bits ([uint32]$ReactMessageId) 10
+    }
 
     $byteCount = [Math]::Ceiling($bits.Count / 8.0)
     $payloadBytes = New-Object byte[] $byteCount
@@ -215,7 +225,7 @@ $combatDeathLines = @(
 Set-Content -Path (Join-Path $OutputDir "combat_death.ndjson") -Value $combatDeathLines -Encoding UTF8
 
 $cureMsg = New-BattleMessagePacket 100 100 7 0 350
-$cureAction = New-CombatActionPacket -ActorId 100 -TargetId 100 -CommandNo 4 -Damage 350 -MessageId 7
+$cureAction = New-CombatActionPacket -ActorId 100 -TargetId 100 -CommandNo 4 -CommandArg 1 -Damage 350 -MessageId 7
 $combatRecoveryLines = @(
     (New-NdjsonLine "kpacket.v1.world.s2c.0x0029" (New-Meta 0x29 "GP_SERV_COMMAND_BATTLE_MESSAGE" $cureMsg.Length 1) $cureMsg)
     (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $cureAction.Length 2) $cureAction)
@@ -291,6 +301,14 @@ $combatDefenseLines = @(
     (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $shadow.Length 3) $shadow)
 )
 Set-Content -Path (Join-Path $OutputDir "combat_defense.ndjson") -Value $combatDefenseLines -Encoding UTF8
+
+# Live Horizon Blaze Spikes: incoming melee (cmd 1) with react bit, message 44, value 17.
+$spikeHit = New-CombatActionPacket -ActorId $mobEntityId -TargetId $playerEntityId -CommandNo 1 -Damage 12 -MessageId 1 -ReactValue 17 -ReactMessageId 44
+$combatSpikesLines = @(
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x00DF" (New-Meta 0xDF "GP_SERV_COMMAND_GROUP_ATTR" $bootstrap.Length 1) $bootstrap)
+    (New-NdjsonLine "kpacket.v1.world.s2c.0x0028" (New-Meta 0x28 "GP_SERV_COMMAND_BATTLE2" $spikeHit.Length 2) $spikeHit)
+)
+Set-Content -Path (Join-Path $OutputDir "combat_spikes.ndjson") -Value $combatSpikesLines -Encoding UTF8
 
 $failBuff = New-CombatActionPacket -ActorId $playerEntityId -TargetId $playerEntityId -CommandNo 4 -Damage 0 -MessageId 0x44 -Miss 0
 $failDebuff = New-CombatActionPacket -ActorId $mobEntityId -TargetId $playerEntityId -CommandNo 4 -Damage 0 -MessageId 0x3B -Miss 0

@@ -47,8 +47,10 @@ type CombatEffectDecoded =
       Value: int
       HasProc: bool
       ProcValue: int
+      ProcMessageId: int
       HasReact: bool
-      ReactValue: int }
+      ReactValue: int
+      ReactMessageId: int }
 
 type CombatTargetDecoded =
     { TargetId: uint32

@@ -64,7 +64,7 @@ module AnalyticsQueries =
 
     let offenseSummary (snap: AnalyticsSnapshot) (filter: MobFilter) =
         filterInteractions snap filter (fun i ->
-            i.InteractionType = InteractionType.Harm
+            InteractionClassification.isHpDamage i
             && i.IsLocalPlayerActor
             && i.Value > 0)
         |> List.groupBy (fun i -> InteractionClassification.categoryLabel i.Category)
@@ -76,7 +76,7 @@ module AnalyticsQueries =
 
     let offenseDetail (snap: AnalyticsSnapshot) (filter: MobFilter) =
         filterInteractions snap filter (fun i ->
-            i.InteractionType = InteractionType.Harm && i.IsLocalPlayerActor)
+            InteractionClassification.isHpDamage i && i.IsLocalPlayerActor)
         |> List.groupBy (fun i -> $"{i.ActionName} — {i.Success}")
         |> List.map (fun (label, rows) ->
             { Label = label
@@ -86,7 +86,7 @@ module AnalyticsQueries =
 
     let defenseSummary (snap: AnalyticsSnapshot) (filter: MobFilter) =
         filterInteractions snap filter (fun i ->
-            i.InteractionType = InteractionType.Harm
+            InteractionClassification.isHpDamage i
             && i.IsLocalPlayerTarget
             && i.Value > 0)
         |> List.groupBy (fun i -> InteractionClassification.categoryLabel i.Category)
@@ -98,7 +98,7 @@ module AnalyticsQueries =
 
     let defenseDetail (snap: AnalyticsSnapshot) (filter: MobFilter) =
         filterInteractions snap filter (fun i ->
-            i.InteractionType = InteractionType.Harm && i.IsLocalPlayerTarget)
+            InteractionClassification.isHpDamage i && i.IsLocalPlayerTarget)
         |> List.groupBy (fun i -> $"{i.ActionName} — {i.Success}")
         |> List.map (fun (label, rows) ->
             { Label = label
@@ -116,8 +116,7 @@ module AnalyticsQueries =
 
     let recovery (snap: AnalyticsSnapshot) (filter: MobFilter) =
         filterInteractions snap filter (fun i ->
-            i.InteractionType = InteractionType.Aid
-            && i.AidType = Some AidType.Recovery
+            InteractionClassification.isHpRecovery i
             && i.Value > 0)
         |> List.groupBy (fun i -> i.ActionName)
         |> List.map (fun (action, rows) ->
@@ -238,10 +237,17 @@ module AnalyticsQueries =
             { Label = actor; Value = "swings"; Count = rows.Length; Total = rows |> List.sumBy (fun r -> r.Value) })
 
     let additionalEffects (snap: AnalyticsSnapshot) (filter: MobFilter) =
-        filterInteractions snap filter (fun i -> i.IsProc && i.ProcValue > 0)
-        |> List.groupBy (fun i -> i.ActionName)
-        |> List.map (fun (action, rows) ->
-            { Label = action; Value = "proc"; Count = rows.Length; Total = rows |> List.sumBy (fun r -> r.ProcValue) })
+        let procs =
+            filterInteractions snap filter InteractionClassification.isAdditionalDamageProc
+            |> List.groupBy (fun i -> i.ActionName)
+            |> List.map (fun (action, rows) ->
+                { Label = action; Value = "proc"; Count = rows.Length; Total = rows |> List.sumBy (fun r -> r.ProcValue) })
+        let spikes =
+            filterInteractions snap filter InteractionClassification.isSpike
+            |> List.groupBy (fun i -> i.ActorName)
+            |> List.map (fun (actor, rows) ->
+                { Label = actor; Value = "spikes"; Count = rows.Length; Total = rows |> List.sumBy (fun r -> r.Value) })
+        procs @ spikes
 
     let timelineBuffs (snap: AnalyticsSnapshot) (filter: MobFilter) =
         filterInteractions snap filter (fun i -> i.AidType = Some AidType.Enhance)
@@ -276,15 +282,6 @@ module AnalyticsQueries =
         |> List.groupBy (fun i -> i.ActionName)
         |> List.map (fun (action, rows) ->
             { Label = action; Value = "roll"; Count = rows.Length; Total = rows.Length })
-
-    let abysseaChests (snap: AnalyticsSnapshot) =
-        snap.Battles
-        |> List.filter (fun b -> b.Killed && b.ExperiencePoints > 0)
-        |> List.map (fun b ->
-            { Label = b.EnemyName
-              Value = $"#{b.Id} xp={b.ExperiencePoints} chain={b.ExperienceChain}"
-              Count = 1
-              Total = b.ExperiencePoints })
 
     let players (snap: AnalyticsSnapshot) =
         snap.Combatants

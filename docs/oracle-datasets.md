@@ -2,7 +2,7 @@
 
 QA parity includes the read-only kparser v1 oracle, not just kparser2 settled
 checks. Capture packets and raw RAM ChatLines together. Request native shell
-permissions and Windows Administrator elevation when attachment requires it.
+permissions. `kparser.cli capture` must run as Administrator.
 Verify both files grow before announcing readiness. Keep raw evidence private.
 
 ## Validated timestamp adapter

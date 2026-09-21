@@ -8,20 +8,32 @@ const write = (p, x) => fs.writeFileSync(p, JSON.stringify(x, null, 2) + '\n', {
 
 function normalizeChat(input, output) {
   if (path.resolve(input) === path.resolve(output)) throw Error('Never overwrite raw evidence');
-  let changed = 0;
+  let changed = 0, lineNumber = 0, checkerTimestamp = null;
+  const derivedTimestamps = [];
   const lines = fs.readFileSync(input, 'utf8').split(/(\r?\n)/).map(line => {
-    if (!line || /^\r?\n$/.test(line) || line.startsWith('#')) return line;
+    if (/^\r?\n$/.test(line)) { lineNumber++; return line; }
+    if (!line || line.startsWith('#')) { checkerTimestamp = null; return line; }
     // Observed Ashita prefix only, immediately after the 21-field RAM header.
     // Retain the timestamp for the oracle's existing timestamp parser.
     const m = /^((?:[0-9a-fA-F]{2},){3}[0-9a-fA-F]{8},(?:[0-9a-fA-F]{8},){2}[0-9a-fA-F]{4},(?:[0-9a-fA-F]{2},){4}(?:[0-9a-fA-F]{8},){9}[0-9a-fA-F]{2},)(.*)$/.exec(line);
     if (!m) throw Error('Unsupported ChatLine header');
-    const body = m[2].replace(/^(?:\x1e\x01)*\x1eQ(\[(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d\])\x1e\x01 /, '$1 ');
+    // A checker line can carry its own color before the timestamp. Do not strip
+    // arbitrary controls from message content or infer times for unknown rows.
+    let body = m[2].replace(/^(?:\x1ej)?(?:\x1e\x01)*\x1eQ(\[(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d\])\x1e\x01 /, '$1 ');
+    if (checkerTimestamp && /^\x1e\x01\x81@\x1ejDefense\x1e\x01\x1eQ\)\x1e\x01$/.test(body)) {
+      derivedTimestamps.push({line:lineNumber+1, source_line:checkerTimestamp.line,
+        timestamp:checkerTimestamp.time, reason:'Immediately preceding checker message wrapped to this RAM row'});
+      body = checkerTimestamp.time + ' ' + body;
+    }
+    const checker = /^(\[\d{2}:\d{2}:\d{2}\]) \x1eQ\[\x1e\x06checker\x1eQ\].*(?:High|Low) $/.exec(body);
+    checkerTimestamp = checker ? {time:checker[1],line:lineNumber+1} : null;
     if (body !== m[2]) changed++;
     return m[1] + body;
   });
   fs.writeFileSync(output, lines.join(''), {flag:'wx'});
   write(output + '.provenance.json', {schema_version:1, adapter:'ashita-timestamp-v1',
     source_sha256:hash(input), output_sha256:hash(output), changed_lines:changed,
+    derived_timestamps:derivedTimestamps,
     privacy:'private-raw-derived', oracle_modified:false});
   return {changed_lines:changed};
 }

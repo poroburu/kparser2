@@ -83,7 +83,8 @@ public sealed partial class DamageGraphViewModel : ObservableObject, IDisposable
                 if (!Enemies.Contains(name)) Enemies.Add(name);
             var battles = snapshot.Battles.Where(b => (SelectedEnemy == "All" || b.EnemyName == SelectedEnemy) && (!ExcludeZeroXp || b.ExperiencePoints > 0)).Select(b => b.Id).ToHashSet();
             var restricted = SelectedEnemy != "All" || ExcludeZeroXp;
-            var rows = snapshot.Interactions.Where(i => i.InteractionType == "Harm" && i.HarmType != "Enfeeble" && (participants.Contains(i.ActorId) || i.IsLocalPlayerActor)
+            var rows = snapshot.Interactions.Where(i => i.IsHpDamage
+                && (participants.Contains(i.ActorId) || i.IsLocalPlayerActor)
                 && (SelectedPlayer == "All" || i.ActorName == SelectedPlayer)
                 && (!restricted || i.BattleId is int id && battles.Contains(id))
                 && (SelectedCategory == "All" || i.Category.Replace(" Crit", "") == SelectedCategory)).ToArray();

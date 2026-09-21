@@ -1,5 +1,7 @@
 namespace kparser2.Analytics
 
+open kparser2.Decoders
+
 module BattleMessageCatalog =
     /// 0x28 cmd_no start packets (XiPackets GP_SERV_COMMAND_BATTLE2). Not damage.
     let isActionStartCommand commandNo =
@@ -42,6 +44,8 @@ module BattleMessageCatalog =
     let classifyActionEffect (commandNo: int) (messageId: int) (miss: int) (value: int) =
         if isActionStartCommand commandNo then
             InteractionType.Unknown, None, None
+        elif commandNo = 5 then
+            InteractionType.Aid, None, Some AidType.Item
         // Wire message ids are not legacy chat ParseCodes. Live BST captures
         // and server/scripts/enum/msg.lua: 67=HIT_CRIT, 185=DAMAGE.
         // XiPackets 0x28: command 3 finishes a WS, 11 a monster/pet skill.
@@ -60,6 +64,9 @@ module BattleMessageCatalog =
         elif commandNo = 11 && (messageId = 242 || messageId = 277) then
             InteractionType.Harm, Some HarmType.Enfeeble, None
         elif commandNo = 11 && (messageId = 264 || messageId = 189 || messageId = 283) then
+            InteractionType.Harm, Some HarmType.Ability, None
+        // Live Digest. Wire 187 is SKILL_DRAIN_HP. Command 1 still uses chatline 0xBB below.
+        elif commandNo = 11 && messageId = MsgBasicCatalog.SkillDrainHp then
             InteractionType.Harm, Some HarmType.Ability, None
         elif commandNo = 4 && messageId = 106 then
             InteractionType.Unknown, None, None
@@ -138,12 +145,24 @@ module BattleMessageCatalog =
             successLabel miss
 
     let actionName commandNo commandArg messageId =
-        if commandNo = 3 then
+        if isActionStartCommand commandNo then
+            match commandNo with
+            | 7 -> "Skill"
+            | 8 -> "Magic"
+            | 9 -> "Item"
+            | 10 -> "Ability"
+            | 12 -> "Ranged"
+            | n -> $"cmd-{n}"
+        elif commandNo = 3 && messageId = MsgBasicCatalog.UsesAbilityTakesDamage then
+            ActionLookup.tryGetName commandArg |> Option.defaultValue $"ability-{commandArg}"
+        elif commandNo = 3 then
             ActionLookup.tryWeaponSkillName commandArg |> Option.defaultValue $"weaponskill-{commandArg}"
         elif commandNo = 11 then
             ActionLookup.tryMonsterSkillName commandArg |> Option.defaultValue $"monster-skill-{commandArg}"
         elif commandNo = 4 then
             SpellLookup.tryGetName commandArg |> Option.defaultValue $"spell-{commandArg}"
+        elif commandNo = 5 then
+            ItemLookup.tryGetName commandArg |> Option.defaultValue $"item-{commandArg}"
         else
             match ActionLookup.tryGetName commandArg with
             | Some name -> name

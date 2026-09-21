@@ -50,7 +50,7 @@ internal sealed partial class ReplayQa
             Title = "kparser2 offline UI QA", Width = 1200, Height = 800,
             Left = -20000, Top = -20000, WindowStartupLocation = WindowStartupLocation.Manual,
             ShowActivated = false, ShowInTaskbar = false, WindowStyle = WindowStyle.None,
-            Background = Brushes.White
+            Opacity = 0, AllowsTransparency = true, Background = Brushes.White
         };
         _window.Show();
         try
@@ -70,7 +70,14 @@ internal sealed partial class ReplayQa
                 catch (Exception ex)
                 {
                     _failures++;
-                    _cases.Add(new { surface = view.Id, scenario = "control-lifecycle", status = "failed", error = ex.ToString() });
+                    CaptureSettings($"{view.Id}-lifecycle");
+                    _cases.Add(new
+                    {
+                        surface = view.Id, scenario = "control-lifecycle", status = "failed",
+                        error = ex.ToString(),
+                        sharedError = ViewSettingsService.Shared.Error,
+                        settings = "view-settings.json"
+                    });
                 }
                 finally
                 {
@@ -139,9 +146,17 @@ internal sealed partial class ReplayQa
             selector.SelectedIndex = 1;
             var selected = selector.SelectedItem.ToString();
             await Check(filter, Request(player: isPlayer ? selected : null, enemy: isPlayer ? null : selected));
-            var persisted = new ViewSettingsService().Report(query);
+            var loaded = new ViewSettingsService();
+            var persisted = loaded.Report(query);
             if ((isPlayer ? persisted.Player : persisted.Mob) != selected)
-                throw new InvalidOperationException("Selected filter was not persisted to the isolated settings file.");
+            {
+                CaptureSettings($"{id}-{filter}-unpersisted");
+                throw new InvalidOperationException(
+                    "Selected filter was not persisted to the isolated settings file."
+                    + $" selected={selected}; diskPlayer={persisted.Player}; diskMob={persisted.Mob}"
+                    + $"; sharedPlayer={ViewSettingsService.Shared.Report(query).Player}; sharedMob={ViewSettingsService.Shared.Report(query).Mob}"
+                    + $"; sharedError={ViewSettingsService.Shared.Error}; loadError={loaded.Error}");
+            }
             // Recreating the view must restore the same filter from isolated saved settings.
             _window.Content = null;
             await PumpAsync();
@@ -270,6 +285,13 @@ internal sealed partial class ReplayQa
         if (string.IsNullOrWhiteSpace(text) || text.Contains("(no data)", StringComparison.Ordinal) ||
             text.Contains("No matching", StringComparison.Ordinal)) return "empty-or-partial";
         return "populated";
+    }
+
+    private void CaptureSettings(string label)
+    {
+        var source = Path.Combine(_output, "view-settings.json");
+        if (!File.Exists(source)) return;
+        File.Copy(source, Path.Combine(_output, $"{label}-view-settings.json"), overwrite: true);
     }
 
     private void SaveCase(string surface, string scenario, UserControl control, string expected, string actual,

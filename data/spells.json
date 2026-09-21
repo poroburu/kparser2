@@ -1,928 +1,3706 @@
-﻿{
-    "1":  "cure",
-    "2":  "cure ii",
-    "3":  "cure iii",
-    "4":  "cure iv",
-    "5":  "cure v",
-    "6":  "cure vi",
-    "7":  "curaga",
-    "8":  "curaga ii",
-    "9":  "curaga iii",
-    "10":  "curaga iv",
-    "11":  "curaga v",
-    "12":  "raise",
-    "13":  "raise ii",
-    "14":  "poisona",
-    "15":  "paralyna",
-    "16":  "blindna",
-    "17":  "silena",
-    "18":  "stona",
-    "19":  "viruna",
-    "20":  "cursna",
-    "21":  "holy",
-    "22":  "holy ii",
-    "23":  "dia",
-    "24":  "dia ii",
-    "25":  "dia iii",
-    "26":  "dia iv",
-    "27":  "dia v",
-    "28":  "banish",
-    "29":  "banish ii",
-    "30":  "banish iii",
-    "31":  "banish iv",
-    "32":  "banish v",
-    "33":  "diaga",
-    "34":  "diaga ii",
-    "35":  "diaga iii",
-    "36":  "diaga iv",
-    "37":  "diaga v",
-    "38":  "banishga",
-    "39":  "banishga ii",
-    "40":  "banishga iii",
-    "41":  "banishga iv",
-    "42":  "banishga v",
-    "43":  "protect",
-    "44":  "protect ii",
-    "45":  "protect iii",
-    "46":  "protect iv",
-    "47":  "protect v",
-    "48":  "shell",
-    "49":  "shell ii",
-    "50":  "shell iii",
-    "51":  "shell iv",
-    "52":  "shell v",
-    "53":  "blink",
-    "54":  "stoneskin",
-    "55":  "aquaveil",
-    "56":  "slow",
-    "57":  "haste",
-    "58":  "paralyze",
-    "59":  "silence",
-    "60":  "barfire",
-    "61":  "barblizzard",
-    "62":  "baraero",
-    "63":  "barstone",
-    "64":  "barthunder",
-    "65":  "barwater",
-    "66":  "barfira",
-    "67":  "barblizzara",
-    "68":  "baraera",
-    "69":  "barstonra",
-    "70":  "barthundra",
-    "71":  "barwatera",
-    "72":  "barsleep",
-    "73":  "barpoison",
-    "74":  "barparalyze",
-    "75":  "barblind",
-    "76":  "barsilence",
-    "77":  "barpetrify",
-    "78":  "barvirus",
-    "79":  "slow ii",
-    "80":  "paralyze ii",
-    "81":  "recall-jugner",
-    "82":  "recall-pashh",
-    "83":  "recall-meriph",
-    "84":  "baramnesia",
-    "85":  "baramnesra",
-    "86":  "barsleepra",
-    "87":  "barpoisonra",
-    "88":  "barparalyzra",
-    "89":  "barblindra",
-    "90":  "barsilencera",
-    "91":  "barpetra",
-    "92":  "barvira",
-    "93":  "cura",
-    "94":  "sacrifice",
-    "95":  "esuna",
-    "96":  "auspice",
-    "97":  "reprisal",
-    "98":  "repose",
-    "99":  "sandstorm",
-    "100":  "enfire",
-    "101":  "enblizzard",
-    "102":  "enaero",
-    "103":  "enstone",
-    "104":  "enthunder",
-    "105":  "enwater",
-    "106":  "phalanx",
-    "107":  "phalanx ii",
-    "108":  "regen",
-    "109":  "refresh",
-    "110":  "regen ii",
-    "111":  "regen iii",
-    "112":  "flash",
-    "113":  "rainstorm",
-    "114":  "windstorm",
-    "115":  "firestorm",
-    "116":  "hailstorm",
-    "117":  "thunderstorm",
-    "118":  "voidstorm",
-    "119":  "aurorastorm",
-    "120":  "teleport-yhoat",
-    "121":  "teleport-altep",
-    "122":  "teleport-holla",
-    "123":  "teleport-dem",
-    "124":  "teleport-mea",
-    "125":  "protectra",
-    "126":  "protectra ii",
-    "127":  "protectra iii",
-    "128":  "protectra iv",
-    "129":  "protectra v",
-    "130":  "shellra",
-    "131":  "shellra ii",
-    "132":  "shellra iii",
-    "133":  "shellra iv",
-    "134":  "shellra v",
-    "135":  "reraise",
-    "136":  "invisible",
-    "137":  "sneak",
-    "138":  "deodorize",
-    "139":  "teleport-vahzl",
-    "140":  "raise iii",
-    "141":  "reraise ii",
-    "142":  "reraise iii",
-    "143":  "erase",
-    "144":  "fire",
-    "145":  "fire ii",
-    "146":  "fire iii",
-    "147":  "fire iv",
-    "148":  "fire v",
-    "149":  "blizzard",
-    "150":  "blizzard ii",
-    "151":  "blizzard iii",
-    "152":  "blizzard iv",
-    "153":  "blizzard v",
-    "154":  "aero",
-    "155":  "aero ii",
-    "156":  "aero iii",
-    "157":  "aero iv",
-    "158":  "aero v",
-    "159":  "stone",
-    "160":  "stone ii",
-    "161":  "stone iii",
-    "162":  "stone iv",
-    "163":  "stone v",
-    "164":  "thunder",
-    "165":  "thunder ii",
-    "166":  "thunder iii",
-    "167":  "thunder iv",
-    "168":  "thunder v",
-    "169":  "water",
-    "170":  "water ii",
-    "171":  "water iii",
-    "172":  "water iv",
-    "173":  "water v",
-    "174":  "firaga",
-    "175":  "firaga ii",
-    "176":  "firaga iii",
-    "177":  "firaga iv",
-    "178":  "firaga v",
-    "179":  "blizzaga",
-    "180":  "blizzaga ii",
-    "181":  "blizzaga iii",
-    "182":  "blizzaga iv",
-    "183":  "blizzaga v",
-    "184":  "aeroga",
-    "185":  "aeroga ii",
-    "186":  "aeroga iii",
-    "187":  "aeroga iv",
-    "188":  "aeroga v",
-    "189":  "stonega",
-    "190":  "stonega ii",
-    "191":  "stonega iii",
-    "192":  "stonega iv",
-    "193":  "stonega v",
-    "194":  "thundaga",
-    "195":  "thundaga ii",
-    "196":  "thundaga iii",
-    "197":  "thundaga iv",
-    "198":  "thundaga v",
-    "199":  "waterga",
-    "200":  "waterga ii",
-    "201":  "waterga iii",
-    "202":  "waterga iv",
-    "203":  "waterga v",
-    "204":  "flare",
-    "205":  "flare ii",
-    "206":  "freeze",
-    "207":  "freeze ii",
-    "208":  "tornado",
-    "209":  "tornado ii",
-    "210":  "quake",
-    "211":  "quake ii",
-    "212":  "burst",
-    "213":  "burst ii",
-    "214":  "flood",
-    "215":  "flood ii",
-    "216":  "gravity",
-    "217":  "gravity ii",
-    "218":  "meteor",
-    "219":  "comet",
-    "220":  "poison",
-    "221":  "poison ii",
-    "222":  "poison iii",
-    "223":  "poison iv",
-    "224":  "poison v",
-    "225":  "poisonga",
-    "226":  "poisonga ii",
-    "227":  "poisonga iii",
-    "228":  "poisonga iv",
-    "229":  "poisonga v",
-    "230":  "bio",
-    "231":  "bio ii",
-    "232":  "bio iii",
-    "233":  "bio iv",
-    "234":  "bio v",
-    "235":  "burn",
-    "236":  "frost",
-    "237":  "choke",
-    "238":  "rasp",
-    "239":  "shock",
-    "240":  "drown",
-    "241":  "retrace",
-    "242":  "absorb-acc",
-    "243":  "absorb-attri",
-    "244":  "meteor ii",
-    "245":  "drain",
-    "246":  "drain ii",
-    "247":  "aspir",
-    "248":  "aspir ii",
-    "249":  "blaze spikes",
-    "250":  "ice spikes",
-    "251":  "shock spikes",
-    "252":  "stun",
-    "253":  "sleep",
-    "254":  "blind",
-    "255":  "break",
-    "256":  "virus",
-    "257":  "curse",
-    "258":  "bind",
-    "259":  "sleep ii",
-    "260":  "dispel",
-    "261":  "warp",
-    "262":  "warp ii",
-    "263":  "escape",
-    "264":  "tractor",
-    "265":  "tractor ii",
-    "266":  "absorb-str",
-    "267":  "absorb-dex",
-    "268":  "absorb-vit",
-    "269":  "absorb-agi",
-    "270":  "absorb-int",
-    "271":  "absorb-mnd",
-    "272":  "absorb-chr",
-    "273":  "sleepga",
-    "274":  "sleepga ii",
-    "275":  "absorb-tp",
-    "276":  "blind ii",
-    "277":  "dread spikes",
-    "278":  "geohelix",
-    "279":  "hydrohelix",
-    "280":  "anemohelix",
-    "281":  "pyrohelix",
-    "282":  "cryohelix",
-    "283":  "ionohelix",
-    "284":  "noctohelix",
-    "285":  "luminohelix",
-    "286":  "addle",
-    "287":  "klimaform",
-    "288":  "fire spirit",
-    "289":  "ice spirit",
-    "290":  "air spirit",
-    "291":  "earth spirit",
-    "292":  "thunder spirit",
-    "293":  "water spirit",
-    "294":  "light spirit",
-    "295":  "dark spirit",
-    "296":  "carbuncle",
-    "297":  "fenrir",
-    "298":  "ifrit",
-    "299":  "titan",
-    "300":  "leviathan",
-    "301":  "garuda",
-    "302":  "shiva",
-    "303":  "ramuh",
-    "304":  "diabolos",
-    "305":  "odin",
-    "306":  "alexander",
-    "307":  "cait sith",
-    "308":  "animus augeo",
-    "309":  "animus minuo",
-    "310":  "enlight",
-    "311":  "endark",
-    "312":  "enfire ii",
-    "313":  "enblizzard ii",
-    "314":  "enaero ii",
-    "315":  "enstone ii",
-    "316":  "enthunder ii",
-    "317":  "enwater ii",
-    "318":  "monomi ichi",
-    "319":  "aisha ichi",
-    "320":  "katon ichi",
-    "321":  "katon ni",
-    "322":  "katon san",
-    "323":  "hyoton ichi",
-    "324":  "hyoton ni",
-    "325":  "hyoton san",
-    "326":  "huton ichi",
-    "327":  "huton ni",
-    "328":  "huton san",
-    "329":  "doton ichi",
-    "330":  "doton ni",
-    "331":  "doton san",
-    "332":  "raiton ichi",
-    "333":  "raiton ni",
-    "334":  "raiton san",
-    "335":  "suiton ichi",
-    "336":  "suiton ni",
-    "337":  "suiton san",
-    "338":  "utsusemi ichi",
-    "339":  "utsusemi ni",
-    "340":  "utsusemi san",
-    "341":  "jubaku ichi",
-    "342":  "jubaku ni",
-    "343":  "jubaku san",
-    "344":  "hojo ichi",
-    "345":  "hojo ni",
-    "346":  "hojo san",
-    "347":  "kurayami ichi",
-    "348":  "kurayami ni",
-    "349":  "kurayami san",
-    "350":  "dokumori ichi",
-    "351":  "dokumori ni",
-    "352":  "dokumori san",
-    "353":  "tonko ichi",
-    "354":  "tonko ni",
-    "355":  "siren",
-    "356":  "paralyga",
-    "357":  "slowga",
-    "358":  "hastega",
-    "359":  "silencega",
-    "360":  "dispelga",
-    "361":  "blindga",
-    "362":  "bindga",
-    "365":  "breakga",
-    "366":  "graviga",
-    "367":  "death",
-    "368":  "foe requiem",
-    "369":  "foe requiem ii",
-    "370":  "foe requiem iii",
-    "371":  "foe requiem iv",
-    "372":  "foe requiem v",
-    "373":  "foe requiem vi",
-    "374":  "foe requiem vii",
-    "375":  "foe requiem viii",
-    "376":  "horde lullaby",
-    "377":  "horde lullaby ii",
-    "378":  "armys paeon",
-    "379":  "armys paeon ii",
-    "380":  "armys paeon iii",
-    "381":  "armys paeon iv",
-    "382":  "armys paeon v",
-    "383":  "armys paeon vi",
-    "384":  "armys paeon vii",
-    "385":  "armys paeon viii",
-    "386":  "mages ballad",
-    "387":  "mages ballad ii",
-    "388":  "mages ballad iii",
-    "389":  "knights minne",
-    "390":  "knights minne ii",
-    "391":  "knights minne iii",
-    "392":  "knights minne iv",
-    "393":  "knights minne v",
-    "394":  "valor minuet",
-    "395":  "valor minuet ii",
-    "396":  "valor minuet iii",
-    "397":  "valor minuet iv",
-    "398":  "valor minuet v",
-    "399":  "sword madrigal",
-    "400":  "blade madrigal",
-    "401":  "hunters prelude",
-    "402":  "archers prelude",
-    "403":  "sheepfoe mambo",
-    "404":  "dragonfoe mambo",
-    "405":  "fowl aubade",
-    "406":  "herb pastoral",
-    "407":  "chocobo hum",
-    "408":  "shining fantasia",
-    "409":  "scops operetta",
-    "410":  "puppets operetta",
-    "411":  "jesters operetta",
-    "412":  "gold capriccio",
-    "413":  "devotee serenade",
-    "414":  "warding round",
-    "415":  "goblin gavotte",
-    "416":  "cactuar fugue",
-    "417":  "moogle rhapsody",
-    "418":  "protected aria",
-    "419":  "advancing march",
-    "420":  "victory march",
-    "421":  "battlefield elegy",
-    "422":  "carnage elegy",
-    "423":  "massacre elegy",
-    "424":  "sinewy etude",
-    "425":  "dextrous etude",
-    "426":  "vivacious etude",
-    "427":  "quick etude",
-    "428":  "learned etude",
-    "429":  "spirited etude",
-    "430":  "enchanting etude",
-    "431":  "herculean etude",
-    "432":  "uncanny etude",
-    "433":  "vital etude",
-    "434":  "swift etude",
-    "435":  "sage etude",
-    "436":  "logical etude",
-    "437":  "bewitching etude",
-    "438":  "fire carol",
-    "439":  "ice carol",
-    "440":  "wind carol",
-    "441":  "earth carol",
-    "442":  "lightning carol",
-    "443":  "water carol",
-    "444":  "light carol",
-    "445":  "dark carol",
-    "446":  "fire carol ii",
-    "447":  "ice carol ii",
-    "448":  "wind carol ii",
-    "449":  "earth carol ii",
-    "450":  "lightning carol ii",
-    "451":  "water carol ii",
-    "452":  "light carol ii",
-    "453":  "dark carol ii",
-    "454":  "fire threnody",
-    "455":  "ice threnody",
-    "456":  "wind threnody",
-    "457":  "earth threnody",
-    "458":  "lightning threnody",
-    "459":  "water threnody",
-    "460":  "light threnody",
-    "461":  "dark threnody",
-    "462":  "magic finale",
-    "463":  "foe lullaby",
-    "464":  "goddesss hymnus",
-    "465":  "chocobo mazurka",
-    "466":  "maidens virelai",
-    "467":  "raptor mazurka",
-    "468":  "foe sirvente",
-    "469":  "adventurers dirge",
-    "470":  "sentinels scherzo",
-    "471":  "foe lullaby ii",
-    "472":  "pining nocturne",
-    "473":  "refresh ii",
-    "474":  "cura ii",
-    "475":  "cura iii",
-    "476":  "crusade",
-    "477":  "regen iv",
-    "478":  "embrava",
-    "479":  "boost-str",
-    "480":  "boost-dex",
-    "481":  "boost-vit",
-    "482":  "boost-agi",
-    "483":  "boost-int",
-    "484":  "boost-mnd",
-    "485":  "boost-chr",
-    "486":  "gain-str",
-    "487":  "gain-dex",
-    "488":  "gain-vit",
-    "489":  "gain-agi",
-    "490":  "gain-int",
-    "491":  "gain-mnd",
-    "492":  "gain-chr",
-    "493":  "temper",
-    "494":  "arise",
-    "495":  "adloquium",
-    "496":  "firaja",
-    "497":  "blizzaja",
-    "498":  "aeroja",
-    "499":  "stoneja",
-    "500":  "thundaja",
-    "501":  "waterja",
-    "502":  "kaustra",
-    "503":  "impact",
-    "504":  "regen v",
-    "505":  "gekka ichi",
-    "506":  "yain ichi",
-    "507":  "myoshu ichi",
-    "508":  "yurin ichi",
-    "509":  "kakka ichi",
-    "510":  "migawari ichi",
-    "511":  "haste ii",
-    "513":  "venom shell",
-    "515":  "maelstrom",
-    "517":  "metallic body",
-    "519":  "screwdriver",
-    "521":  "mp drainkiss",
-    "522":  "death ray",
-    "524":  "sandspin",
-    "527":  "smite of rage",
-    "529":  "bludgeon",
-    "530":  "refueling",
-    "531":  "ice break",
-    "532":  "blitzstrahl",
-    "533":  "self-destruct",
-    "534":  "mysterious light",
-    "535":  "cold wave",
-    "536":  "poison breath",
-    "537":  "stinking gas",
-    "538":  "memento mori",
-    "539":  "terror touch",
-    "540":  "spinal cleave",
-    "541":  "blood saber",
-    "542":  "digest",
-    "543":  "mandibular bite",
-    "544":  "cursed sphere",
-    "545":  "sickle slash",
-    "547":  "cocoon",
-    "548":  "filamented hold",
-    "549":  "pollen",
-    "551":  "power attack",
-    "554":  "death scissors",
-    "555":  "magnetite cloud",
-    "557":  "eyes on me",
-    "560":  "frenetic rip",
-    "561":  "frightful roar",
-    "563":  "hecatomb wave",
-    "564":  "body slam",
-    "565":  "radiant breath",
-    "567":  "helldive",
-    "569":  "jet stream",
-    "570":  "blood drain",
-    "572":  "sound blast",
-    "573":  "feather tickle",
-    "574":  "feather barrier",
-    "575":  "jettatura",
-    "576":  "yawn",
-    "577":  "foot kick",
-    "578":  "wild carrot",
-    "579":  "voracious trunk",
-    "581":  "healing breeze",
-    "582":  "chaotic eye",
-    "584":  "sheep song",
-    "585":  "ram charge",
-    "587":  "claw cyclone",
-    "588":  "lowing",
-    "589":  "dimensional death",
-    "591":  "heat breath",
-    "592":  "blank gaze",
-    "593":  "magic fruit",
-    "594":  "uppercut",
-    "595":  "1000 needles",
-    "596":  "pinecone bomb",
-    "597":  "sprout smack",
-    "598":  "soporific",
-    "599":  "queasyshroom",
-    "603":  "wild oats",
-    "604":  "bad breath",
-    "605":  "geist wall",
-    "606":  "awful eye",
-    "608":  "frost breath",
-    "610":  "infrasonics",
-    "611":  "disseverment",
-    "612":  "actinic burst",
-    "613":  "reactor cool",
-    "614":  "saline coat",
-    "615":  "plasma charge",
-    "616":  "temporal shift",
-    "617":  "vertical cleave",
-    "618":  "blastbomb",
-    "620":  "battle dance",
-    "621":  "sandspray",
-    "622":  "grand slam",
-    "623":  "head butt",
-    "626":  "bomb toss",
-    "628":  "frypan",
-    "629":  "flying hip press",
-    "631":  "hydro shot",
-    "632":  "diamondhide",
-    "633":  "enervation",
-    "634":  "light of penance",
-    "636":  "warm-up",
-    "637":  "firespit",
-    "638":  "feather storm",
-    "640":  "tail slap",
-    "641":  "hysteric barrage",
-    "642":  "amplification",
-    "643":  "cannonball",
-    "644":  "mind blast",
-    "645":  "exuviation",
-    "646":  "magic hammer",
-    "647":  "zephyr mantle",
-    "648":  "regurgitation",
-    "650":  "seedspray",
-    "651":  "corrosive ooze",
-    "652":  "spiral spin",
-    "653":  "asuran claws",
-    "654":  "sub-zero smash",
-    "655":  "triumphant roar",
-    "656":  "acrid stream",
-    "657":  "blazing bound",
-    "658":  "plenilune embrace",
-    "659":  "demoralizing roar",
-    "660":  "cimicine discharge",
-    "661":  "animating wail",
-    "662":  "battery charge",
-    "663":  "leafstorm",
-    "664":  "regeneration",
-    "665":  "final sting",
-    "666":  "goblin rush",
-    "667":  "vanity dive",
-    "668":  "magic barrier",
-    "669":  "whirl of rage",
-    "670":  "benthic typhoon",
-    "671":  "auroral drape",
-    "672":  "osmosis",
-    "673":  "quad continuum",
-    "674":  "fantod",
-    "675":  "thermal pulse",
-    "677":  "empty thrash",
-    "678":  "dream flower",
-    "679":  "occultation",
-    "680":  "charged whisker",
-    "681":  "winds of promy",
-    "682":  "delta thrust",
-    "683":  "evryone grudge",
-    "684":  "reaving wind",
-    "685":  "barrier tusk",
-    "686":  "mortal ray",
-    "687":  "water bomb",
-    "688":  "heavy strike",
-    "689":  "dark orb",
-    "690":  "white wind",
-    "692":  "sudden lunge",
-    "693":  "quadrastrike",
-    "694":  "vapor spray",
-    "695":  "thunder breath",
-    "696":  "orcish counterstance",
-    "697":  "amorphic spikes",
-    "698":  "wind breath",
-    "699":  "barbed crescent",
-    "700":  "natures meditation",
-    "701":  "tempestuous upheaval",
-    "702":  "rending deluge",
-    "703":  "embalming earth",
-    "704":  "paralyzing triad",
-    "705":  "foul waters",
-    "706":  "glutinous dart",
-    "707":  "retinal glare",
-    "708":  "subduction",
-    "709":  "thrashing assault",
-    "710":  "erratic flutter",
-    "711":  "restoral",
-    "712":  "rail cannon",
-    "713":  "diffusion ray",
-    "714":  "sinker drill",
-    "736":  "thunderbolt",
-    "737":  "harden shell",
-    "738":  "absolute terror",
-    "739":  "gates of hades",
-    "740":  "tourbillion",
-    "741":  "pyric bulwark",
-    "742":  "bilgestorm",
-    "743":  "bloodrake",
-    "744":  "droning whirlwind",
-    "745":  "carcharian verve",
-    "746":  "blistering roar",
-    "768":  "indi-regen",
-    "769":  "indi-poison",
-    "770":  "indi-refresh",
-    "771":  "indi-haste",
-    "772":  "indi-str",
-    "773":  "indi-dex",
-    "774":  "indi-vit",
-    "775":  "indi-agi",
-    "776":  "indi-int",
-    "777":  "indi-mnd",
-    "778":  "indi-chr",
-    "779":  "indi-fury",
-    "780":  "indi-barrier",
-    "781":  "indi-acumen",
-    "782":  "indi-fend",
-    "783":  "indi-precision",
-    "784":  "indi-voidance",
-    "785":  "indi-focus",
-    "786":  "indi-attunement",
-    "787":  "indi-wilt",
-    "788":  "indi-frailty",
-    "789":  "indi-fade",
-    "790":  "indi-malaise",
-    "791":  "indi-slip",
-    "792":  "indi-torpor",
-    "793":  "indi-vex",
-    "794":  "indi-languor",
-    "795":  "indi-slow",
-    "796":  "indi-paralysis",
-    "797":  "indi-gravity",
-    "798":  "geo-regen",
-    "799":  "geo-poison",
-    "800":  "geo-refresh",
-    "801":  "geo-haste",
-    "802":  "geo-str",
-    "803":  "geo-dex",
-    "804":  "geo-vit",
-    "805":  "geo-agi",
-    "806":  "geo-int",
-    "807":  "geo-mnd",
-    "808":  "geo-chr",
-    "809":  "geo-fury",
-    "810":  "geo-barrier",
-    "811":  "geo-acumen",
-    "812":  "geo-fend",
-    "813":  "geo-precision",
-    "814":  "geo-voidance",
-    "815":  "geo-focus",
-    "816":  "geo-attunement",
-    "817":  "geo-wilt",
-    "818":  "geo-frailty",
-    "819":  "geo-fade",
-    "820":  "geo-malaise",
-    "821":  "geo-slip",
-    "822":  "geo-torpor",
-    "823":  "geo-vex",
-    "824":  "geo-languor",
-    "825":  "geo-slow",
-    "826":  "geo-paralysis",
-    "827":  "geo-gravity",
-    "828":  "fira",
-    "829":  "fira ii",
-    "830":  "blizzara",
-    "831":  "blizzara ii",
-    "832":  "aera",
-    "833":  "aera ii",
-    "834":  "stonera",
-    "835":  "stonera ii",
-    "836":  "thundara",
-    "837":  "thundara ii",
-    "838":  "watera",
-    "839":  "watera ii",
-    "840":  "foil",
-    "841":  "distract",
-    "842":  "distract ii",
-    "843":  "frazzle",
-    "844":  "frazzle ii",
-    "845":  "flurry",
-    "846":  "flurry ii",
-    "847":  "atomos",
-    "848":  "reraise iv",
-    "849":  "fire vi",
-    "850":  "blizzard vi",
-    "851":  "aero vi",
-    "852":  "stone vi",
-    "853":  "thunder vi",
-    "854":  "water vi",
-    "855":  "enlight ii",
-    "856":  "endark ii",
-    "857":  "sandstorm ii",
-    "858":  "rainstorm ii",
-    "859":  "windstorm ii",
-    "860":  "firestorm ii",
-    "861":  "hailstorm ii",
-    "862":  "thunderstorm ii",
-    "863":  "voidstorm ii",
-    "864":  "aurorastorm ii",
-    "871":  "fire threnody ii",
-    "872":  "ice threnody ii",
-    "873":  "wind threnody ii",
-    "874":  "earth threnody ii",
-    "875":  "ltng threnody ii",
-    "876":  "water threnody ii",
-    "877":  "light threnody ii",
-    "878":  "dark threnody ii",
-    "879":  "inundation",
-    "880":  "drain iii",
-    "881":  "aspir iii",
-    "882":  "distract iii",
-    "883":  "frazzle iii",
-    "884":  "addle ii",
-    "885":  "geohelix ii",
-    "886":  "hydrohelix ii",
-    "887":  "anemohelix ii",
-    "888":  "pyrohelix ii",
-    "889":  "cryohelix ii",
-    "890":  "ionohelix ii",
-    "891":  "noctohelix ii",
-    "892":  "luminohelix ii",
-    "893":  "full cure",
-    "894":  "refresh iii",
-    "895":  "temper ii",
-    "896":  "shantotto",
-    "897":  "naji",
-    "898":  "kupipi",
-    "899":  "excenmille",
-    "900":  "ayame",
-    "901":  "nanaa mihgo",
-    "902":  "curilla",
-    "903":  "volker",
-    "904":  "ajido-marujido",
-    "905":  "trion",
-    "906":  "zeid",
-    "907":  "lion",
-    "908":  "tenzen",
-    "909":  "mihli aliapoh",
-    "910":  "valaineral",
-    "911":  "joachim",
-    "912":  "naja salaheem",
-    "913":  "prishe",
-    "914":  "ulmia",
-    "915":  "shikaree z",
-    "916":  "cherukiki",
-    "917":  "iron eater",
-    "918":  "gessho",
-    "919":  "gadalar",
-    "920":  "rainemard",
-    "921":  "ingrid",
-    "922":  "lehko habhoka",
-    "923":  "nashmeira",
-    "924":  "zazarg",
-    "925":  "ovjang",
-    "926":  "mnejing",
-    "927":  "sakura",
-    "928":  "luzaf",
-    "929":  "najelith",
-    "930":  "aldo",
-    "931":  "moogle",
-    "932":  "fablinix",
-    "933":  "maat",
-    "934":  "d shantotto",
-    "935":  "star sibyl",
-    "936":  "karaha-baruha",
-    "937":  "cid",
-    "938":  "gilgamesh",
-    "939":  "areuhat",
-    "940":  "semih lafihna",
-    "941":  "elivira",
-    "942":  "noillurie",
-    "943":  "lhu mhakaracca",
-    "944":  "ferreous coffin",
-    "945":  "lilisette",
-    "946":  "mumor",
-    "947":  "uka totlihn",
-    "948":  "klara",
-    "949":  "romaa mihgo",
-    "950":  "kuyin hathdenna",
-    "951":  "rahal",
-    "952":  "koru-moru",
-    "953":  "pieuje uc",
-    "954":  "i shield uc",
-    "955":  "apururu uc",
-    "956":  "jakoh uc",
-    "957":  "flaviria uc",
-    "958":  "babban",
-    "959":  "abenzio",
-    "960":  "rughadjeen",
-    "961":  "kukki-chebukki",
-    "962":  "margret",
-    "963":  "chacharoon",
-    "964":  "lhe lhangavo",
-    "965":  "arciela",
-    "966":  "mayakov",
-    "967":  "qultada",
-    "968":  "adelheid",
-    "969":  "amchuchu",
-    "970":  "brygid",
-    "971":  "mildaurion",
-    "972":  "halver",
-    "973":  "rongelouts",
-    "974":  "leonoyne",
-    "975":  "maximilian",
-    "976":  "kayeel-payeel",
-    "977":  "robel-akbel",
-    "978":  "kupofried",
-    "979":  "selh teus",
-    "980":  "yoran-oran uc",
-    "981":  "sylvie uc",
-    "982":  "abquhbah",
-    "983":  "balamor",
-    "984":  "august",
-    "985":  "rosulatia",
-    "986":  "teodor",
-    "987":  "ullegore",
-    "988":  "makki-chebukki",
-    "989":  "king of hearts",
-    "990":  "morimar",
-    "991":  "darrcuiln",
-    "992":  "aahm",
-    "993":  "aaev",
-    "994":  "aamr",
-    "995":  "aatt",
-    "996":  "aagk",
-    "997":  "iroha",
-    "998":  "ygnas",
-    "999":  "monberaux",
-    "1004":  "excenmille s",
-    "1005":  "ayame uc",
-    "1006":  "maat uc",
-    "1007":  "aldo uc",
-    "1008":  "naja uc",
-    "1009":  "lion ii",
-    "1010":  "zeid ii",
-    "1011":  "prishe ii",
-    "1012":  "nashmeira ii",
-    "1013":  "lilisette ii",
-    "1014":  "tenzen ii",
-    "1015":  "mumor ii",
-    "1016":  "ingrid ii",
-    "1017":  "arciela ii",
-    "1018":  "iroha ii",
-    "1019":  "shantotto ii"
+{
+  "1": {
+    "name": "cure",
+    "mpCost": 8
+  },
+  "2": {
+    "name": "cure ii",
+    "mpCost": 24
+  },
+  "3": {
+    "name": "cure iii",
+    "mpCost": 46
+  },
+  "4": {
+    "name": "cure iv",
+    "mpCost": 88
+  },
+  "5": {
+    "name": "cure v",
+    "mpCost": 135
+  },
+  "6": {
+    "name": "cure vi",
+    "mpCost": 227
+  },
+  "7": {
+    "name": "curaga",
+    "mpCost": 60
+  },
+  "8": {
+    "name": "curaga ii",
+    "mpCost": 120
+  },
+  "9": {
+    "name": "curaga iii",
+    "mpCost": 180
+  },
+  "10": {
+    "name": "curaga iv",
+    "mpCost": 260
+  },
+  "11": {
+    "name": "curaga v",
+    "mpCost": 380
+  },
+  "12": {
+    "name": "raise",
+    "mpCost": 150
+  },
+  "13": {
+    "name": "raise ii",
+    "mpCost": 150
+  },
+  "14": {
+    "name": "poisona",
+    "mpCost": 8
+  },
+  "15": {
+    "name": "paralyna",
+    "mpCost": 12
+  },
+  "16": {
+    "name": "blindna",
+    "mpCost": 16
+  },
+  "17": {
+    "name": "silena",
+    "mpCost": 24
+  },
+  "18": {
+    "name": "stona",
+    "mpCost": 40
+  },
+  "19": {
+    "name": "viruna",
+    "mpCost": 48
+  },
+  "20": {
+    "name": "cursna",
+    "mpCost": 30
+  },
+  "21": {
+    "name": "holy",
+    "mpCost": 100
+  },
+  "22": {
+    "name": "holy ii",
+    "mpCost": 150
+  },
+  "23": {
+    "name": "dia",
+    "mpCost": 7
+  },
+  "24": {
+    "name": "dia ii",
+    "mpCost": 30
+  },
+  "25": {
+    "name": "dia iii",
+    "mpCost": 45
+  },
+  "26": {
+    "name": "dia iv",
+    "mpCost": 164
+  },
+  "27": {
+    "name": "dia v",
+    "mpCost": 217
+  },
+  "28": {
+    "name": "banish",
+    "mpCost": 15
+  },
+  "29": {
+    "name": "banish ii",
+    "mpCost": 57
+  },
+  "30": {
+    "name": "banish iii",
+    "mpCost": 96
+  },
+  "31": {
+    "name": "banish iv",
+    "mpCost": 108
+  },
+  "32": {
+    "name": "banish v",
+    "mpCost": 159
+  },
+  "33": {
+    "name": "diaga",
+    "mpCost": 12
+  },
+  "34": {
+    "name": "diaga ii",
+    "mpCost": 60
+  },
+  "35": {
+    "name": "diaga iii",
+    "mpCost": 120
+  },
+  "36": {
+    "name": "diaga iv",
+    "mpCost": 180
+  },
+  "37": {
+    "name": "diaga v",
+    "mpCost": 240
+  },
+  "38": {
+    "name": "banishga",
+    "mpCost": 41
+  },
+  "39": {
+    "name": "banishga ii",
+    "mpCost": 120
+  },
+  "40": {
+    "name": "banishga iii",
+    "mpCost": 233
+  },
+  "41": {
+    "name": "banishga iv",
+    "mpCost": 380
+  },
+  "42": {
+    "name": "banishga v",
+    "mpCost": 563
+  },
+  "43": {
+    "name": "protect",
+    "mpCost": 9
+  },
+  "44": {
+    "name": "protect ii",
+    "mpCost": 28
+  },
+  "45": {
+    "name": "protect iii",
+    "mpCost": 46
+  },
+  "46": {
+    "name": "protect iv",
+    "mpCost": 65
+  },
+  "47": {
+    "name": "protect v",
+    "mpCost": 84
+  },
+  "48": {
+    "name": "shell",
+    "mpCost": 18
+  },
+  "49": {
+    "name": "shell ii",
+    "mpCost": 37
+  },
+  "50": {
+    "name": "shell iii",
+    "mpCost": 56
+  },
+  "51": {
+    "name": "shell iv",
+    "mpCost": 75
+  },
+  "52": {
+    "name": "shell v",
+    "mpCost": 93
+  },
+  "53": {
+    "name": "blink",
+    "mpCost": 20
+  },
+  "54": {
+    "name": "stoneskin",
+    "mpCost": 29
+  },
+  "55": {
+    "name": "aquaveil",
+    "mpCost": 12
+  },
+  "56": {
+    "name": "slow",
+    "mpCost": 15
+  },
+  "57": {
+    "name": "haste",
+    "mpCost": 40
+  },
+  "58": {
+    "name": "paralyze",
+    "mpCost": 6
+  },
+  "59": {
+    "name": "silence",
+    "mpCost": 16
+  },
+  "60": {
+    "name": "barfire",
+    "mpCost": 6
+  },
+  "61": {
+    "name": "barblizzard",
+    "mpCost": 6
+  },
+  "62": {
+    "name": "baraero",
+    "mpCost": 6
+  },
+  "63": {
+    "name": "barstone",
+    "mpCost": 6
+  },
+  "64": {
+    "name": "barthunder",
+    "mpCost": 6
+  },
+  "65": {
+    "name": "barwater",
+    "mpCost": 6
+  },
+  "66": {
+    "name": "barfira",
+    "mpCost": 12
+  },
+  "67": {
+    "name": "barblizzara",
+    "mpCost": 12
+  },
+  "68": {
+    "name": "baraera",
+    "mpCost": 12
+  },
+  "69": {
+    "name": "barstonra",
+    "mpCost": 12
+  },
+  "70": {
+    "name": "barthundra",
+    "mpCost": 12
+  },
+  "71": {
+    "name": "barwatera",
+    "mpCost": 12
+  },
+  "72": {
+    "name": "barsleep",
+    "mpCost": 7
+  },
+  "73": {
+    "name": "barpoison",
+    "mpCost": 9
+  },
+  "74": {
+    "name": "barparalyze",
+    "mpCost": 11
+  },
+  "75": {
+    "name": "barblind",
+    "mpCost": 13
+  },
+  "76": {
+    "name": "barsilence",
+    "mpCost": 15
+  },
+  "77": {
+    "name": "barpetrify",
+    "mpCost": 20
+  },
+  "78": {
+    "name": "barvirus",
+    "mpCost": 25
+  },
+  "79": {
+    "name": "slow ii",
+    "mpCost": 45
+  },
+  "80": {
+    "name": "paralyze ii",
+    "mpCost": 36
+  },
+  "81": {
+    "name": "recall-jugner",
+    "mpCost": 125
+  },
+  "82": {
+    "name": "recall-pashh",
+    "mpCost": 125
+  },
+  "83": {
+    "name": "recall-meriph",
+    "mpCost": 125
+  },
+  "84": {
+    "name": "baramnesia",
+    "mpCost": 30
+  },
+  "85": {
+    "name": "baramnesra",
+    "mpCost": 60
+  },
+  "86": {
+    "name": "barsleepra",
+    "mpCost": 14
+  },
+  "87": {
+    "name": "barpoisonra",
+    "mpCost": 18
+  },
+  "88": {
+    "name": "barparalyzra",
+    "mpCost": 22
+  },
+  "89": {
+    "name": "barblindra",
+    "mpCost": 26
+  },
+  "90": {
+    "name": "barsilencera",
+    "mpCost": 30
+  },
+  "91": {
+    "name": "barpetra",
+    "mpCost": 40
+  },
+  "92": {
+    "name": "barvira",
+    "mpCost": 50
+  },
+  "93": {
+    "name": "cura",
+    "mpCost": 30
+  },
+  "94": {
+    "name": "sacrifice",
+    "mpCost": 18
+  },
+  "95": {
+    "name": "esuna",
+    "mpCost": 24
+  },
+  "96": {
+    "name": "auspice",
+    "mpCost": 48
+  },
+  "97": {
+    "name": "reprisal",
+    "mpCost": 24
+  },
+  "98": {
+    "name": "repose",
+    "mpCost": 26
+  },
+  "99": {
+    "name": "sandstorm",
+    "mpCost": 30
+  },
+  "100": {
+    "name": "enfire",
+    "mpCost": 12
+  },
+  "101": {
+    "name": "enblizzard",
+    "mpCost": 12
+  },
+  "102": {
+    "name": "enaero",
+    "mpCost": 12
+  },
+  "103": {
+    "name": "enstone",
+    "mpCost": 12
+  },
+  "104": {
+    "name": "enthunder",
+    "mpCost": 12
+  },
+  "105": {
+    "name": "enwater",
+    "mpCost": 12
+  },
+  "106": {
+    "name": "phalanx",
+    "mpCost": 21
+  },
+  "107": {
+    "name": "phalanx ii",
+    "mpCost": 42
+  },
+  "108": {
+    "name": "regen",
+    "mpCost": 15
+  },
+  "109": {
+    "name": "refresh",
+    "mpCost": 40
+  },
+  "110": {
+    "name": "regen ii",
+    "mpCost": 36
+  },
+  "111": {
+    "name": "regen iii",
+    "mpCost": 64
+  },
+  "112": {
+    "name": "flash",
+    "mpCost": 25
+  },
+  "113": {
+    "name": "rainstorm",
+    "mpCost": 30
+  },
+  "114": {
+    "name": "windstorm",
+    "mpCost": 30
+  },
+  "115": {
+    "name": "firestorm",
+    "mpCost": 30
+  },
+  "116": {
+    "name": "hailstorm",
+    "mpCost": 30
+  },
+  "117": {
+    "name": "thunderstorm",
+    "mpCost": 30
+  },
+  "118": {
+    "name": "voidstorm",
+    "mpCost": 30
+  },
+  "119": {
+    "name": "aurorastorm",
+    "mpCost": 30
+  },
+  "120": {
+    "name": "teleport-yhoat",
+    "mpCost": 100
+  },
+  "121": {
+    "name": "teleport-altep",
+    "mpCost": 100
+  },
+  "122": {
+    "name": "teleport-holla",
+    "mpCost": 75
+  },
+  "123": {
+    "name": "teleport-dem",
+    "mpCost": 75
+  },
+  "124": {
+    "name": "teleport-mea",
+    "mpCost": 75
+  },
+  "125": {
+    "name": "protectra",
+    "mpCost": 9
+  },
+  "126": {
+    "name": "protectra ii",
+    "mpCost": 28
+  },
+  "127": {
+    "name": "protectra iii",
+    "mpCost": 46
+  },
+  "128": {
+    "name": "protectra iv",
+    "mpCost": 65
+  },
+  "129": {
+    "name": "protectra v",
+    "mpCost": 84
+  },
+  "130": {
+    "name": "shellra",
+    "mpCost": 18
+  },
+  "131": {
+    "name": "shellra ii",
+    "mpCost": 37
+  },
+  "132": {
+    "name": "shellra iii",
+    "mpCost": 56
+  },
+  "133": {
+    "name": "shellra iv",
+    "mpCost": 75
+  },
+  "134": {
+    "name": "shellra v",
+    "mpCost": 93
+  },
+  "135": {
+    "name": "reraise",
+    "mpCost": 150
+  },
+  "136": {
+    "name": "invisible",
+    "mpCost": 15
+  },
+  "137": {
+    "name": "sneak",
+    "mpCost": 12
+  },
+  "138": {
+    "name": "deodorize",
+    "mpCost": 10
+  },
+  "139": {
+    "name": "teleport-vahzl",
+    "mpCost": 100
+  },
+  "140": {
+    "name": "raise iii",
+    "mpCost": 150
+  },
+  "141": {
+    "name": "reraise ii",
+    "mpCost": 150
+  },
+  "142": {
+    "name": "reraise iii",
+    "mpCost": 150
+  },
+  "143": {
+    "name": "erase",
+    "mpCost": 18
+  },
+  "144": {
+    "name": "fire",
+    "mpCost": 7
+  },
+  "145": {
+    "name": "fire ii",
+    "mpCost": 26
+  },
+  "146": {
+    "name": "fire iii",
+    "mpCost": 63
+  },
+  "147": {
+    "name": "fire iv",
+    "mpCost": 135
+  },
+  "148": {
+    "name": "fire v",
+    "mpCost": 228
+  },
+  "149": {
+    "name": "blizzard",
+    "mpCost": 8
+  },
+  "150": {
+    "name": "blizzard ii",
+    "mpCost": 31
+  },
+  "151": {
+    "name": "blizzard iii",
+    "mpCost": 75
+  },
+  "152": {
+    "name": "blizzard iv",
+    "mpCost": 162
+  },
+  "153": {
+    "name": "blizzard v",
+    "mpCost": 267
+  },
+  "154": {
+    "name": "aero",
+    "mpCost": 6
+  },
+  "155": {
+    "name": "aero ii",
+    "mpCost": 22
+  },
+  "156": {
+    "name": "aero iii",
+    "mpCost": 54
+  },
+  "157": {
+    "name": "aero iv",
+    "mpCost": 115
+  },
+  "158": {
+    "name": "aero v",
+    "mpCost": 198
+  },
+  "159": {
+    "name": "stone",
+    "mpCost": 4
+  },
+  "160": {
+    "name": "stone ii",
+    "mpCost": 16
+  },
+  "161": {
+    "name": "stone iii",
+    "mpCost": 40
+  },
+  "162": {
+    "name": "stone iv",
+    "mpCost": 88
+  },
+  "163": {
+    "name": "stone v",
+    "mpCost": 156
+  },
+  "164": {
+    "name": "thunder",
+    "mpCost": 9
+  },
+  "165": {
+    "name": "thunder ii",
+    "mpCost": 37
+  },
+  "166": {
+    "name": "thunder iii",
+    "mpCost": 91
+  },
+  "167": {
+    "name": "thunder iv",
+    "mpCost": 195
+  },
+  "168": {
+    "name": "thunder v",
+    "mpCost": 306
+  },
+  "169": {
+    "name": "water",
+    "mpCost": 5
+  },
+  "170": {
+    "name": "water ii",
+    "mpCost": 19
+  },
+  "171": {
+    "name": "water iii",
+    "mpCost": 46
+  },
+  "172": {
+    "name": "water iv",
+    "mpCost": 99
+  },
+  "173": {
+    "name": "water v",
+    "mpCost": 175
+  },
+  "174": {
+    "name": "firaga",
+    "mpCost": 57
+  },
+  "175": {
+    "name": "firaga ii",
+    "mpCost": 153
+  },
+  "176": {
+    "name": "firaga iii",
+    "mpCost": 263
+  },
+  "177": {
+    "name": "firaga iv",
+    "mpCost": 428
+  },
+  "178": {
+    "name": "firaga v",
+    "mpCost": 610
+  },
+  "179": {
+    "name": "blizzaga",
+    "mpCost": 80
+  },
+  "180": {
+    "name": "blizzaga ii",
+    "mpCost": 175
+  },
+  "181": {
+    "name": "blizzaga iii",
+    "mpCost": 297
+  },
+  "182": {
+    "name": "blizzaga iv",
+    "mpCost": 455
+  },
+  "183": {
+    "name": "blizzaga v",
+    "mpCost": 642
+  },
+  "184": {
+    "name": "aeroga",
+    "mpCost": 45
+  },
+  "185": {
+    "name": "aeroga ii",
+    "mpCost": 131
+  },
+  "186": {
+    "name": "aeroga iii",
+    "mpCost": 232
+  },
+  "187": {
+    "name": "aeroga iv",
+    "mpCost": 396
+  },
+  "188": {
+    "name": "aeroga v",
+    "mpCost": 571
+  },
+  "189": {
+    "name": "stonega",
+    "mpCost": 24
+  },
+  "190": {
+    "name": "stonega ii",
+    "mpCost": 93
+  },
+  "191": {
+    "name": "stonega iii",
+    "mpCost": 175
+  },
+  "192": {
+    "name": "stonega iv",
+    "mpCost": 345
+  },
+  "193": {
+    "name": "stonega v",
+    "mpCost": 512
+  },
+  "194": {
+    "name": "thundaga",
+    "mpCost": 105
+  },
+  "195": {
+    "name": "thundaga ii",
+    "mpCost": 200
+  },
+  "196": {
+    "name": "thundaga iii",
+    "mpCost": 332
+  },
+  "197": {
+    "name": "thundaga iv",
+    "mpCost": 483
+  },
+  "198": {
+    "name": "thundaga v",
+    "mpCost": 674
+  },
+  "199": {
+    "name": "waterga",
+    "mpCost": 34
+  },
+  "200": {
+    "name": "waterga ii",
+    "mpCost": 112
+  },
+  "201": {
+    "name": "waterga iii",
+    "mpCost": 202
+  },
+  "202": {
+    "name": "waterga iv",
+    "mpCost": 371
+  },
+  "203": {
+    "name": "waterga v",
+    "mpCost": 541
+  },
+  "204": {
+    "name": "flare",
+    "mpCost": 315
+  },
+  "205": {
+    "name": "flare ii",
+    "mpCost": 280
+  },
+  "206": {
+    "name": "freeze",
+    "mpCost": 315
+  },
+  "207": {
+    "name": "freeze ii",
+    "mpCost": 280
+  },
+  "208": {
+    "name": "tornado",
+    "mpCost": 315
+  },
+  "209": {
+    "name": "tornado ii",
+    "mpCost": 280
+  },
+  "210": {
+    "name": "quake",
+    "mpCost": 315
+  },
+  "211": {
+    "name": "quake ii",
+    "mpCost": 280
+  },
+  "212": {
+    "name": "burst",
+    "mpCost": 315
+  },
+  "213": {
+    "name": "burst ii",
+    "mpCost": 280
+  },
+  "214": {
+    "name": "flood",
+    "mpCost": 315
+  },
+  "215": {
+    "name": "flood ii",
+    "mpCost": 280
+  },
+  "216": {
+    "name": "gravity",
+    "mpCost": 24
+  },
+  "217": {
+    "name": "gravity ii",
+    "mpCost": 36
+  },
+  "218": {
+    "name": "meteor",
+    "mpCost": 418
+  },
+  "219": {
+    "name": "comet",
+    "mpCost": 350
+  },
+  "220": {
+    "name": "poison",
+    "mpCost": 5
+  },
+  "221": {
+    "name": "poison ii",
+    "mpCost": 38
+  },
+  "222": {
+    "name": "poison iii",
+    "mpCost": 72
+  },
+  "223": {
+    "name": "poison iv",
+    "mpCost": 106
+  },
+  "224": {
+    "name": "poison v",
+    "mpCost": 140
+  },
+  "225": {
+    "name": "poisonga",
+    "mpCost": 44
+  },
+  "226": {
+    "name": "poisonga ii",
+    "mpCost": 112
+  },
+  "227": {
+    "name": "poisonga iii",
+    "mpCost": 180
+  },
+  "228": {
+    "name": "poisonga iv",
+    "mpCost": 248
+  },
+  "229": {
+    "name": "poisonga v",
+    "mpCost": 314
+  },
+  "230": {
+    "name": "bio",
+    "mpCost": 15
+  },
+  "231": {
+    "name": "bio ii",
+    "mpCost": 36
+  },
+  "232": {
+    "name": "bio iii",
+    "mpCost": 54
+  },
+  "233": {
+    "name": "bio iv",
+    "mpCost": 154
+  },
+  "234": {
+    "name": "bio v",
+    "mpCost": 197
+  },
+  "235": {
+    "name": "burn",
+    "mpCost": 25
+  },
+  "236": {
+    "name": "frost",
+    "mpCost": 25
+  },
+  "237": {
+    "name": "choke",
+    "mpCost": 25
+  },
+  "238": {
+    "name": "rasp",
+    "mpCost": 25
+  },
+  "239": {
+    "name": "shock",
+    "mpCost": 25
+  },
+  "240": {
+    "name": "drown",
+    "mpCost": 25
+  },
+  "241": {
+    "name": "retrace",
+    "mpCost": 150
+  },
+  "242": {
+    "name": "absorb-acc",
+    "mpCost": 33
+  },
+  "243": {
+    "name": "absorb-attri",
+    "mpCost": 33
+  },
+  "244": {
+    "name": "meteor ii",
+    "mpCost": 666
+  },
+  "245": {
+    "name": "drain",
+    "mpCost": 21
+  },
+  "246": {
+    "name": "drain ii",
+    "mpCost": 37
+  },
+  "247": {
+    "name": "aspir",
+    "mpCost": 10
+  },
+  "248": {
+    "name": "aspir ii",
+    "mpCost": 5
+  },
+  "249": {
+    "name": "blaze spikes",
+    "mpCost": 8
+  },
+  "250": {
+    "name": "ice spikes",
+    "mpCost": 16
+  },
+  "251": {
+    "name": "shock spikes",
+    "mpCost": 24
+  },
+  "252": {
+    "name": "stun",
+    "mpCost": 25
+  },
+  "253": {
+    "name": "sleep",
+    "mpCost": 19
+  },
+  "254": {
+    "name": "blind",
+    "mpCost": 5
+  },
+  "255": {
+    "name": "break",
+    "mpCost": 39
+  },
+  "256": {
+    "name": "virus",
+    "mpCost": 39
+  },
+  "257": {
+    "name": "curse",
+    "mpCost": 39
+  },
+  "258": {
+    "name": "bind",
+    "mpCost": 8
+  },
+  "259": {
+    "name": "sleep ii",
+    "mpCost": 29
+  },
+  "260": {
+    "name": "dispel",
+    "mpCost": 25
+  },
+  "261": {
+    "name": "warp",
+    "mpCost": 100
+  },
+  "262": {
+    "name": "warp ii",
+    "mpCost": 150
+  },
+  "263": {
+    "name": "escape",
+    "mpCost": 125
+  },
+  "264": {
+    "name": "tractor",
+    "mpCost": 26
+  },
+  "265": {
+    "name": "tractor ii",
+    "mpCost": 50
+  },
+  "266": {
+    "name": "absorb-str",
+    "mpCost": 33
+  },
+  "267": {
+    "name": "absorb-dex",
+    "mpCost": 33
+  },
+  "268": {
+    "name": "absorb-vit",
+    "mpCost": 33
+  },
+  "269": {
+    "name": "absorb-agi",
+    "mpCost": 33
+  },
+  "270": {
+    "name": "absorb-int",
+    "mpCost": 33
+  },
+  "271": {
+    "name": "absorb-mnd",
+    "mpCost": 33
+  },
+  "272": {
+    "name": "absorb-chr",
+    "mpCost": 33
+  },
+  "273": {
+    "name": "sleepga",
+    "mpCost": 38
+  },
+  "274": {
+    "name": "sleepga ii",
+    "mpCost": 58
+  },
+  "275": {
+    "name": "absorb-tp",
+    "mpCost": 33
+  },
+  "276": {
+    "name": "blind ii",
+    "mpCost": 31
+  },
+  "277": {
+    "name": "dread spikes",
+    "mpCost": 78
+  },
+  "278": {
+    "name": "geohelix",
+    "mpCost": 26
+  },
+  "279": {
+    "name": "hydrohelix",
+    "mpCost": 26
+  },
+  "280": {
+    "name": "anemohelix",
+    "mpCost": 26
+  },
+  "281": {
+    "name": "pyrohelix",
+    "mpCost": 26
+  },
+  "282": {
+    "name": "cryohelix",
+    "mpCost": 26
+  },
+  "283": {
+    "name": "ionohelix",
+    "mpCost": 26
+  },
+  "284": {
+    "name": "noctohelix",
+    "mpCost": 26
+  },
+  "285": {
+    "name": "luminohelix",
+    "mpCost": 26
+  },
+  "286": {
+    "name": "addle",
+    "mpCost": 36
+  },
+  "287": {
+    "name": "klimaform",
+    "mpCost": 30
+  },
+  "288": {
+    "name": "fire spirit",
+    "mpCost": 10
+  },
+  "289": {
+    "name": "ice spirit",
+    "mpCost": 10
+  },
+  "290": {
+    "name": "air spirit",
+    "mpCost": 10
+  },
+  "291": {
+    "name": "earth spirit",
+    "mpCost": 10
+  },
+  "292": {
+    "name": "thunder spirit",
+    "mpCost": 10
+  },
+  "293": {
+    "name": "water spirit",
+    "mpCost": 10
+  },
+  "294": {
+    "name": "light spirit",
+    "mpCost": 10
+  },
+  "295": {
+    "name": "dark spirit",
+    "mpCost": 10
+  },
+  "296": {
+    "name": "carbuncle",
+    "mpCost": 5
+  },
+  "297": {
+    "name": "fenrir",
+    "mpCost": 15
+  },
+  "298": {
+    "name": "ifrit",
+    "mpCost": 7
+  },
+  "299": {
+    "name": "titan",
+    "mpCost": 7
+  },
+  "300": {
+    "name": "leviathan",
+    "mpCost": 7
+  },
+  "301": {
+    "name": "garuda",
+    "mpCost": 7
+  },
+  "302": {
+    "name": "shiva",
+    "mpCost": 7
+  },
+  "303": {
+    "name": "ramuh",
+    "mpCost": 7
+  },
+  "304": {
+    "name": "diabolos",
+    "mpCost": 15
+  },
+  "305": {
+    "name": "odin",
+    "mpCost": 0
+  },
+  "306": {
+    "name": "alexander",
+    "mpCost": 0
+  },
+  "307": {
+    "name": "cait sith",
+    "mpCost": 0
+  },
+  "308": {
+    "name": "animus augeo",
+    "mpCost": 21
+  },
+  "309": {
+    "name": "animus minuo",
+    "mpCost": 21
+  },
+  "310": {
+    "name": "enlight",
+    "mpCost": 24
+  },
+  "311": {
+    "name": "endark",
+    "mpCost": 24
+  },
+  "312": {
+    "name": "enfire ii",
+    "mpCost": 24
+  },
+  "313": {
+    "name": "enblizzard ii",
+    "mpCost": 24
+  },
+  "314": {
+    "name": "enaero ii",
+    "mpCost": 24
+  },
+  "315": {
+    "name": "enstone ii",
+    "mpCost": 24
+  },
+  "316": {
+    "name": "enthunder ii",
+    "mpCost": 24
+  },
+  "317": {
+    "name": "enwater ii",
+    "mpCost": 24
+  },
+  "318": {
+    "name": "monomi ichi",
+    "mpCost": 2553
+  },
+  "319": {
+    "name": "aisha ichi",
+    "mpCost": 2555
+  },
+  "320": {
+    "name": "katon ichi",
+    "mpCost": 1161
+  },
+  "321": {
+    "name": "katon ni",
+    "mpCost": 1161
+  },
+  "322": {
+    "name": "katon san",
+    "mpCost": 1161
+  },
+  "323": {
+    "name": "hyoton ichi",
+    "mpCost": 1164
+  },
+  "324": {
+    "name": "hyoton ni",
+    "mpCost": 1164
+  },
+  "325": {
+    "name": "hyoton san",
+    "mpCost": 1164
+  },
+  "326": {
+    "name": "huton ichi",
+    "mpCost": 1167
+  },
+  "327": {
+    "name": "huton ni",
+    "mpCost": 1167
+  },
+  "328": {
+    "name": "huton san",
+    "mpCost": 1167
+  },
+  "329": {
+    "name": "doton ichi",
+    "mpCost": 1170
+  },
+  "330": {
+    "name": "doton ni",
+    "mpCost": 1170
+  },
+  "331": {
+    "name": "doton san",
+    "mpCost": 1170
+  },
+  "332": {
+    "name": "raiton ichi",
+    "mpCost": 1173
+  },
+  "333": {
+    "name": "raiton ni",
+    "mpCost": 1173
+  },
+  "334": {
+    "name": "raiton san",
+    "mpCost": 1173
+  },
+  "335": {
+    "name": "suiton ichi",
+    "mpCost": 1176
+  },
+  "336": {
+    "name": "suiton ni",
+    "mpCost": 1176
+  },
+  "337": {
+    "name": "suiton san",
+    "mpCost": 1176
+  },
+  "338": {
+    "name": "utsusemi ichi",
+    "mpCost": 1179
+  },
+  "339": {
+    "name": "utsusemi ni",
+    "mpCost": 1179
+  },
+  "340": {
+    "name": "utsusemi san",
+    "mpCost": 1179
+  },
+  "341": {
+    "name": "jubaku ichi",
+    "mpCost": 1182
+  },
+  "342": {
+    "name": "jubaku ni",
+    "mpCost": 1182
+  },
+  "343": {
+    "name": "jubaku san",
+    "mpCost": 1182
+  },
+  "344": {
+    "name": "hojo ichi",
+    "mpCost": 1185
+  },
+  "345": {
+    "name": "hojo ni",
+    "mpCost": 1185
+  },
+  "346": {
+    "name": "hojo san",
+    "mpCost": 1185
+  },
+  "347": {
+    "name": "kurayami ichi",
+    "mpCost": 1188
+  },
+  "348": {
+    "name": "kurayami ni",
+    "mpCost": 1188
+  },
+  "349": {
+    "name": "kurayami san",
+    "mpCost": 1188
+  },
+  "350": {
+    "name": "dokumori ichi",
+    "mpCost": 1191
+  },
+  "351": {
+    "name": "dokumori ni",
+    "mpCost": 1191
+  },
+  "352": {
+    "name": "dokumori san",
+    "mpCost": 1191
+  },
+  "353": {
+    "name": "tonko ichi",
+    "mpCost": 1194
+  },
+  "354": {
+    "name": "tonko ni",
+    "mpCost": 1194
+  },
+  "355": {
+    "name": "siren",
+    "mpCost": 7
+  },
+  "356": {
+    "name": "paralyga",
+    "mpCost": 12
+  },
+  "357": {
+    "name": "slowga",
+    "mpCost": 30
+  },
+  "358": {
+    "name": "hastega",
+    "mpCost": 80
+  },
+  "359": {
+    "name": "silencega",
+    "mpCost": 32
+  },
+  "360": {
+    "name": "dispelga",
+    "mpCost": 200
+  },
+  "361": {
+    "name": "blindga",
+    "mpCost": 10
+  },
+  "362": {
+    "name": "bindga",
+    "mpCost": 16
+  },
+  "365": {
+    "name": "breakga",
+    "mpCost": 100
+  },
+  "366": {
+    "name": "graviga",
+    "mpCost": 48
+  },
+  "367": {
+    "name": "death",
+    "mpCost": 666
+  },
+  "368": {
+    "name": "foe requiem",
+    "mpCost": 0
+  },
+  "369": {
+    "name": "foe requiem ii",
+    "mpCost": 0
+  },
+  "370": {
+    "name": "foe requiem iii",
+    "mpCost": 0
+  },
+  "371": {
+    "name": "foe requiem iv",
+    "mpCost": 0
+  },
+  "372": {
+    "name": "foe requiem v",
+    "mpCost": 0
+  },
+  "373": {
+    "name": "foe requiem vi",
+    "mpCost": 0
+  },
+  "374": {
+    "name": "foe requiem vii",
+    "mpCost": 0
+  },
+  "375": {
+    "name": "foe requiem viii",
+    "mpCost": 0
+  },
+  "376": {
+    "name": "horde lullaby",
+    "mpCost": 0
+  },
+  "377": {
+    "name": "horde lullaby ii",
+    "mpCost": 0
+  },
+  "378": {
+    "name": "armys paeon",
+    "mpCost": 0
+  },
+  "379": {
+    "name": "armys paeon ii",
+    "mpCost": 0
+  },
+  "380": {
+    "name": "armys paeon iii",
+    "mpCost": 0
+  },
+  "381": {
+    "name": "armys paeon iv",
+    "mpCost": 0
+  },
+  "382": {
+    "name": "armys paeon v",
+    "mpCost": 0
+  },
+  "383": {
+    "name": "armys paeon vi",
+    "mpCost": 0
+  },
+  "384": {
+    "name": "armys paeon vii",
+    "mpCost": 0
+  },
+  "385": {
+    "name": "armys paeon viii",
+    "mpCost": 0
+  },
+  "386": {
+    "name": "mages ballad",
+    "mpCost": 0
+  },
+  "387": {
+    "name": "mages ballad ii",
+    "mpCost": 0
+  },
+  "388": {
+    "name": "mages ballad iii",
+    "mpCost": 0
+  },
+  "389": {
+    "name": "knights minne",
+    "mpCost": 0
+  },
+  "390": {
+    "name": "knights minne ii",
+    "mpCost": 0
+  },
+  "391": {
+    "name": "knights minne iii",
+    "mpCost": 0
+  },
+  "392": {
+    "name": "knights minne iv",
+    "mpCost": 0
+  },
+  "393": {
+    "name": "knights minne v",
+    "mpCost": 0
+  },
+  "394": {
+    "name": "valor minuet",
+    "mpCost": 0
+  },
+  "395": {
+    "name": "valor minuet ii",
+    "mpCost": 0
+  },
+  "396": {
+    "name": "valor minuet iii",
+    "mpCost": 0
+  },
+  "397": {
+    "name": "valor minuet iv",
+    "mpCost": 0
+  },
+  "398": {
+    "name": "valor minuet v",
+    "mpCost": 0
+  },
+  "399": {
+    "name": "sword madrigal",
+    "mpCost": 0
+  },
+  "400": {
+    "name": "blade madrigal",
+    "mpCost": 0
+  },
+  "401": {
+    "name": "hunters prelude",
+    "mpCost": 0
+  },
+  "402": {
+    "name": "archers prelude",
+    "mpCost": 0
+  },
+  "403": {
+    "name": "sheepfoe mambo",
+    "mpCost": 0
+  },
+  "404": {
+    "name": "dragonfoe mambo",
+    "mpCost": 0
+  },
+  "405": {
+    "name": "fowl aubade",
+    "mpCost": 0
+  },
+  "406": {
+    "name": "herb pastoral",
+    "mpCost": 0
+  },
+  "407": {
+    "name": "chocobo hum",
+    "mpCost": null
+  },
+  "408": {
+    "name": "shining fantasia",
+    "mpCost": 0
+  },
+  "409": {
+    "name": "scops operetta",
+    "mpCost": 0
+  },
+  "410": {
+    "name": "puppets operetta",
+    "mpCost": 0
+  },
+  "411": {
+    "name": "jesters operetta",
+    "mpCost": 0
+  },
+  "412": {
+    "name": "gold capriccio",
+    "mpCost": 0
+  },
+  "413": {
+    "name": "devotee serenade",
+    "mpCost": 0
+  },
+  "414": {
+    "name": "warding round",
+    "mpCost": 0
+  },
+  "415": {
+    "name": "goblin gavotte",
+    "mpCost": 0
+  },
+  "416": {
+    "name": "cactuar fugue",
+    "mpCost": 0
+  },
+  "417": {
+    "name": "moogle rhapsody",
+    "mpCost": 0
+  },
+  "418": {
+    "name": "protected aria",
+    "mpCost": 0
+  },
+  "419": {
+    "name": "advancing march",
+    "mpCost": 0
+  },
+  "420": {
+    "name": "victory march",
+    "mpCost": 0
+  },
+  "421": {
+    "name": "battlefield elegy",
+    "mpCost": 0
+  },
+  "422": {
+    "name": "carnage elegy",
+    "mpCost": 0
+  },
+  "423": {
+    "name": "massacre elegy",
+    "mpCost": 0
+  },
+  "424": {
+    "name": "sinewy etude",
+    "mpCost": 0
+  },
+  "425": {
+    "name": "dextrous etude",
+    "mpCost": 0
+  },
+  "426": {
+    "name": "vivacious etude",
+    "mpCost": 0
+  },
+  "427": {
+    "name": "quick etude",
+    "mpCost": 0
+  },
+  "428": {
+    "name": "learned etude",
+    "mpCost": 0
+  },
+  "429": {
+    "name": "spirited etude",
+    "mpCost": 0
+  },
+  "430": {
+    "name": "enchanting etude",
+    "mpCost": 0
+  },
+  "431": {
+    "name": "herculean etude",
+    "mpCost": 0
+  },
+  "432": {
+    "name": "uncanny etude",
+    "mpCost": 0
+  },
+  "433": {
+    "name": "vital etude",
+    "mpCost": 0
+  },
+  "434": {
+    "name": "swift etude",
+    "mpCost": 0
+  },
+  "435": {
+    "name": "sage etude",
+    "mpCost": 0
+  },
+  "436": {
+    "name": "logical etude",
+    "mpCost": 0
+  },
+  "437": {
+    "name": "bewitching etude",
+    "mpCost": 0
+  },
+  "438": {
+    "name": "fire carol",
+    "mpCost": 0
+  },
+  "439": {
+    "name": "ice carol",
+    "mpCost": 0
+  },
+  "440": {
+    "name": "wind carol",
+    "mpCost": 0
+  },
+  "441": {
+    "name": "earth carol",
+    "mpCost": 0
+  },
+  "442": {
+    "name": "lightning carol",
+    "mpCost": 0
+  },
+  "443": {
+    "name": "water carol",
+    "mpCost": 0
+  },
+  "444": {
+    "name": "light carol",
+    "mpCost": 0
+  },
+  "445": {
+    "name": "dark carol",
+    "mpCost": 0
+  },
+  "446": {
+    "name": "fire carol ii",
+    "mpCost": 0
+  },
+  "447": {
+    "name": "ice carol ii",
+    "mpCost": 0
+  },
+  "448": {
+    "name": "wind carol ii",
+    "mpCost": 0
+  },
+  "449": {
+    "name": "earth carol ii",
+    "mpCost": 0
+  },
+  "450": {
+    "name": "lightning carol ii",
+    "mpCost": 0
+  },
+  "451": {
+    "name": "water carol ii",
+    "mpCost": 0
+  },
+  "452": {
+    "name": "light carol ii",
+    "mpCost": 0
+  },
+  "453": {
+    "name": "dark carol ii",
+    "mpCost": 0
+  },
+  "454": {
+    "name": "fire threnody",
+    "mpCost": 0
+  },
+  "455": {
+    "name": "ice threnody",
+    "mpCost": 0
+  },
+  "456": {
+    "name": "wind threnody",
+    "mpCost": 0
+  },
+  "457": {
+    "name": "earth threnody",
+    "mpCost": 0
+  },
+  "458": {
+    "name": "lightning threnody",
+    "mpCost": 0
+  },
+  "459": {
+    "name": "water threnody",
+    "mpCost": 0
+  },
+  "460": {
+    "name": "light threnody",
+    "mpCost": 0
+  },
+  "461": {
+    "name": "dark threnody",
+    "mpCost": 0
+  },
+  "462": {
+    "name": "magic finale",
+    "mpCost": 0
+  },
+  "463": {
+    "name": "foe lullaby",
+    "mpCost": 0
+  },
+  "464": {
+    "name": "goddesss hymnus",
+    "mpCost": 0
+  },
+  "465": {
+    "name": "chocobo mazurka",
+    "mpCost": 0
+  },
+  "466": {
+    "name": "maidens virelai",
+    "mpCost": 0
+  },
+  "467": {
+    "name": "raptor mazurka",
+    "mpCost": 0
+  },
+  "468": {
+    "name": "foe sirvente",
+    "mpCost": 0
+  },
+  "469": {
+    "name": "adventurers dirge",
+    "mpCost": 0
+  },
+  "470": {
+    "name": "sentinels scherzo",
+    "mpCost": 0
+  },
+  "471": {
+    "name": "foe lullaby ii",
+    "mpCost": 0
+  },
+  "472": {
+    "name": "pining nocturne",
+    "mpCost": 0
+  },
+  "473": {
+    "name": "refresh ii",
+    "mpCost": 60
+  },
+  "474": {
+    "name": "cura ii",
+    "mpCost": 45
+  },
+  "475": {
+    "name": "cura iii",
+    "mpCost": 60
+  },
+  "476": {
+    "name": "crusade",
+    "mpCost": 18
+  },
+  "477": {
+    "name": "regen iv",
+    "mpCost": 82
+  },
+  "478": {
+    "name": "embrava",
+    "mpCost": 1
+  },
+  "479": {
+    "name": "boost-str",
+    "mpCost": 36
+  },
+  "480": {
+    "name": "boost-dex",
+    "mpCost": 36
+  },
+  "481": {
+    "name": "boost-vit",
+    "mpCost": 36
+  },
+  "482": {
+    "name": "boost-agi",
+    "mpCost": 36
+  },
+  "483": {
+    "name": "boost-int",
+    "mpCost": 36
+  },
+  "484": {
+    "name": "boost-mnd",
+    "mpCost": 36
+  },
+  "485": {
+    "name": "boost-chr",
+    "mpCost": 36
+  },
+  "486": {
+    "name": "gain-str",
+    "mpCost": 36
+  },
+  "487": {
+    "name": "gain-dex",
+    "mpCost": 36
+  },
+  "488": {
+    "name": "gain-vit",
+    "mpCost": 36
+  },
+  "489": {
+    "name": "gain-agi",
+    "mpCost": 36
+  },
+  "490": {
+    "name": "gain-int",
+    "mpCost": 36
+  },
+  "491": {
+    "name": "gain-mnd",
+    "mpCost": 36
+  },
+  "492": {
+    "name": "gain-chr",
+    "mpCost": 36
+  },
+  "493": {
+    "name": "temper",
+    "mpCost": 36
+  },
+  "494": {
+    "name": "arise",
+    "mpCost": 300
+  },
+  "495": {
+    "name": "adloquium",
+    "mpCost": 50
+  },
+  "496": {
+    "name": "firaja",
+    "mpCost": 358
+  },
+  "497": {
+    "name": "blizzaja",
+    "mpCost": 378
+  },
+  "498": {
+    "name": "aeroja",
+    "mpCost": 338
+  },
+  "499": {
+    "name": "stoneja",
+    "mpCost": 298
+  },
+  "500": {
+    "name": "thundaja",
+    "mpCost": 398
+  },
+  "501": {
+    "name": "waterja",
+    "mpCost": 318
+  },
+  "502": {
+    "name": "kaustra",
+    "mpCost": 1
+  },
+  "503": {
+    "name": "impact",
+    "mpCost": 666
+  },
+  "504": {
+    "name": "regen v",
+    "mpCost": 100
+  },
+  "505": {
+    "name": "gekka ichi",
+    "mpCost": 8803
+  },
+  "506": {
+    "name": "yain ichi",
+    "mpCost": 8804
+  },
+  "507": {
+    "name": "myoshu ichi",
+    "mpCost": 2642
+  },
+  "508": {
+    "name": "yurin ichi",
+    "mpCost": 2643
+  },
+  "509": {
+    "name": "kakka ichi",
+    "mpCost": 2644
+  },
+  "510": {
+    "name": "migawari ichi",
+    "mpCost": 2970
+  },
+  "511": {
+    "name": "haste ii",
+    "mpCost": 80
+  },
+  "513": {
+    "name": "venom shell",
+    "mpCost": 86
+  },
+  "515": {
+    "name": "maelstrom",
+    "mpCost": 162
+  },
+  "517": {
+    "name": "metallic body",
+    "mpCost": 19
+  },
+  "519": {
+    "name": "screwdriver",
+    "mpCost": 21
+  },
+  "521": {
+    "name": "mp drainkiss",
+    "mpCost": 20
+  },
+  "522": {
+    "name": "death ray",
+    "mpCost": 49
+  },
+  "524": {
+    "name": "sandspin",
+    "mpCost": 10
+  },
+  "527": {
+    "name": "smite of rage",
+    "mpCost": 28
+  },
+  "529": {
+    "name": "bludgeon",
+    "mpCost": 16
+  },
+  "530": {
+    "name": "refueling",
+    "mpCost": 29
+  },
+  "531": {
+    "name": "ice break",
+    "mpCost": 142
+  },
+  "532": {
+    "name": "blitzstrahl",
+    "mpCost": 70
+  },
+  "533": {
+    "name": "self-destruct",
+    "mpCost": 100
+  },
+  "534": {
+    "name": "mysterious light",
+    "mpCost": 73
+  },
+  "535": {
+    "name": "cold wave",
+    "mpCost": 37
+  },
+  "536": {
+    "name": "poison breath",
+    "mpCost": 22
+  },
+  "537": {
+    "name": "stinking gas",
+    "mpCost": 37
+  },
+  "538": {
+    "name": "memento mori",
+    "mpCost": 46
+  },
+  "539": {
+    "name": "terror touch",
+    "mpCost": 62
+  },
+  "540": {
+    "name": "spinal cleave",
+    "mpCost": 61
+  },
+  "541": {
+    "name": "blood saber",
+    "mpCost": 25
+  },
+  "542": {
+    "name": "digest",
+    "mpCost": 20
+  },
+  "543": {
+    "name": "mandibular bite",
+    "mpCost": 38
+  },
+  "544": {
+    "name": "cursed sphere",
+    "mpCost": 36
+  },
+  "545": {
+    "name": "sickle slash",
+    "mpCost": 41
+  },
+  "547": {
+    "name": "cocoon",
+    "mpCost": 10
+  },
+  "548": {
+    "name": "filamented hold",
+    "mpCost": 38
+  },
+  "549": {
+    "name": "pollen",
+    "mpCost": 8
+  },
+  "551": {
+    "name": "power attack",
+    "mpCost": 5
+  },
+  "554": {
+    "name": "death scissors",
+    "mpCost": 51
+  },
+  "555": {
+    "name": "magnetite cloud",
+    "mpCost": 86
+  },
+  "557": {
+    "name": "eyes on me",
+    "mpCost": 112
+  },
+  "560": {
+    "name": "frenetic rip",
+    "mpCost": 61
+  },
+  "561": {
+    "name": "frightful roar",
+    "mpCost": 32
+  },
+  "563": {
+    "name": "hecatomb wave",
+    "mpCost": 116
+  },
+  "564": {
+    "name": "body slam",
+    "mpCost": 74
+  },
+  "565": {
+    "name": "radiant breath",
+    "mpCost": 116
+  },
+  "567": {
+    "name": "helldive",
+    "mpCost": 16
+  },
+  "569": {
+    "name": "jet stream",
+    "mpCost": 47
+  },
+  "570": {
+    "name": "blood drain",
+    "mpCost": 10
+  },
+  "572": {
+    "name": "sound blast",
+    "mpCost": 25
+  },
+  "573": {
+    "name": "feather tickle",
+    "mpCost": 48
+  },
+  "574": {
+    "name": "feather barrier",
+    "mpCost": 29
+  },
+  "575": {
+    "name": "jettatura",
+    "mpCost": 37
+  },
+  "576": {
+    "name": "yawn",
+    "mpCost": 55
+  },
+  "577": {
+    "name": "foot kick",
+    "mpCost": 5
+  },
+  "578": {
+    "name": "wild carrot",
+    "mpCost": 37
+  },
+  "579": {
+    "name": "voracious trunk",
+    "mpCost": 72
+  },
+  "581": {
+    "name": "healing breeze",
+    "mpCost": 55
+  },
+  "582": {
+    "name": "chaotic eye",
+    "mpCost": 13
+  },
+  "584": {
+    "name": "sheep song",
+    "mpCost": 22
+  },
+  "585": {
+    "name": "ram charge",
+    "mpCost": 79
+  },
+  "587": {
+    "name": "claw cyclone",
+    "mpCost": 24
+  },
+  "588": {
+    "name": "lowing",
+    "mpCost": 66
+  },
+  "589": {
+    "name": "dimensional death",
+    "mpCost": 48
+  },
+  "591": {
+    "name": "heat breath",
+    "mpCost": 169
+  },
+  "592": {
+    "name": "blank gaze",
+    "mpCost": 25
+  },
+  "593": {
+    "name": "magic fruit",
+    "mpCost": 72
+  },
+  "594": {
+    "name": "uppercut",
+    "mpCost": 31
+  },
+  "595": {
+    "name": "1000 needles",
+    "mpCost": 350
+  },
+  "596": {
+    "name": "pinecone bomb",
+    "mpCost": 48
+  },
+  "597": {
+    "name": "sprout smack",
+    "mpCost": 6
+  },
+  "598": {
+    "name": "soporific",
+    "mpCost": 38
+  },
+  "599": {
+    "name": "queasyshroom",
+    "mpCost": 20
+  },
+  "603": {
+    "name": "wild oats",
+    "mpCost": 9
+  },
+  "604": {
+    "name": "bad breath",
+    "mpCost": 212
+  },
+  "605": {
+    "name": "geist wall",
+    "mpCost": 35
+  },
+  "606": {
+    "name": "awful eye",
+    "mpCost": 32
+  },
+  "608": {
+    "name": "frost breath",
+    "mpCost": 136
+  },
+  "610": {
+    "name": "infrasonics",
+    "mpCost": 42
+  },
+  "611": {
+    "name": "disseverment",
+    "mpCost": 74
+  },
+  "612": {
+    "name": "actinic burst",
+    "mpCost": 24
+  },
+  "613": {
+    "name": "reactor cool",
+    "mpCost": 28
+  },
+  "614": {
+    "name": "saline coat",
+    "mpCost": 66
+  },
+  "615": {
+    "name": "plasma charge",
+    "mpCost": 24
+  },
+  "616": {
+    "name": "temporal shift",
+    "mpCost": 48
+  },
+  "617": {
+    "name": "vertical cleave",
+    "mpCost": 86
+  },
+  "618": {
+    "name": "blastbomb",
+    "mpCost": 36
+  },
+  "620": {
+    "name": "battle dance",
+    "mpCost": 12
+  },
+  "621": {
+    "name": "sandspray",
+    "mpCost": 43
+  },
+  "622": {
+    "name": "grand slam",
+    "mpCost": 24
+  },
+  "623": {
+    "name": "head butt",
+    "mpCost": 12
+  },
+  "626": {
+    "name": "bomb toss",
+    "mpCost": 42
+  },
+  "628": {
+    "name": "frypan",
+    "mpCost": 65
+  },
+  "629": {
+    "name": "flying hip press",
+    "mpCost": 125
+  },
+  "631": {
+    "name": "hydro shot",
+    "mpCost": 55
+  },
+  "632": {
+    "name": "diamondhide",
+    "mpCost": 99
+  },
+  "633": {
+    "name": "enervation",
+    "mpCost": 48
+  },
+  "634": {
+    "name": "light of penance",
+    "mpCost": 53
+  },
+  "636": {
+    "name": "warm-up",
+    "mpCost": 59
+  },
+  "637": {
+    "name": "firespit",
+    "mpCost": 121
+  },
+  "638": {
+    "name": "feather storm",
+    "mpCost": 12
+  },
+  "640": {
+    "name": "tail slap",
+    "mpCost": 77
+  },
+  "641": {
+    "name": "hysteric barrage",
+    "mpCost": 61
+  },
+  "642": {
+    "name": "amplification",
+    "mpCost": 48
+  },
+  "643": {
+    "name": "cannonball",
+    "mpCost": 66
+  },
+  "644": {
+    "name": "mind blast",
+    "mpCost": 82
+  },
+  "645": {
+    "name": "exuviation",
+    "mpCost": 40
+  },
+  "646": {
+    "name": "magic hammer",
+    "mpCost": 40
+  },
+  "647": {
+    "name": "zephyr mantle",
+    "mpCost": 31
+  },
+  "648": {
+    "name": "regurgitation",
+    "mpCost": 69
+  },
+  "650": {
+    "name": "seedspray",
+    "mpCost": 61
+  },
+  "651": {
+    "name": "corrosive ooze",
+    "mpCost": 55
+  },
+  "652": {
+    "name": "spiral spin",
+    "mpCost": 39
+  },
+  "653": {
+    "name": "asuran claws",
+    "mpCost": 81
+  },
+  "654": {
+    "name": "sub-zero smash",
+    "mpCost": 44
+  },
+  "655": {
+    "name": "triumphant roar",
+    "mpCost": 36
+  },
+  "656": {
+    "name": "acrid stream",
+    "mpCost": 89
+  },
+  "657": {
+    "name": "blazing bound",
+    "mpCost": 113
+  },
+  "658": {
+    "name": "plenilune embrace",
+    "mpCost": 106
+  },
+  "659": {
+    "name": "demoralizing roar",
+    "mpCost": 46
+  },
+  "660": {
+    "name": "cimicine discharge",
+    "mpCost": 32
+  },
+  "661": {
+    "name": "animating wail",
+    "mpCost": 53
+  },
+  "662": {
+    "name": "battery charge",
+    "mpCost": 50
+  },
+  "663": {
+    "name": "leafstorm",
+    "mpCost": 132
+  },
+  "664": {
+    "name": "regeneration",
+    "mpCost": 36
+  },
+  "665": {
+    "name": "final sting",
+    "mpCost": 88
+  },
+  "666": {
+    "name": "goblin rush",
+    "mpCost": 76
+  },
+  "667": {
+    "name": "vanity dive",
+    "mpCost": 58
+  },
+  "668": {
+    "name": "magic barrier",
+    "mpCost": 29
+  },
+  "669": {
+    "name": "whirl of rage",
+    "mpCost": 73
+  },
+  "670": {
+    "name": "benthic typhoon",
+    "mpCost": 56
+  },
+  "671": {
+    "name": "auroral drape",
+    "mpCost": 51
+  },
+  "672": {
+    "name": "osmosis",
+    "mpCost": 47
+  },
+  "673": {
+    "name": "quad continuum",
+    "mpCost": 91
+  },
+  "674": {
+    "name": "fantod",
+    "mpCost": 12
+  },
+  "675": {
+    "name": "thermal pulse",
+    "mpCost": 151
+  },
+  "677": {
+    "name": "empty thrash",
+    "mpCost": 33
+  },
+  "678": {
+    "name": "dream flower",
+    "mpCost": 68
+  },
+  "679": {
+    "name": "occultation",
+    "mpCost": 138
+  },
+  "680": {
+    "name": "charged whisker",
+    "mpCost": 183
+  },
+  "681": {
+    "name": "winds of promy",
+    "mpCost": 36
+  },
+  "682": {
+    "name": "delta thrust",
+    "mpCost": 28
+  },
+  "683": {
+    "name": "evryone grudge",
+    "mpCost": 185
+  },
+  "684": {
+    "name": "reaving wind",
+    "mpCost": 84
+  },
+  "685": {
+    "name": "barrier tusk",
+    "mpCost": 41
+  },
+  "686": {
+    "name": "mortal ray",
+    "mpCost": 267
+  },
+  "687": {
+    "name": "water bomb",
+    "mpCost": 67
+  },
+  "688": {
+    "name": "heavy strike",
+    "mpCost": 32
+  },
+  "689": {
+    "name": "dark orb",
+    "mpCost": 124
+  },
+  "690": {
+    "name": "white wind",
+    "mpCost": 145
+  },
+  "692": {
+    "name": "sudden lunge",
+    "mpCost": 18
+  },
+  "693": {
+    "name": "quadrastrike",
+    "mpCost": 98
+  },
+  "694": {
+    "name": "vapor spray",
+    "mpCost": 172
+  },
+  "695": {
+    "name": "thunder breath",
+    "mpCost": 193
+  },
+  "696": {
+    "name": "orcish counterstance",
+    "mpCost": 18
+  },
+  "697": {
+    "name": "amorphic spikes",
+    "mpCost": 79
+  },
+  "698": {
+    "name": "wind breath",
+    "mpCost": 26
+  },
+  "699": {
+    "name": "barbed crescent",
+    "mpCost": 52
+  },
+  "700": {
+    "name": "natures meditation",
+    "mpCost": null
+  },
+  "701": {
+    "name": "tempestuous upheaval",
+    "mpCost": null
+  },
+  "702": {
+    "name": "rending deluge",
+    "mpCost": null
+  },
+  "703": {
+    "name": "embalming earth",
+    "mpCost": null
+  },
+  "704": {
+    "name": "paralyzing triad",
+    "mpCost": null
+  },
+  "705": {
+    "name": "foul waters",
+    "mpCost": null
+  },
+  "706": {
+    "name": "glutinous dart",
+    "mpCost": null
+  },
+  "707": {
+    "name": "retinal glare",
+    "mpCost": null
+  },
+  "708": {
+    "name": "subduction",
+    "mpCost": null
+  },
+  "709": {
+    "name": "thrashing assault",
+    "mpCost": null
+  },
+  "710": {
+    "name": "erratic flutter",
+    "mpCost": null
+  },
+  "711": {
+    "name": "restoral",
+    "mpCost": null
+  },
+  "712": {
+    "name": "rail cannon",
+    "mpCost": null
+  },
+  "713": {
+    "name": "diffusion ray",
+    "mpCost": null
+  },
+  "714": {
+    "name": "sinker drill",
+    "mpCost": null
+  },
+  "736": {
+    "name": "thunderbolt",
+    "mpCost": 138
+  },
+  "737": {
+    "name": "harden shell",
+    "mpCost": 20
+  },
+  "738": {
+    "name": "absolute terror",
+    "mpCost": 29
+  },
+  "739": {
+    "name": "gates of hades",
+    "mpCost": 156
+  },
+  "740": {
+    "name": "tourbillion",
+    "mpCost": 108
+  },
+  "741": {
+    "name": "pyric bulwark",
+    "mpCost": 50
+  },
+  "742": {
+    "name": "bilgestorm",
+    "mpCost": 122
+  },
+  "743": {
+    "name": "bloodrake",
+    "mpCost": 99
+  },
+  "744": {
+    "name": "droning whirlwind",
+    "mpCost": null
+  },
+  "745": {
+    "name": "carcharian verve",
+    "mpCost": null
+  },
+  "746": {
+    "name": "blistering roar",
+    "mpCost": null
+  },
+  "768": {
+    "name": "indi-regen",
+    "mpCost": 37
+  },
+  "769": {
+    "name": "indi-poison",
+    "mpCost": 12
+  },
+  "770": {
+    "name": "indi-refresh",
+    "mpCost": 63
+  },
+  "771": {
+    "name": "indi-haste",
+    "mpCost": 100
+  },
+  "772": {
+    "name": "indi-str",
+    "mpCost": 63
+  },
+  "773": {
+    "name": "indi-dex",
+    "mpCost": 63
+  },
+  "774": {
+    "name": "indi-vit",
+    "mpCost": 63
+  },
+  "775": {
+    "name": "indi-agi",
+    "mpCost": 63
+  },
+  "776": {
+    "name": "indi-int",
+    "mpCost": 63
+  },
+  "777": {
+    "name": "indi-mnd",
+    "mpCost": 63
+  },
+  "778": {
+    "name": "indi-chr",
+    "mpCost": 63
+  },
+  "779": {
+    "name": "indi-fury",
+    "mpCost": 70
+  },
+  "780": {
+    "name": "indi-barrier",
+    "mpCost": 59
+  },
+  "781": {
+    "name": "indi-acumen",
+    "mpCost": 91
+  },
+  "782": {
+    "name": "indi-fend",
+    "mpCost": 80
+  },
+  "783": {
+    "name": "indi-precision",
+    "mpCost": 25
+  },
+  "784": {
+    "name": "indi-voidance",
+    "mpCost": 17
+  },
+  "785": {
+    "name": "indi-focus",
+    "mpCost": 49
+  },
+  "786": {
+    "name": "indi-attunement",
+    "mpCost": 38
+  },
+  "787": {
+    "name": "indi-wilt",
+    "mpCost": 161
+  },
+  "788": {
+    "name": "indi-frailty",
+    "mpCost": 147
+  },
+  "789": {
+    "name": "indi-fade",
+    "mpCost": 186
+  },
+  "790": {
+    "name": "indi-malaise",
+    "mpCost": 174
+  },
+  "791": {
+    "name": "indi-slip",
+    "mpCost": 112
+  },
+  "792": {
+    "name": "indi-torpor",
+    "mpCost": 101
+  },
+  "793": {
+    "name": "indi-vex",
+    "mpCost": 136
+  },
+  "794": {
+    "name": "indi-languor",
+    "mpCost": 124
+  },
+  "795": {
+    "name": "indi-slow",
+    "mpCost": 94
+  },
+  "796": {
+    "name": "indi-paralysis",
+    "mpCost": 107
+  },
+  "797": {
+    "name": "indi-gravity",
+    "mpCost": 174
+  },
+  "798": {
+    "name": "geo-regen",
+    "mpCost": 74
+  },
+  "799": {
+    "name": "geo-poison",
+    "mpCost": 25
+  },
+  "800": {
+    "name": "geo-refresh",
+    "mpCost": 126
+  },
+  "801": {
+    "name": "geo-haste",
+    "mpCost": 200
+  },
+  "802": {
+    "name": "geo-str",
+    "mpCost": 126
+  },
+  "803": {
+    "name": "geo-dex",
+    "mpCost": 126
+  },
+  "804": {
+    "name": "geo-vit",
+    "mpCost": 126
+  },
+  "805": {
+    "name": "geo-agi",
+    "mpCost": 126
+  },
+  "806": {
+    "name": "geo-int",
+    "mpCost": 126
+  },
+  "807": {
+    "name": "geo-mnd",
+    "mpCost": 126
+  },
+  "808": {
+    "name": "geo-chr",
+    "mpCost": 126
+  },
+  "809": {
+    "name": "geo-fury",
+    "mpCost": 140
+  },
+  "810": {
+    "name": "geo-barrier",
+    "mpCost": 119
+  },
+  "811": {
+    "name": "geo-acumen",
+    "mpCost": 182
+  },
+  "812": {
+    "name": "geo-fend",
+    "mpCost": 161
+  },
+  "813": {
+    "name": "geo-precision",
+    "mpCost": 50
+  },
+  "814": {
+    "name": "geo-voidance",
+    "mpCost": 35
+  },
+  "815": {
+    "name": "geo-focus",
+    "mpCost": 98
+  },
+  "816": {
+    "name": "geo-attunement",
+    "mpCost": 77
+  },
+  "817": {
+    "name": "geo-wilt",
+    "mpCost": 322
+  },
+  "818": {
+    "name": "geo-frailty",
+    "mpCost": 294
+  },
+  "819": {
+    "name": "geo-fade",
+    "mpCost": 372
+  },
+  "820": {
+    "name": "geo-malaise",
+    "mpCost": 348
+  },
+  "821": {
+    "name": "geo-slip",
+    "mpCost": 225
+  },
+  "822": {
+    "name": "geo-torpor",
+    "mpCost": 203
+  },
+  "823": {
+    "name": "geo-vex",
+    "mpCost": 273
+  },
+  "824": {
+    "name": "geo-languor",
+    "mpCost": 249
+  },
+  "825": {
+    "name": "geo-slow",
+    "mpCost": 189
+  },
+  "826": {
+    "name": "geo-paralysis",
+    "mpCost": 215
+  },
+  "827": {
+    "name": "geo-gravity",
+    "mpCost": 348
+  },
+  "828": {
+    "name": "fira",
+    "mpCost": 93
+  },
+  "829": {
+    "name": "fira ii",
+    "mpCost": 206
+  },
+  "830": {
+    "name": "blizzara",
+    "mpCost": 108
+  },
+  "831": {
+    "name": "blizzara ii",
+    "mpCost": 229
+  },
+  "832": {
+    "name": "aera",
+    "mpCost": 79
+  },
+  "833": {
+    "name": "aera ii",
+    "mpCost": 184
+  },
+  "834": {
+    "name": "stonera",
+    "mpCost": 54
+  },
+  "835": {
+    "name": "stonera ii",
+    "mpCost": 143
+  },
+  "836": {
+    "name": "thundara",
+    "mpCost": 123
+  },
+  "837": {
+    "name": "thundara ii",
+    "mpCost": 253
+  },
+  "838": {
+    "name": "watera",
+    "mpCost": 66
+  },
+  "839": {
+    "name": "watera ii",
+    "mpCost": 163
+  },
+  "840": {
+    "name": "foil",
+    "mpCost": 48
+  },
+  "841": {
+    "name": "distract",
+    "mpCost": 32
+  },
+  "842": {
+    "name": "distract ii",
+    "mpCost": 58
+  },
+  "843": {
+    "name": "frazzle",
+    "mpCost": 38
+  },
+  "844": {
+    "name": "frazzle ii",
+    "mpCost": 64
+  },
+  "845": {
+    "name": "flurry",
+    "mpCost": 40
+  },
+  "846": {
+    "name": "flurry ii",
+    "mpCost": 80
+  },
+  "847": {
+    "name": "atomos",
+    "mpCost": 50
+  },
+  "848": {
+    "name": "reraise iv",
+    "mpCost": 150
+  },
+  "849": {
+    "name": "fire vi",
+    "mpCost": 339
+  },
+  "850": {
+    "name": "blizzard vi",
+    "mpCost": 386
+  },
+  "851": {
+    "name": "aero vi",
+    "mpCost": 299
+  },
+  "852": {
+    "name": "stone vi",
+    "mpCost": 237
+  },
+  "853": {
+    "name": "thunder vi",
+    "mpCost": 437
+  },
+  "854": {
+    "name": "water vi",
+    "mpCost": 266
+  },
+  "855": {
+    "name": "enlight ii",
+    "mpCost": null
+  },
+  "856": {
+    "name": "endark ii",
+    "mpCost": 36
+  },
+  "857": {
+    "name": "sandstorm ii",
+    "mpCost": null
+  },
+  "858": {
+    "name": "rainstorm ii",
+    "mpCost": null
+  },
+  "859": {
+    "name": "windstorm ii",
+    "mpCost": null
+  },
+  "860": {
+    "name": "firestorm ii",
+    "mpCost": null
+  },
+  "861": {
+    "name": "hailstorm ii",
+    "mpCost": null
+  },
+  "862": {
+    "name": "thunderstorm ii",
+    "mpCost": null
+  },
+  "863": {
+    "name": "voidstorm ii",
+    "mpCost": null
+  },
+  "864": {
+    "name": "aurorastorm ii",
+    "mpCost": null
+  },
+  "871": {
+    "name": "fire threnody ii",
+    "mpCost": 0
+  },
+  "872": {
+    "name": "ice threnody ii",
+    "mpCost": 0
+  },
+  "873": {
+    "name": "wind threnody ii",
+    "mpCost": 0
+  },
+  "874": {
+    "name": "earth threnody ii",
+    "mpCost": 0
+  },
+  "875": {
+    "name": "ltng threnody ii",
+    "mpCost": 0
+  },
+  "876": {
+    "name": "water threnody ii",
+    "mpCost": 0
+  },
+  "877": {
+    "name": "light threnody ii",
+    "mpCost": 0
+  },
+  "878": {
+    "name": "dark threnody ii",
+    "mpCost": 0
+  },
+  "879": {
+    "name": "inundation",
+    "mpCost": null
+  },
+  "880": {
+    "name": "drain iii",
+    "mpCost": 53
+  },
+  "881": {
+    "name": "aspir iii",
+    "mpCost": null
+  },
+  "882": {
+    "name": "distract iii",
+    "mpCost": null
+  },
+  "883": {
+    "name": "frazzle iii",
+    "mpCost": null
+  },
+  "884": {
+    "name": "addle ii",
+    "mpCost": null
+  },
+  "885": {
+    "name": "geohelix ii",
+    "mpCost": 78
+  },
+  "886": {
+    "name": "hydrohelix ii",
+    "mpCost": 78
+  },
+  "887": {
+    "name": "anemohelix ii",
+    "mpCost": 78
+  },
+  "888": {
+    "name": "pyrohelix ii",
+    "mpCost": 78
+  },
+  "889": {
+    "name": "cryohelix ii",
+    "mpCost": 78
+  },
+  "890": {
+    "name": "ionohelix ii",
+    "mpCost": 78
+  },
+  "891": {
+    "name": "noctohelix ii",
+    "mpCost": 78
+  },
+  "892": {
+    "name": "luminohelix ii",
+    "mpCost": 78
+  },
+  "893": {
+    "name": "full cure",
+    "mpCost": null
+  },
+  "894": {
+    "name": "refresh iii",
+    "mpCost": null
+  },
+  "895": {
+    "name": "temper ii",
+    "mpCost": 72
+  },
+  "896": {
+    "name": "shantotto",
+    "mpCost": 0
+  },
+  "897": {
+    "name": "naji",
+    "mpCost": 0
+  },
+  "898": {
+    "name": "kupipi",
+    "mpCost": 0
+  },
+  "899": {
+    "name": "excenmille",
+    "mpCost": 0
+  },
+  "900": {
+    "name": "ayame",
+    "mpCost": 0
+  },
+  "901": {
+    "name": "nanaa mihgo",
+    "mpCost": 0
+  },
+  "902": {
+    "name": "curilla",
+    "mpCost": 0
+  },
+  "903": {
+    "name": "volker",
+    "mpCost": 0
+  },
+  "904": {
+    "name": "ajido-marujido",
+    "mpCost": 0
+  },
+  "905": {
+    "name": "trion",
+    "mpCost": 0
+  },
+  "906": {
+    "name": "zeid",
+    "mpCost": 0
+  },
+  "907": {
+    "name": "lion",
+    "mpCost": 0
+  },
+  "908": {
+    "name": "tenzen",
+    "mpCost": 0
+  },
+  "909": {
+    "name": "mihli aliapoh",
+    "mpCost": 0
+  },
+  "910": {
+    "name": "valaineral",
+    "mpCost": 0
+  },
+  "911": {
+    "name": "joachim",
+    "mpCost": 0
+  },
+  "912": {
+    "name": "naja salaheem",
+    "mpCost": 0
+  },
+  "913": {
+    "name": "prishe",
+    "mpCost": 0
+  },
+  "914": {
+    "name": "ulmia",
+    "mpCost": 0
+  },
+  "915": {
+    "name": "shikaree z",
+    "mpCost": 0
+  },
+  "916": {
+    "name": "cherukiki",
+    "mpCost": 0
+  },
+  "917": {
+    "name": "iron eater",
+    "mpCost": 0
+  },
+  "918": {
+    "name": "gessho",
+    "mpCost": 0
+  },
+  "919": {
+    "name": "gadalar",
+    "mpCost": 0
+  },
+  "920": {
+    "name": "rainemard",
+    "mpCost": 0
+  },
+  "921": {
+    "name": "ingrid",
+    "mpCost": 0
+  },
+  "922": {
+    "name": "lehko habhoka",
+    "mpCost": 0
+  },
+  "923": {
+    "name": "nashmeira",
+    "mpCost": 0
+  },
+  "924": {
+    "name": "zazarg",
+    "mpCost": 0
+  },
+  "925": {
+    "name": "ovjang",
+    "mpCost": 0
+  },
+  "926": {
+    "name": "mnejing",
+    "mpCost": 0
+  },
+  "927": {
+    "name": "sakura",
+    "mpCost": 0
+  },
+  "928": {
+    "name": "luzaf",
+    "mpCost": 0
+  },
+  "929": {
+    "name": "najelith",
+    "mpCost": 0
+  },
+  "930": {
+    "name": "aldo",
+    "mpCost": 0
+  },
+  "931": {
+    "name": "moogle",
+    "mpCost": 0
+  },
+  "932": {
+    "name": "fablinix",
+    "mpCost": 0
+  },
+  "933": {
+    "name": "maat",
+    "mpCost": 0
+  },
+  "934": {
+    "name": "d shantotto",
+    "mpCost": 0
+  },
+  "935": {
+    "name": "star sibyl",
+    "mpCost": 0
+  },
+  "936": {
+    "name": "karaha-baruha",
+    "mpCost": 0
+  },
+  "937": {
+    "name": "cid",
+    "mpCost": 0
+  },
+  "938": {
+    "name": "gilgamesh",
+    "mpCost": 0
+  },
+  "939": {
+    "name": "areuhat",
+    "mpCost": 0
+  },
+  "940": {
+    "name": "semih lafihna",
+    "mpCost": 0
+  },
+  "941": {
+    "name": "elivira",
+    "mpCost": 0
+  },
+  "942": {
+    "name": "noillurie",
+    "mpCost": 0
+  },
+  "943": {
+    "name": "lhu mhakaracca",
+    "mpCost": 0
+  },
+  "944": {
+    "name": "ferreous coffin",
+    "mpCost": 0
+  },
+  "945": {
+    "name": "lilisette",
+    "mpCost": 0
+  },
+  "946": {
+    "name": "mumor",
+    "mpCost": 0
+  },
+  "947": {
+    "name": "uka totlihn",
+    "mpCost": 0
+  },
+  "948": {
+    "name": "klara",
+    "mpCost": 0
+  },
+  "949": {
+    "name": "romaa mihgo",
+    "mpCost": 0
+  },
+  "950": {
+    "name": "kuyin hathdenna",
+    "mpCost": 0
+  },
+  "951": {
+    "name": "rahal",
+    "mpCost": 0
+  },
+  "952": {
+    "name": "koru-moru",
+    "mpCost": 0
+  },
+  "953": {
+    "name": "pieuje uc",
+    "mpCost": 0
+  },
+  "954": {
+    "name": "i shield uc",
+    "mpCost": 0
+  },
+  "955": {
+    "name": "apururu uc",
+    "mpCost": 0
+  },
+  "956": {
+    "name": "jakoh uc",
+    "mpCost": 0
+  },
+  "957": {
+    "name": "flaviria uc",
+    "mpCost": 0
+  },
+  "958": {
+    "name": "babban",
+    "mpCost": 0
+  },
+  "959": {
+    "name": "abenzio",
+    "mpCost": 0
+  },
+  "960": {
+    "name": "rughadjeen",
+    "mpCost": 0
+  },
+  "961": {
+    "name": "kukki-chebukki",
+    "mpCost": 0
+  },
+  "962": {
+    "name": "margret",
+    "mpCost": 0
+  },
+  "963": {
+    "name": "chacharoon",
+    "mpCost": 0
+  },
+  "964": {
+    "name": "lhe lhangavo",
+    "mpCost": 0
+  },
+  "965": {
+    "name": "arciela",
+    "mpCost": 0
+  },
+  "966": {
+    "name": "mayakov",
+    "mpCost": 0
+  },
+  "967": {
+    "name": "qultada",
+    "mpCost": 0
+  },
+  "968": {
+    "name": "adelheid",
+    "mpCost": 0
+  },
+  "969": {
+    "name": "amchuchu",
+    "mpCost": 0
+  },
+  "970": {
+    "name": "brygid",
+    "mpCost": 0
+  },
+  "971": {
+    "name": "mildaurion",
+    "mpCost": 0
+  },
+  "972": {
+    "name": "halver",
+    "mpCost": 0
+  },
+  "973": {
+    "name": "rongelouts",
+    "mpCost": 0
+  },
+  "974": {
+    "name": "leonoyne",
+    "mpCost": 0
+  },
+  "975": {
+    "name": "maximilian",
+    "mpCost": 0
+  },
+  "976": {
+    "name": "kayeel-payeel",
+    "mpCost": 0
+  },
+  "977": {
+    "name": "robel-akbel",
+    "mpCost": 0
+  },
+  "978": {
+    "name": "kupofried",
+    "mpCost": 0
+  },
+  "979": {
+    "name": "selh teus",
+    "mpCost": 0
+  },
+  "980": {
+    "name": "yoran-oran uc",
+    "mpCost": 0
+  },
+  "981": {
+    "name": "sylvie uc",
+    "mpCost": 0
+  },
+  "982": {
+    "name": "abquhbah",
+    "mpCost": 0
+  },
+  "983": {
+    "name": "balamor",
+    "mpCost": 0
+  },
+  "984": {
+    "name": "august",
+    "mpCost": 0
+  },
+  "985": {
+    "name": "rosulatia",
+    "mpCost": 0
+  },
+  "986": {
+    "name": "teodor",
+    "mpCost": 0
+  },
+  "987": {
+    "name": "ullegore",
+    "mpCost": 0
+  },
+  "988": {
+    "name": "makki-chebukki",
+    "mpCost": 0
+  },
+  "989": {
+    "name": "king of hearts",
+    "mpCost": 0
+  },
+  "990": {
+    "name": "morimar",
+    "mpCost": 0
+  },
+  "991": {
+    "name": "darrcuiln",
+    "mpCost": 0
+  },
+  "992": {
+    "name": "aahm",
+    "mpCost": 0
+  },
+  "993": {
+    "name": "aaev",
+    "mpCost": 0
+  },
+  "994": {
+    "name": "aamr",
+    "mpCost": 0
+  },
+  "995": {
+    "name": "aatt",
+    "mpCost": 0
+  },
+  "996": {
+    "name": "aagk",
+    "mpCost": 0
+  },
+  "997": {
+    "name": "iroha",
+    "mpCost": 0
+  },
+  "998": {
+    "name": "ygnas",
+    "mpCost": 0
+  },
+  "999": {
+    "name": "monberaux",
+    "mpCost": 0
+  },
+  "1004": {
+    "name": "excenmille s",
+    "mpCost": 0
+  },
+  "1005": {
+    "name": "ayame uc",
+    "mpCost": 0
+  },
+  "1006": {
+    "name": "maat uc",
+    "mpCost": 0
+  },
+  "1007": {
+    "name": "aldo uc",
+    "mpCost": 0
+  },
+  "1008": {
+    "name": "naja uc",
+    "mpCost": 0
+  },
+  "1009": {
+    "name": "lion ii",
+    "mpCost": 0
+  },
+  "1010": {
+    "name": "zeid ii",
+    "mpCost": 0
+  },
+  "1011": {
+    "name": "prishe ii",
+    "mpCost": 0
+  },
+  "1012": {
+    "name": "nashmeira ii",
+    "mpCost": 0
+  },
+  "1013": {
+    "name": "lilisette ii",
+    "mpCost": 0
+  },
+  "1014": {
+    "name": "tenzen ii",
+    "mpCost": 0
+  },
+  "1015": {
+    "name": "mumor ii",
+    "mpCost": 0
+  },
+  "1016": {
+    "name": "ingrid ii",
+    "mpCost": 0
+  },
+  "1017": {
+    "name": "arciela ii",
+    "mpCost": 0
+  },
+  "1018": {
+    "name": "iroha ii",
+    "mpCost": 0
+  },
+  "1019": {
+    "name": "shantotto ii",
+    "mpCost": 0
+  }
 }

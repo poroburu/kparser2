@@ -180,12 +180,10 @@ module ReportAggregators =
           Skillchains = Map.empty }
 
     let offenseInteractions (snap: AnalyticsSnapshot) (filter: MobFilter) =
-        filterInteractions snap filter (fun i ->
-            i.InteractionType = InteractionType.Harm && i.Value >= 0)
+        filterInteractions snap filter (fun i -> InteractionClassification.isHpDamage i && i.Value >= 0)
 
     let defenseInteractions (snap: AnalyticsSnapshot) (filter: MobFilter) =
-        filterInteractions snap filter (fun i ->
-            i.InteractionType = InteractionType.Harm && i.Value >= 0)
+        filterInteractions snap filter (fun i -> InteractionClassification.isHpDamage i && i.Value >= 0)
 
     let private isPerformanceParticipant (snap: AnalyticsSnapshot) (name: string) =
         match
@@ -451,8 +449,7 @@ module ReportAggregators =
 
     let recoveryByPlayer (snap: AnalyticsSnapshot) (filter: MobFilter) =
         filterInteractions snap filter (fun i ->
-            i.InteractionType = InteractionType.Aid
-            && i.AidType = Some AidType.Recovery
+            InteractionClassification.isHpRecovery i
             && i.Value > 0)
         |> List.groupBy (fun i -> i.ActorName)
         |> List.map (fun (name, rows) ->

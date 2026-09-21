@@ -85,3 +85,18 @@ module InteractionTestHelpers =
         | None -> failwith "Expected battle action decode"
         | Some action ->
             InteractionBuilder.fromCombatAction 1000L None action |> List.head
+
+    let packetEvent (packetId: uint16) (data: byte[]) =
+        { Topic = "test"
+          Timestamp = 10UL
+          Direction = PacketDirection.Incoming
+          PacketType = "world_s2c"
+          PacketId = packetId
+          PacketName = "test"
+          Size = uint32 data.Length
+          Injected = false
+          Blocked = false
+          SessionUuid = "test"
+          Version = "v1"
+          MessageId = 10UL
+          Data = data }

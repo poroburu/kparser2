@@ -179,6 +179,32 @@ module DecoderTests =
         Assert.Equal(Some EntityRegistry.EntityKind.Mob, EntityRegistry.tryGetEntityKind 0x108A5A5u)
 
     [<Fact>]
+    let ``npc update keeps Horizon instance suffixes distinct from display names`` () =
+        EntityRegistry.reset()
+        let observe entityId name =
+            EntityRegistry.observe
+                { Topic = "test"
+                  Timestamp = 1UL
+                  Direction = PacketDirection.Incoming
+                  PacketType = "world_s2c"
+                  PacketId = 0x000Eus
+                  PacketName = "GP_SERV_COMMAND_CHAR_NPC"
+                  Size = 68u
+                  Injected = false
+                  Blocked = false
+                  SessionUuid = "test"
+                  Version = "v1"
+                  MessageId = uint64 entityId
+                  Data = Fixtures.npcUpdatePacket name entityId }
+
+        observe 1u "Funnel_Bats_GC"
+        observe 2u "Funnel_Bats"
+        observe 3u "Funnel Bats"
+        Assert.Equal(Some "Funnel_Bats_GC", EntityRegistry.tryGetName 1u)
+        Assert.Equal(Some "Funnel_Bats", EntityRegistry.tryGetName 2u)
+        Assert.Equal(Some "Funnel Bats", EntityRegistry.tryGetName 3u)
+
+    [<Fact>]
     let ``EntityRegistry sets local player from group attr`` () =
         EntityRegistry.reset()
 
@@ -327,6 +353,29 @@ module DecoderTests =
         | Some action ->
             Assert.Equal(1u, action.ActorId)
             Assert.NotEmpty action.Targets
+
+    [<Fact>]
+    let ``Battle0x28 keeps bloody bolt proc message`` () =
+        match Battle0x28.decode (Fixtures.bloodyBoltDrainPacket ()) with
+        | None -> failwith "Expected bloody bolt decode"
+        | Some action ->
+            Assert.Equal(2, action.CommandNo)
+            let effect = action.Targets |> List.head |> fun t -> List.head t.Effects
+            Assert.Equal(352, effect.MessageId)
+            Assert.Equal(24, effect.Value)
+            Assert.True effect.HasProc
+            Assert.Equal(31, effect.ProcValue)
+            Assert.Equal(161, effect.ProcMessageId)
+
+    [<Fact>]
+    let ``Battle0x28 decodes react spikes`` () =
+        match Battle0x28.decode (Fixtures.combatActionPacketWithReact 1u 2u 1 90 0x14 0 33 44) with
+        | None -> failwith "Expected battle2 react decode"
+        | Some action ->
+            let effect = action.Targets |> List.head |> fun t -> List.head t.Effects
+            Assert.True(effect.HasReact)
+            Assert.Equal(33, effect.ReactValue)
+            Assert.Equal(44, effect.ReactMessageId)
 
     [<Fact>]
     let ``DecoderRegistry routes chat opcode`` () =

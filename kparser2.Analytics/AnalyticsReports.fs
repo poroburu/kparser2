@@ -169,7 +169,7 @@ module DeathsReport =
                 if d.MessageId = 6 then
                     { d with ActorId = d.TargetId; ActorName = d.TargetName
                              TargetId = d.ActorId; TargetName = d.ActorName }
-                elif d.MessageId = 20 then { d with TargetName = "" }
+                elif d.MessageId = 20 then { d with TargetName = "Unknown" }
                 else d)
             |> List.filter (fun d ->
                 snap.Combatants |> List.exists (fun c ->
@@ -914,7 +914,7 @@ module ExtraAttacksReport =
 module AddEffectReport =
     let format (snap: AnalyticsSnapshot) (filter: MobFilter) =
         let rows =
-            ReportAggregators.filterInteractions snap filter (fun i -> i.IsProc && i.ProcValue > 0)
+            ReportAggregators.filterInteractions snap filter InteractionClassification.isAdditionalDamageProc
             |> List.groupBy (fun i -> i.ActorName, i.ActionName)
 
         if rows.IsEmpty then
@@ -1044,24 +1044,6 @@ module CorsairReport =
                     |> ReportBuilder.blankLine)
                 report
 
-module AbysseaReport =
-    let format (snap: AnalyticsSnapshot) (_filter: MobFilter) =
-        let killed = snap.Battles |> List.filter (fun b -> b.Killed)
-
-        if killed.IsEmpty then
-            ReportBuilder.empty
-        else
-            let totalXp = killed |> List.sumBy (fun b -> b.ExperiencePoints)
-
-            ReportBuilder.empty
-            |> ReportBuilder.appendTitle "Abyssea"
-            |> ReportBuilder.appendFormatLine ReportTemplates.Experience.xpListFormatNum [| box "Total Cruor/XP"; box totalXp |]
-            |> ReportBuilder.blankLine
-            |> ReportBuilder.appendTitle "Kills"
-            |> ReportBuilder.appendFormatLine
-                ReportTemplates.Treasure.timesKilledFormat
-                [| box (killed.Length.ToString() + " mobs"); box killed.Length |]
-
 module AnalyticsReports =
     let format (queryId: string) (snap: AnalyticsSnapshot) (filter: MobFilter) =
         match queryId with
@@ -1090,7 +1072,7 @@ module AnalyticsReports =
         | "ws-rates" -> WsRatesReport.format snap filter
         | "thief" -> ThiefReport.format snap filter
         | "corsair" -> CorsairReport.format snap filter
-        | "abyssea" -> AbysseaReport.format snap filter
+        | "abyssea" -> LegacyReportStubs.abyssea snap filter
         | _ -> ReportBuilder.empty
 
     let formatChat (snap: AnalyticsSnapshot) (modeFilter: string option) (speakerFilter: string option) =
