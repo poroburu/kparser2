@@ -14,10 +14,10 @@ All notable changes to kparser2 are documented here. The format follows [Keep a 
 
 ### Fixed
 
-- Aspir / MP-drain amounts (msg 228, skill 225) stay on the interaction log but are no longer summed into HP damage, DPS, export, or the damage graph. HP Drain still counts and still dual-emits caster recovery.
+- Aspir / MP-drain amounts (msg 228, skill 225) and skill TP drain (msg 226) stay on the interaction log but are no longer summed into HP damage, DPS, export, or the damage graph. HP Drain still counts and still dual-emits caster recovery.
 - Additional-effect HP drain (proc message 161, Bloody Bolt) and HP heal (167) are attacker recovery, not proc damage. Proc MP drain (162), TP drain (165), MP heal (152), and status procs (160, 164, 166) stay off additional-effect damage. Souleater (message 100) is an effect id. Weapon Bash (command 3, message 110) is ability damage named from the ability table.
 - Wire message 22 (chatline code 0x16) stays a harm row and no longer invents caster HP recovery. HP Drain recovery remains message 227.
-- Digest (command 11, message 187) is skill HP drain and restores that HP to the actor. Starlight (message 224) stays out of HP curing. Spirit Taker stays damage-only. Skill messages 38 and 53 stay off combat reports.
+- Digest (command 11, message 187) is skill HP drain and restores that HP to the actor. Starlight (message 224) stays out of the Recovery report and out of healing summaries. Spirit Taker stays damage-only. Skill messages 38 and 53 stay off combat reports.
 
 ### Changed
 

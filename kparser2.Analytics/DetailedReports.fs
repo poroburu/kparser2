@@ -178,7 +178,7 @@ module DetailedReports =
     let recovery mode snap filter =
         let statusCure = mode = "StatusCuring" || mode = "StatusCured"
         let eraseIds = set [83; 123; 159; 321; 341; 343]
-        let rows = ReportAggregators.filterInteractions snap { filter with SelectedPlayerName = None } (fun i -> if statusCure then eraseIds.Contains i.MessageId else i.AidType = Some AidType.Recovery && i.MessageId <> 224)
+        let rows = ReportAggregators.filterInteractions snap { filter with SelectedPlayerName = None } (fun i -> if statusCure then eraseIds.Contains i.MessageId else InteractionClassification.isHpRecovery i)
         let received = mode = "Recovery" || mode = "StatusCured"
         let rows = rows |> List.filter (fun i -> selected (if received then i.TargetName else i.ActorName) filter)
         if statusCure then

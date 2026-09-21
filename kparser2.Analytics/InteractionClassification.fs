@@ -62,7 +62,13 @@ module InteractionClassification =
     let isHpDamage (i: Interaction) =
         i.InteractionType = InteractionType.Harm
         && i.HarmType <> Some HarmType.Enfeeble
-        && not (MsgBasicCatalog.isMpResourceTransfer i.MessageId)
+        && not (MsgBasicCatalog.isNonHpResourceTransfer i.MessageId)
+
+    /// HP restored to a combatant. Skill MP recovery (224) stays a recovery row and is not curing.
+    let isHpRecovery (i: Interaction) =
+        i.InteractionType = InteractionType.Aid
+        && i.AidType = Some AidType.Recovery
+        && i.MessageId <> MsgBasicCatalog.SkillRecoversMp
 
     /// React message 44 (SPIKES_EFFECT_DMG) only. Recover-HP and other reacts are not spike HP.
     let isSpike (i: Interaction) =

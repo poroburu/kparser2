@@ -114,7 +114,8 @@ module AnalyticsDtoMapping =
             ProcMessageId = i.ProcMessageId,
             IsLocalPlayerActor = i.IsLocalPlayerActor,
             IsLocalPlayerTarget = i.IsLocalPlayerTarget,
-            SourcePacketId = Option.toObj i.SourcePacketId
+            SourcePacketId = Option.toObj i.SourcePacketId,
+            IsHpDamage = InteractionClassification.isHpDamage i
         )
 
     let private toChat (c: ChatMessageRecord) =

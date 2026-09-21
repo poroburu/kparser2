@@ -83,9 +83,7 @@ public sealed partial class DamageGraphViewModel : ObservableObject, IDisposable
                 if (!Enemies.Contains(name)) Enemies.Add(name);
             var battles = snapshot.Battles.Where(b => (SelectedEnemy == "All" || b.EnemyName == SelectedEnemy) && (!ExcludeZeroXp || b.ExperiencePoints > 0)).Select(b => b.Id).ToHashSet();
             var restricted = SelectedEnemy != "All" || ExcludeZeroXp;
-            // 225/228 = MsgBasicCatalog skill/magic MP drain: keep rows, exclude from HP series.
-            var rows = snapshot.Interactions.Where(i => i.InteractionType == "Harm" && i.HarmType != "Enfeeble"
-                && i.MessageId is not 225 and not 228
+            var rows = snapshot.Interactions.Where(i => i.IsHpDamage
                 && (participants.Contains(i.ActorId) || i.IsLocalPlayerActor)
                 && (SelectedPlayer == "All" || i.ActorName == SelectedPlayer)
                 && (!restricted || i.BattleId is int id && battles.Contains(id))

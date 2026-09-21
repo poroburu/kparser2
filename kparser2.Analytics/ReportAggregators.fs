@@ -449,8 +449,7 @@ module ReportAggregators =
 
     let recoveryByPlayer (snap: AnalyticsSnapshot) (filter: MobFilter) =
         filterInteractions snap filter (fun i ->
-            i.InteractionType = InteractionType.Aid
-            && i.AidType = Some AidType.Recovery
+            InteractionClassification.isHpRecovery i
             && i.Value > 0)
         |> List.groupBy (fun i -> i.ActorName)
         |> List.map (fun (name, rows) ->

@@ -116,8 +116,7 @@ module AnalyticsQueries =
 
     let recovery (snap: AnalyticsSnapshot) (filter: MobFilter) =
         filterInteractions snap filter (fun i ->
-            i.InteractionType = InteractionType.Aid
-            && i.AidType = Some AidType.Recovery
+            InteractionClassification.isHpRecovery i
             && i.Value > 0)
         |> List.groupBy (fun i -> i.ActionName)
         |> List.map (fun (action, rows) ->

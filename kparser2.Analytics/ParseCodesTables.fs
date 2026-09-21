@@ -311,6 +311,10 @@ module MsgBasicCatalog =
     let isMpResourceTransfer n =
         n = MagicDrainMp || n = SkillDrainMp
 
+    /// MP or skill TP (226) moved by a finish. Keep the rows; do not count the amount as HP.
+    let isNonHpResourceTransfer n =
+        isMpResourceTransfer n || n = SkillDrainTp
+
     /// Additional-effect proc messages that move HP, MP, or TP. Not additional damage.
     let isResourceDrainProc n =
         n = AddEffectHpDrain || n = AddEffectMpDrain || n = AddEffectTpDrain
