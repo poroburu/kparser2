@@ -65,6 +65,9 @@ module BattleMessageCatalog =
             InteractionType.Harm, Some HarmType.Enfeeble, None
         elif commandNo = 11 && (messageId = 264 || messageId = 189 || messageId = 283) then
             InteractionType.Harm, Some HarmType.Ability, None
+        // Live Digest. Wire 187 is SKILL_DRAIN_HP. Command 1 still uses chatline 0xBB below.
+        elif commandNo = 11 && messageId = MsgBasicCatalog.SkillDrainHp then
+            InteractionType.Harm, Some HarmType.Ability, None
         elif commandNo = 4 && messageId = 106 then
             InteractionType.Unknown, None, None
         elif messageId >= 420 && messageId <= 429 then
