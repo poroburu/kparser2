@@ -27,9 +27,13 @@ For RC releases use tags like `v0.1.0-rc.1` and pass `--prerelease` to `gh relea
 
 ## Pre-release checklist
 
+Run this required block on the commit you will merge. A commit after that run starts the block over. GitHub CI (`Category!=Integration`) does not replace it.
+
 Constructed smokes (`sample`, `combat_basic`) prove the CLI boots. They do not prove a camp.
 
 Do **not** use `bcmn30_petrifying_pair` as the RC CLI gate. That file is a retail PacketViewer slice (first capture imported from `ffxi-captures`). It stays as an Integration regression (`Category=Integration`), not a stand-in for live Horizon yell, `0x002D` XP, or `0x28` finish classifiers.
+
+Live `probe` / `record` is a changelog note, not a checkbox that holds the PR. When the game is down, write "record untested" and continue. A paired report-oracle window and `scripts/test-ui-replay.ps1` are not part of this gate.
 
 ```powershell
 cd C:\path\to\kparser2
@@ -53,7 +57,7 @@ dotnet test kparser2.sln -c Release --no-build --filter "Category=Integration"
 
 Optional: replay the latest file under `ffxi-captures/ndjson/` with `--assert-settled` (leftover codes are OK; do not require a clean camp).
 
-Optional live smoke (game + kpacket2):
+Live smoke note (game + kpacket2). This does not hold the release. When you skip it, write "record untested" in the changelog:
 
 ```powershell
 dotnet run -c Release --project kparser2.Cli/kparser2.Cli.fsproj -- probe
@@ -80,6 +84,8 @@ dotnet publish kparser2.Cli/kparser2.Cli.fsproj -c Release -r win-x64 --self-con
 dotnet publish kparser2/kparser2.csproj -c Release -r win-x64 --self-contained false `
   -o "$out/kparser2-win-x64"
 ```
+
+Launch each of the three publish folders from that directory. Both CLIs with no args print usage. Start the WPF app, then stop it.
 
 Copy `data/` and `fixtures/sessions/` are included via project `None` items in the WPF publish output. For CLI-only zips, copy `data/` manually if lookups are needed at runtime.
 
