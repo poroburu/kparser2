@@ -55,6 +55,10 @@ module InteractionClassification =
                 | None -> InteractionCategory.Other
             | _ -> InteractionCategory.Other
 
+    /// Proc values that are HP, MP, or TP transfer. Not additional damage.
+    let isAdditionalDamageProc (i: Interaction) =
+        i.IsProc && i.ProcValue > 0 && not (MsgBasicCatalog.isResourceDrainProc i.ProcMessageId)
+
     let isHpDamage (i: Interaction) =
         i.InteractionType = InteractionType.Harm
         && i.HarmType <> Some HarmType.Enfeeble

@@ -239,7 +239,7 @@ module AnalyticsQueries =
 
     let additionalEffects (snap: AnalyticsSnapshot) (filter: MobFilter) =
         let procs =
-            filterInteractions snap filter (fun i -> i.IsProc && i.ProcValue > 0)
+            filterInteractions snap filter InteractionClassification.isAdditionalDamageProc
             |> List.groupBy (fun i -> i.ActionName)
             |> List.map (fun (action, rows) ->
                 { Label = action; Value = "proc"; Count = rows.Length; Total = rows |> List.sumBy (fun r -> r.ProcValue) })

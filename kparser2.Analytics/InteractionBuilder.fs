@@ -29,6 +29,7 @@ module InteractionBuilder =
         (messageId: int)
         (isProc: bool)
         (procValue: int)
+        (procMessageId: int)
         =
         let damageModifier = InteractionClassification.classifyDamageModifier messageId isProc
 
@@ -55,6 +56,7 @@ module InteractionBuilder =
           MessageId = messageId
           IsProc = isProc
           ProcValue = procValue
+          ProcMessageId = procMessageId
           IsLocalPlayerActor = isLocalPlayer actorId
           IsLocalPlayerTarget = isLocalPlayer targetId
           SourcePacketId = None }
@@ -84,6 +86,7 @@ module InteractionBuilder =
                         action.CommandNo
                         effect.MessageId
                         false
+                        0
                         0 ]
                 else
                     let interactionType, harmType, aidType =
@@ -108,6 +111,7 @@ module InteractionBuilder =
                                 effect.MessageId
                                 effect.HasProc
                                 effect.ProcValue
+                                effect.ProcMessageId
 
                         let drainAid =
                             if interactionType = InteractionType.Harm && isHpDrain effect.MessageId && effect.Value > 0 then
@@ -125,6 +129,30 @@ module InteractionBuilder =
                                     action.CommandNo
                                     effect.MessageId
                                     false
+                                    0
+                                    0 ]
+                            else
+                                []
+
+                        let procHpRecovery =
+                            if effect.HasProc
+                               && effect.ProcMessageId = MsgBasicCatalog.AddEffectHpDrain
+                               && effect.ProcValue > 0 then
+                                [ buildInteraction
+                                    timestampMs
+                                    battleId
+                                    action.ActorId
+                                    action.ActorId
+                                    InteractionType.Aid
+                                    None
+                                    (Some AidType.Recovery)
+                                    actionName
+                                    effect.ProcValue
+                                    "hit"
+                                    action.CommandNo
+                                    effect.ProcMessageId
+                                    false
+                                    0
                                     0 ]
                             else
                                 []
@@ -145,13 +173,14 @@ module InteractionBuilder =
                                     action.CommandNo
                                     (if effect.ReactMessageId > 0 then effect.ReactMessageId else effect.MessageId)
                                     false
+                                    0
                                     0 ]
                             else
                                 []
 
                         let primary =
                             { primary with SpellId = if action.CommandNo = 4 then Some (int action.CommandArg) else None }
-                        primary :: drainAid @ spike))
+                        primary :: drainAid @ procHpRecovery @ spike))
 
     let fromCombatMessage (timestampMs: int64) (battleId: int option) (message: CombatMessageDecoded) =
         let interactionType, harmType, aidType =
@@ -189,6 +218,7 @@ module InteractionBuilder =
             MessageId = int message.MessageNum
             IsProc = false
             ProcValue = 0
+            ProcMessageId = 0
             IsLocalPlayerActor = isLocalPlayer message.CasterId
             IsLocalPlayerTarget = isLocalPlayer message.TargetId
             SourcePacketId = None } ]
