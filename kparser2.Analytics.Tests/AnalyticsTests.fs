@@ -762,6 +762,13 @@ module AnalyticsTests =
             (MsgBasicCatalog.classify MsgBasicCatalog.MagicAbsorbStr 4 |> fun (t, _, _) -> t)
         )
         Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.SkillDrainMp)
+        Assert.Equal("Skill Drain HP", MsgBasicCatalog.messageLabel MsgBasicCatalog.SkillDrainHp)
+        Assert.Equal("Skill Gain", MsgBasicCatalog.messageLabel MsgBasicCatalog.SkillGain)
+        Assert.Equal("Skill Level Up", MsgBasicCatalog.messageLabel MsgBasicCatalog.SkillLevelUp)
+        Assert.Equal(InteractionType.Unknown, (MsgBasicCatalog.classify MsgBasicCatalog.SkillGain 4 |> fun (t, _, _) -> t))
+        Assert.Equal(InteractionType.Unknown, (MsgBasicCatalog.classify MsgBasicCatalog.SkillLevelUp 4 |> fun (t, _, _) -> t))
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.SkillGain)
+        Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.SkillLevelUp)
         Assert.Equal("Magic Erase", MsgBasicCatalog.messageLabel MsgBasicCatalog.MagicErase)
         Assert.True(SettledDivergence.isMessageClassified MsgBasicCatalog.MagicErase)
         Assert.Equal("Magic Remove Effect", MsgBasicCatalog.messageLabel MsgBasicCatalog.MagicRemoveEffect)
@@ -1649,3 +1656,95 @@ module OffenseNukeMpTests =
         Assert.DoesNotMatch(@"Caster\s+\S", text)
         ingest store 20UL 200u 4 152u 324 2 0
         Assert.Matches(@"Caster\s+Blizzard Iv\s+162\s+2\.00", report "offense" store |> costs)
+
+[<Collection("EntityRegistry")>]
+module SlimeCampTests =
+    let private ingest opcode data store =
+        let evt = InteractionTestHelpers.packetEvent opcode data
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+
+    [<Fact>]
+    let ``Digest command 11 message 187 is ability HP drain plus actor recovery`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionBuilder.reset ()
+        InteractionTestHelpers.registerLocalPlayer 0x268Bu "Poroburu"
+        InteractionTestHelpers.registerMob 0x2C8Bu "Gloop"
+        let meleeType, meleeHarm, _ = BattleMessageCatalog.classifyActionEffect 1 MsgBasicCatalog.SkillDrainHp 0 3
+        Assert.Equal(InteractionType.Harm, meleeType)
+        Assert.Equal(Some HarmType.Other, meleeHarm)
+        let store = SessionStore.create ()
+        ingest 0x0028us (Fixtures.combatActionPacketEx 0x2C8Bu 0x268Bu 11 433u 11 MsgBasicCatalog.SkillDrainHp 0) store
+        ingest 0x0028us (Fixtures.combatActionPacketEx 0x268Bu 0x2C8Bu 1 0u 3 MsgBasicCatalog.SkillDrainHp 0) store
+        let snap = SessionStore.snapshot store
+        let harm =
+            snap.Interactions
+            |> List.find (fun i -> i.CommandNo = 11 && i.InteractionType = InteractionType.Harm)
+        Assert.Equal(Some HarmType.Ability, harm.HarmType)
+        Assert.Equal("Digest", harm.ActionName)
+        Assert.Equal(11, harm.Value)
+        Assert.Equal(0x268Bu, harm.TargetId)
+        Assert.True(InteractionClassification.isHpDamage harm)
+        let recover =
+            Assert.Single(snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery))
+        Assert.Equal(0x2C8Bu, recover.ActorId)
+        Assert.Equal(0x2C8Bu, recover.TargetId)
+        Assert.Equal(11, recover.Value)
+        Assert.Equal("Digest", recover.ActionName)
+
+    [<Fact>]
+    let ``Spirit Taker stays weaponskill damage without an invented MP recovery`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionBuilder.reset ()
+        InteractionTestHelpers.registerLocalPlayer 0x268Bu "Poroburu"
+        InteractionTestHelpers.registerMob 0x2C8Bu "Gloop"
+        let store = SessionStore.create ()
+        ingest 0x0028us (Fixtures.combatActionPacketEx 0x268Bu 0x2C8Bu 3 183u 51 185 0) store
+        let snap = SessionStore.snapshot store
+        let hit = Assert.Single snap.Interactions
+        Assert.Equal(InteractionType.Harm, hit.InteractionType)
+        Assert.Equal(Some HarmType.Weaponskill, hit.HarmType)
+        Assert.Equal("Spirit Taker", hit.ActionName)
+        Assert.Equal(51, hit.Value)
+        Assert.True(InteractionClassification.isHpDamage hit)
+
+    [<Fact>]
+    let ``Starlight message 224 is MP recovery and stays out of HP curing`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionBuilder.reset ()
+        InteractionTestHelpers.registerLocalPlayer 0x268Bu "Poroburu"
+        let store = SessionStore.create ()
+        ingest 0x0028us (Fixtures.combatActionPacketEx 0x268Bu 0x268Bu 3 163u 26 MsgBasicCatalog.SkillRecoversMp 0) store
+        let snap = SessionStore.snapshot store
+        let row = Assert.Single snap.Interactions
+        Assert.Equal(InteractionType.Aid, row.InteractionType)
+        Assert.Equal(Some AidType.Recovery, row.AidType)
+        Assert.Equal("Starlight", row.ActionName)
+        Assert.Equal(26, row.Value)
+        Assert.Equal(0x268Bu, row.TargetId)
+        Assert.False(InteractionClassification.isHpDamage row)
+        let text = ReportTestHelpers.reportText "recovery" (AnalyticsDtoMapping.toSnapshotDto snap)
+        Assert.DoesNotContain("Starlight", text, StringComparison.Ordinal)
+        Assert.DoesNotContain("26", text, StringComparison.Ordinal)
+
+    [<Fact>]
+    let ``club skill messages stay off buff and damage reports`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionBuilder.reset ()
+        InteractionTestHelpers.registerLocalPlayer 0x268Bu "Poroburu"
+        let store = SessionStore.create ()
+        ingest 0x0029us (Fixtures.battleMessagePacket 0x268Bu 0x268Bu (uint16 MsgBasicCatalog.SkillGain) 2u 0u 4uy) store
+        ingest 0x0029us (Fixtures.battleMessagePacket 0x268Bu 0x268Bu (uint16 MsgBasicCatalog.SkillLevelUp) 90u 0u 4uy) store
+        let snap = SessionStore.snapshot store
+        Assert.Equal(2, snap.Interactions.Length)
+        Assert.All(snap.Interactions, fun i ->
+            Assert.Equal(InteractionType.Unknown, i.InteractionType)
+            Assert.False(InteractionClassification.isHpDamage i))
+        Assert.Contains(snap.Interactions, fun i -> i.ActionName = "Skill Gain" && i.MessageId = 38)
+        Assert.Contains(snap.Interactions, fun i -> i.ActionName = "Skill Level Up" && i.MessageId = 53)
+        let dto = AnalyticsDtoMapping.toSnapshotDto snap
+        let buffs = ReportTestHelpers.reportText "buffs" dto
+        let offense = ReportTestHelpers.reportText "offense" dto
+        Assert.DoesNotContain("Skill Gain", buffs, StringComparison.Ordinal)
+        Assert.DoesNotContain("Skill Level Up", buffs, StringComparison.Ordinal)
+        Assert.DoesNotContain("Skill Gain", offense, StringComparison.Ordinal)
+        Assert.DoesNotContain("90", offense, StringComparison.Ordinal)

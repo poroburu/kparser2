@@ -6,16 +6,22 @@ open System.IO
 open System.Text.Json
 
 module ActionLookup =
-    // Verified against paired BST ChatLines and server/sql/{weapon_skills,mob_skills}.sql.
+    // Verified against paired chat and server/sql/{weapon_skills,mob_skills}.sql.
     // These IDs belong to separate namespaces from job abilities in actions.json.
+    // Starlight 163, Spirit Taker 183, and Digest 433 are from the 20260921 slime camp.
     let tryWeaponSkillName id =
-        match id with | 69 -> Some "Rampage" | _ -> None
+        match id with
+        | 69 -> Some "Rampage"
+        | 163 -> Some "Starlight"
+        | 183 -> Some "Spirit Taker"
+        | _ -> None
 
     let tryMonsterSkillName id =
         match id with
         | 260 | 3857 -> Some "Lamb Chop"
         | 340 -> Some "Rhino Attack"
         | 341 -> Some "Rhino Guard"
+        | 433 -> Some "Digest"
         | 792 -> Some "Sandstorm"
         | 795 -> Some "Sand Trap"
         | _ -> None

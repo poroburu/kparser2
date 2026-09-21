@@ -64,6 +64,10 @@ module InteractionBuilder =
     let private isHpDrain messageId =
         messageId = MsgBasicCatalog.MagicDrainHp || messageId = 0x16
 
+    /// Command 11 message 187 only. Command 1 message 0xBB stays the chatline TP-drain row.
+    let private isMonsterSkillHpDrain commandNo messageId =
+        commandNo = 11 && messageId = MsgBasicCatalog.SkillDrainHp
+
     let fromCombatAction (timestampMs: int64) (battleId: int option) (action: CombatActionDecoded) =
         action.Targets
         |> List.collect (fun target ->
@@ -114,7 +118,9 @@ module InteractionBuilder =
                                 effect.ProcMessageId
 
                         let drainAid =
-                            if interactionType = InteractionType.Harm && isHpDrain effect.MessageId && effect.Value > 0 then
+                            if interactionType = InteractionType.Harm
+                               && effect.Value > 0
+                               && (isHpDrain effect.MessageId || isMonsterSkillHpDrain action.CommandNo effect.MessageId) then
                                 [ buildInteraction
                                     timestampMs
                                     battleId

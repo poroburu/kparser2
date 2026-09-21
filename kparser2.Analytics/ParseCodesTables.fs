@@ -203,6 +203,8 @@ module MsgBasicCatalog =
     let SkillRecoversMp = 224
     let SkillDrainMp = 225
     let SkillDrainTp = 226
+    // Live Digest: 0x28 command 11 message 187. Same number as chatline code 0xBB.
+    let SkillDrainHp = 187
     let MagicDrainHp = 227
     let MagicDrainMp = 228
     // xi.msg.basic additional-effect procs. Live 20260921 Bloody Bolt: proc_message 161, proc_value is HP drained.
@@ -257,6 +259,9 @@ module MsgBasicCatalog =
     // /check evasion-defense lines; Windower BtlMess 170-178, LSB enum has a hole here. Live camp used 176-178.
     let CheckHighEvaDef = 170
     let CheckLowEvaDef = 178
+    // Live club skillups: 0x29 message 38 rises, 53 reaches a level.
+    let SkillGain = 38
+    let SkillLevelUp = 53
 
     let private isCastInterruptedOrBlocked n =
         n = IsInterrupted
@@ -343,6 +348,7 @@ module MsgBasicCatalog =
         | n when n = TimeLeft -> Some(InteractionType.Unknown, None, None)
         | n when isActionBlocked n -> Some(InteractionType.Unknown, None, None)
         | n when isCheckEvasionDefense n -> Some(InteractionType.Unknown, None, None)
+        | n when n = SkillGain || n = SkillLevelUp -> Some(InteractionType.Unknown, None, None)
         | _ -> None
 
     let classify (messageNum: int) (messageType: int) =
@@ -371,6 +377,7 @@ module MsgBasicCatalog =
         | n when n = TimeLeft -> InteractionType.Unknown, None, None
         | n when isActionBlocked n -> InteractionType.Unknown, None, None
         | n when isCheckEvasionDefense n -> InteractionType.Unknown, None, None
+        | n when n = SkillGain || n = SkillLevelUp -> InteractionType.Unknown, None, None
         | _ when messageType >= 4 -> InteractionType.Aid, None, Some AidType.Enhance
         | _ -> InteractionType.Unknown, None, None
 
@@ -400,6 +407,7 @@ module MsgBasicCatalog =
         | 224 -> "Skill Recovers MP"
         | 225 -> "Skill Drain MP"
         | 226 -> "Skill Drain TP"
+        | 187 -> "Skill Drain HP"
         | 227 -> "Magic Drain HP"
         | 228 -> "Magic Drain MP"
         | 329 -> "Magic Absorb STR"
@@ -440,4 +448,6 @@ module MsgBasicCatalog =
         | 176 -> "Check Low Evasion High Defense"
         | 177 -> "Check Low Evasion"
         | 178 -> "Check Low Evasion And Defense"
+        | 38 -> "Skill Gain"
+        | 53 -> "Skill Level Up"
         | n -> $"MsgBasic-{n}"
