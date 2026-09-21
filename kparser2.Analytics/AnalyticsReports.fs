@@ -914,7 +914,7 @@ module ExtraAttacksReport =
 module AddEffectReport =
     let format (snap: AnalyticsSnapshot) (filter: MobFilter) =
         let rows =
-            ReportAggregators.filterInteractions snap filter (fun i -> i.IsProc && i.ProcValue > 0)
+            ReportAggregators.filterInteractions snap filter InteractionClassification.isAdditionalDamageProc
             |> List.groupBy (fun i -> i.ActorName, i.ActionName)
 
         if rows.IsEmpty then

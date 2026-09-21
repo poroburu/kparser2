@@ -91,6 +91,7 @@ type Interaction =
       MessageId: int
       IsProc: bool
       ProcValue: int
+      ProcMessageId: int
       IsLocalPlayerActor: bool
       IsLocalPlayerTarget: bool
       SourcePacketId: string option }

@@ -205,6 +205,10 @@ module MsgBasicCatalog =
     let SkillDrainTp = 226
     let MagicDrainHp = 227
     let MagicDrainMp = 228
+    // xi.msg.basic additional-effect procs. Live 20260921 Bloody Bolt: proc_message 161, proc_value is HP drained.
+    let AddEffectHpDrain = 161
+    let AddEffectMpDrain = 162
+    let AddEffectTpDrain = 165
     // xi.msg.basic MAGIC_ABSORB_*; live stop 20260919_105549 cmd 4 used 329-332 (STR/DEX/VIT/AGI).
     let MagicAbsorbStr = 329
     let MagicAbsorbDex = 330
@@ -290,6 +294,10 @@ module MsgBasicCatalog =
     /// MP transferred by Aspir (228) or skill drain (225). Keep the rows; do not count as HP.
     let isMpResourceTransfer n =
         n = MagicDrainMp || n = SkillDrainMp
+
+    /// Additional-effect proc messages that move HP, MP, or TP. Not additional damage.
+    let isResourceDrainProc n =
+        n = AddEffectHpDrain || n = AddEffectMpDrain || n = AddEffectTpDrain
 
     // Live 329-332 carry status ids 136-139, not damage amounts.
     let private isStatAbsorb n = n >= MagicAbsorbStr && n <= MagicAbsorbChr

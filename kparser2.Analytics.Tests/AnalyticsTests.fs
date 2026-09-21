@@ -275,6 +275,7 @@ module FightSegmenterTests =
           MessageId = 0
           IsProc = false
           ProcValue = 0
+          ProcMessageId = 0
           IsLocalPlayerActor = false
           IsLocalPlayerTarget = false; SourcePacketId = None }
 
@@ -1078,6 +1079,7 @@ module AnalyticsTests =
                 MessageId = 7
                 IsProc = false
                 ProcValue = 0
+                ProcMessageId = 0
                 IsLocalPlayerActor = false
                 IsLocalPlayerTarget = false; SourcePacketId = None } ]
 
@@ -1287,6 +1289,53 @@ module FixtureReplayParityTests =
         Assert.True(snap.Interactions |> List.exists (fun i -> i.Value = 52 && i.HarmType = Some HarmType.Melee))
         let text = ReportTestHelpers.reportText "offense" (AnalyticsDtoMapping.toSnapshotDto snap)
         ReportTestHelpers.contains "Melee" text
+
+    [<Fact>]
+    let ``bloody bolt proc recovers HP and adds no additional damage`` () =
+        InteractionTestHelpers.resetEntities ()
+        let data = Fixtures.bloodyBoltDrainPacket ()
+        let action =
+            match Battle0x28.decode data with
+            | None -> failwith "Expected bloody bolt decode"
+            | Some action -> action
+        InteractionTestHelpers.registerLocalPlayer action.ActorId "Caster"
+        let store = SessionStore.create ()
+        let evt = InteractionTestHelpers.packetEvent 0x0028us data
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        let snap = SessionStore.snapshot store
+        Assert.True(snap.Interactions |> List.exists (fun i ->
+            i.InteractionType = InteractionType.Harm && i.HarmType = Some HarmType.Ranged && i.Value = 24 && i.MessageId = 352))
+        Assert.True(snap.Interactions |> List.exists (fun i ->
+            i.AidType = Some AidType.Recovery && i.MessageId = 161 && i.Value = 31 && i.ActorId = action.ActorId))
+        let filter = MobFilter.defaultFilter
+        Assert.Equal(24, AnalyticsQueries.offenseSummary snap filter |> List.sumBy (fun r -> r.Total))
+        Assert.Equal(31, AnalyticsQueries.recovery snap filter |> List.sumBy (fun r -> r.Total))
+        Assert.Equal(0, AnalyticsQueries.additionalEffects snap filter |> List.filter (fun r -> r.Value = "proc") |> List.sumBy (fun r -> r.Total))
+
+    [<Fact>]
+    let ``additional effect damage proc still counts`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 1u "Caster"
+        let store = SessionStore.create ()
+        let data = Fixtures.combatActionPacketWithProc 1u 2u 1 10 1 0 34 163
+        let evt = InteractionTestHelpers.packetEvent 0x0028us data
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        let snap = SessionStore.snapshot store
+        Assert.Empty(snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery))
+        Assert.Equal(34, AnalyticsQueries.additionalEffects snap MobFilter.defaultFilter |> List.filter (fun r -> r.Value = "proc") |> List.sumBy (fun r -> r.Total))
+        Assert.Equal(10, AnalyticsQueries.offenseSummary snap MobFilter.defaultFilter |> List.sumBy (fun r -> r.Total))
+
+    [<Fact>]
+    let ``mp drain proc is not HP recovery or additional damage`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 1u "Caster"
+        let store = SessionStore.create ()
+        let data = Fixtures.combatActionPacketWithProc 1u 2u 1 10 1 0 20 162
+        let evt = InteractionTestHelpers.packetEvent 0x0028us data
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        let snap = SessionStore.snapshot store
+        Assert.Empty(snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery))
+        Assert.Equal(0, AnalyticsQueries.additionalEffects snap MobFilter.defaultFilter |> List.filter (fun r -> r.Value = "proc") |> List.sumBy (fun r -> r.Total))
 
     [<Fact>]
     let ``combat_drain counts harm and recovery hp`` () =

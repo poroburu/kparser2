@@ -355,6 +355,19 @@ module DecoderTests =
             Assert.NotEmpty action.Targets
 
     [<Fact>]
+    let ``Battle0x28 keeps bloody bolt proc message`` () =
+        match Battle0x28.decode (Fixtures.bloodyBoltDrainPacket ()) with
+        | None -> failwith "Expected bloody bolt decode"
+        | Some action ->
+            Assert.Equal(2, action.CommandNo)
+            let effect = action.Targets |> List.head |> fun t -> List.head t.Effects
+            Assert.Equal(352, effect.MessageId)
+            Assert.Equal(24, effect.Value)
+            Assert.True effect.HasProc
+            Assert.Equal(31, effect.ProcValue)
+            Assert.Equal(161, effect.ProcMessageId)
+
+    [<Fact>]
     let ``Battle0x28 decodes react spikes`` () =
         match Battle0x28.decode (Fixtures.combatActionPacketWithReact 1u 2u 1 90 0x14 0 33 44) with
         | None -> failwith "Expected battle2 react decode"
