@@ -153,6 +153,8 @@ module BattleMessageCatalog =
             | 10 -> "Ability"
             | 12 -> "Ranged"
             | n -> $"cmd-{n}"
+        elif commandNo = 3 && messageId = MsgBasicCatalog.UsesAbilityTakesDamage then
+            ActionLookup.tryGetName commandArg |> Option.defaultValue $"ability-{commandArg}"
         elif commandNo = 3 then
             ActionLookup.tryWeaponSkillName commandArg |> Option.defaultValue $"weaponskill-{commandArg}"
         elif commandNo = 11 then

@@ -61,8 +61,9 @@ module InteractionBuilder =
           IsLocalPlayerTarget = isLocalPlayer targetId
           SourcePacketId = None }
 
+    /// Wire HP drain is message 227. Chatline code 0x16 is the same number as UNKNOWN_22.
     let private isHpDrain messageId =
-        messageId = MsgBasicCatalog.MagicDrainHp || messageId = 0x16
+        messageId = MsgBasicCatalog.MagicDrainHp
 
     /// Command 11 message 187 only. Command 1 message 0xBB stays the chatline TP-drain row.
     let private isMonsterSkillHpDrain commandNo messageId =
@@ -142,8 +143,9 @@ module InteractionBuilder =
 
                         let procHpRecovery =
                             if effect.HasProc
-                               && effect.ProcMessageId = MsgBasicCatalog.AddEffectHpDrain
-                               && effect.ProcValue > 0 then
+                               && effect.ProcValue > 0
+                               && (effect.ProcMessageId = MsgBasicCatalog.AddEffectHpDrain
+                                   || effect.ProcMessageId = MsgBasicCatalog.AddEffectHpHeal) then
                                 [ buildInteraction
                                     timestampMs
                                     battleId

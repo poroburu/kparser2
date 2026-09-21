@@ -210,9 +210,14 @@ module MsgBasicCatalog =
     let MagicDrainHp = 227
     let MagicDrainMp = 228
     // xi.msg.basic additional-effect procs. Live 20260921 Bloody Bolt: proc_message 161, proc_value is HP drained.
+    let AddEffectMpHeal = 152
+    let AddEffectStatus = 160
     let AddEffectHpDrain = 161
     let AddEffectMpDrain = 162
+    let AddEffectStatus2 = 164
     let AddEffectTpDrain = 165
+    let AddEffectSelfBuff = 166
+    let AddEffectHpHeal = 167
     // Live 20260921: Souleater finish is command 6, message 100, param = effect id 63.
     let UsesJobAbility = 100
     // Live 20260921: Weapon Bash finish is command 3, message 110, param = damage.
@@ -309,6 +314,15 @@ module MsgBasicCatalog =
     /// Additional-effect proc messages that move HP, MP, or TP. Not additional damage.
     let isResourceDrainProc n =
         n = AddEffectHpDrain || n = AddEffectMpDrain || n = AddEffectTpDrain
+
+    /// Proc values that are not additional HP damage: resource transfer, heals, and status ids.
+    let isNonDamageProc n =
+        isResourceDrainProc n
+        || n = AddEffectMpHeal
+        || n = AddEffectHpHeal
+        || n = AddEffectStatus
+        || n = AddEffectStatus2
+        || n = AddEffectSelfBuff
 
     // Live 329-332 carry status ids 136-139, not damage amounts.
     let private isStatAbsorb n = n >= MagicAbsorbStr && n <= MagicAbsorbChr

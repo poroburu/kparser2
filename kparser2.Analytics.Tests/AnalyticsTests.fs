@@ -1374,13 +1374,62 @@ module FixtureReplayParityTests =
         Assert.DoesNotContain("20", addEffect, StringComparison.Ordinal)
 
     [<Fact>]
-    let ``combat_drain counts harm and recovery hp`` () =
+    let ``hp heal proc recovers HP and adds no additional damage`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 1u "Caster"
+        let store = SessionStore.create ()
+        let data = Fixtures.combatActionPacketWithProc 1u 2u 1 10 1 0 40 167
+        let evt = InteractionTestHelpers.packetEvent 0x0028us data
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        let snap = SessionStore.snapshot store
+        Assert.True(snap.Interactions |> List.exists (fun i ->
+            i.AidType = Some AidType.Recovery && i.MessageId = 167 && i.Value = 40 && i.ActorId = 1u))
+        Assert.Equal(40, AnalyticsQueries.recovery snap MobFilter.defaultFilter |> List.sumBy (fun r -> r.Total))
+        Assert.Equal(0, AnalyticsQueries.additionalEffects snap MobFilter.defaultFilter |> List.filter (fun r -> r.Value = "proc") |> List.sumBy (fun r -> r.Total))
+        let addEffect = ReportTestHelpers.reportText "add-effect" (AnalyticsDtoMapping.toSnapshotDto snap)
+        Assert.DoesNotContain("40", addEffect, StringComparison.Ordinal)
+
+    [<Fact>]
+    let ``mp heal and status procs are not HP recovery or additional damage`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 1u "Caster"
+        let store = SessionStore.create ()
+        let ingest procValue procMessage =
+            let data = Fixtures.combatActionPacketWithProc 1u 2u 1 10 1 0 procValue procMessage
+            let evt = InteractionTestHelpers.packetEvent 0x0028us data
+            SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        ingest 18 152
+        ingest 136 160
+        let snap = SessionStore.snapshot store
+        Assert.Empty(snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery))
+        Assert.Equal(0, AnalyticsQueries.additionalEffects snap MobFilter.defaultFilter |> List.filter (fun r -> r.Value = "proc") |> List.sumBy (fun r -> r.Total))
+        let addEffect = ReportTestHelpers.reportText "add-effect" (AnalyticsDtoMapping.toSnapshotDto snap)
+        Assert.DoesNotContain("18", addEffect, StringComparison.Ordinal)
+        Assert.DoesNotContain("136", addEffect, StringComparison.Ordinal)
+
+    [<Fact>]
+    let ``weapon bash command 3 uses the ability name`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 1u "Caster"
+        let store = SessionStore.create ()
+        let data = Fixtures.combatActionPacketEx 1u 2u 3 77u 19 MsgBasicCatalog.UsesAbilityTakesDamage 0
+        let evt = InteractionTestHelpers.packetEvent 0x0028us data
+        SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        let snap = SessionStore.snapshot store
+        let hit = Assert.Single snap.Interactions
+        Assert.Equal(InteractionType.Harm, hit.InteractionType)
+        Assert.Equal(Some HarmType.Ability, hit.HarmType)
+        Assert.Equal("weapon bash", hit.ActionName)
+        Assert.Equal(19, hit.Value)
+
+    [<Fact>]
+    let ``combat_drain keeps message 22 harm without invented recovery`` () =
         EntityRegistry.reset()
         let snap = ReplayHelpers.ingestFixture (FixturePaths.combatDrain())
         Assert.True(snap.Interactions |> List.exists (fun i -> i.InteractionType = InteractionType.Harm && i.MessageId = 0x16 && i.Value = 50))
-        Assert.True(snap.Interactions |> List.exists (fun i -> i.AidType = Some AidType.Recovery && i.Value = 50))
+        Assert.Empty(snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery))
         let text = ReportTestHelpers.reportText "recovery" (AnalyticsDtoMapping.toSnapshotDto snap)
-        ReportTestHelpers.contains "Curing" text
+        Assert.DoesNotContain("50", text, StringComparison.Ordinal)
 
     [<Fact>]
     let ``stat absorbs retain effects but never add damage or recovery`` () =
