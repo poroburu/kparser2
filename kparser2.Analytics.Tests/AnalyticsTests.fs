@@ -1341,6 +1341,8 @@ module FixtureReplayParityTests =
         Assert.Equal(24, AnalyticsQueries.offenseSummary snap filter |> List.sumBy (fun r -> r.Total))
         Assert.Equal(31, AnalyticsQueries.recovery snap filter |> List.sumBy (fun r -> r.Total))
         Assert.Equal(0, AnalyticsQueries.additionalEffects snap filter |> List.filter (fun r -> r.Value = "proc") |> List.sumBy (fun r -> r.Total))
+        let addEffect = ReportTestHelpers.reportText "add-effect" (AnalyticsDtoMapping.toSnapshotDto snap)
+        Assert.DoesNotContain("31", addEffect, StringComparison.Ordinal)
 
     [<Fact>]
     let ``additional effect damage proc still counts`` () =
@@ -1354,6 +1356,8 @@ module FixtureReplayParityTests =
         Assert.Empty(snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery))
         Assert.Equal(34, AnalyticsQueries.additionalEffects snap MobFilter.defaultFilter |> List.filter (fun r -> r.Value = "proc") |> List.sumBy (fun r -> r.Total))
         Assert.Equal(10, AnalyticsQueries.offenseSummary snap MobFilter.defaultFilter |> List.sumBy (fun r -> r.Total))
+        let addEffect = ReportTestHelpers.reportText "add-effect" (AnalyticsDtoMapping.toSnapshotDto snap)
+        ReportTestHelpers.contains "34" addEffect
 
     [<Fact>]
     let ``mp drain proc is not HP recovery or additional damage`` () =
@@ -1366,6 +1370,8 @@ module FixtureReplayParityTests =
         let snap = SessionStore.snapshot store
         Assert.Empty(snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery))
         Assert.Equal(0, AnalyticsQueries.additionalEffects snap MobFilter.defaultFilter |> List.filter (fun r -> r.Value = "proc") |> List.sumBy (fun r -> r.Total))
+        let addEffect = ReportTestHelpers.reportText "add-effect" (AnalyticsDtoMapping.toSnapshotDto snap)
+        Assert.DoesNotContain("20", addEffect, StringComparison.Ordinal)
 
     [<Fact>]
     let ``combat_drain counts harm and recovery hp`` () =

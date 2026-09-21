@@ -240,7 +240,7 @@ module DetailedReports =
         let attacks = scoped meleeRanged |> List.filter (fun i -> selected i.ActorName filter)
         let procs =
             attacks
-            |> List.filter (fun i -> i.IsProc)
+            |> List.filter InteractionClassification.isAdditionalDamageProc
             |> List.groupBy (fun i -> i.ActorName, i.ActionName)
             |> List.sortBy fst
             |> List.map (fun ((n, a), es) ->
