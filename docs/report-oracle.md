@@ -99,7 +99,14 @@ results. A passing rerun does not resolve an intermittent failure.
 
 ## GitHub
 
-- [#4](https://github.com/poroburu/kparser2/issues/4) — report inventory. Comment when a family is classified or proven. Close only when the inventory is decided (done or deferred with reason).
+- [#4](https://github.com/poroburu/kparser2/issues/4) — report inventory. Each row is one state:
+
+  - **Verified** — paired Horizon window or committed live slice; figures checked against packet bytes and against kparser where both saw the event; WPF filters for that report exercised; honest empty shown when the event is absent.
+  - **Shipped with a named limit** — the report renders, and the unchecked mode is named.
+  - **Blocked on bytes** — the report stays empty or partial until a capture contains the event.
+  - **Deferred** — written reason; no implementation until that reason changes.
+
+  Comment when a family is classified or proven. Close only when every row is Verified or Deferred. A child issue closing, a CLI `report` with rows, `--assert-settled`, a cool heat fingerprint, or a UI text match against `AnalyticsReportService` does not move a row to Verified. `scripts/test-ui-replay.ps1` checks that WPF bound the same text as state.
 - [#9](https://github.com/poroburu/kparser2/issues/9) — harness freeze lifted **only to run** the existing compare path for #4. Do not close. Do not grow oracle scripts until a missing compare blocks a family.
 - [#6](https://github.com/poroburu/kparser2/issues/6) — do not touch.
 - [#10](https://github.com/poroburu/kparser2/issues/10)–[#13](https://github.com/poroburu/kparser2/issues/13) — stay closed.
