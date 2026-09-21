@@ -278,7 +278,7 @@ Fixture replay (`analytics snapshot`, `--parity-chat`, `dotnet test`) does **not
 
 A **wire scan** is packet-first: `record`, heat, reconcile, `analytics snapshot --assert-settled`. That is **not** #4 completion.
 
-A **report-oracle scan** ([docs/report-oracle.md](docs/report-oracle.md)) requires dual capture: last-green `record` **and** `kparser.cli capture`. Do not mark v1 unobserved and proceed. The RAM reader may need Administrator (`RunAs`); a shell sandbox exception alone does not grant it. Failed attach: fix/retry/ask once for elevation. Town idle with a live attach is OK; NDJSON combat/chat with a dead chatlines file is capture broken.
+A **report-oracle scan** ([docs/report-oracle.md](docs/report-oracle.md)) requires dual capture: last-green `record` **and** `kparser.cli capture`. Do not mark v1 unobserved and proceed. `kparser.cli capture` must run as Administrator (`Start-Process -Verb RunAs`). It exits 2 when it is not elevated, before it writes ChatLines. A shell sandbox exception does not elevate it. Town idle with a live attach is OK; NDJSON combat/chat with a dead chatlines file is capture broken.
 
 Testers **only play**. A local Cursor Agent thread on the game PC runs the loop. Not a cloud Automation (`:5555` is localhost). Not WPF. No in-game cast checklist.
 

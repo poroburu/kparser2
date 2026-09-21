@@ -32,7 +32,7 @@ The report-oracle scan does **not** mark kparser v1 “unobserved” and continu
 | State | Action |
 |-------|--------|
 | kpacket `:5555`/`:5556` down | Fix `/load kpacket` / `probe`. Do not invent a sleeper. |
-| `kparser.cli capture` not attached | Build x86 net3.5 CLI if missing; request unsandboxed shell; RAM read often needs Administrator — ask once for elevation. Retry. **Block** product compare and report PRs until attach works. |
+| `kparser.cli capture` not attached | Build x86 net3.5 CLI if missing. `capture` must run as Administrator (`Start-Process -Verb RunAs`); an unelevated process exits 2 and writes no ChatLines. A sandbox exception does not elevate. **Block** product compare and report PRs until the elevated process is writing lines or a proven idle attach. |
 | Capture attached, town idle, no new ChatLines | Allowed. Wait for play. |
 | NDJSON grew combat/chat and chatlines did not | Capture is broken. Fix attach. Do not classify those rows as kparser-only. |
 
@@ -46,7 +46,7 @@ Horizon loaded, `/load kpacket`.
 
 1. `kparser2.cli probe`. Fail → live untested for **wire** until the plugin is up; still do not skip kparser attach once the game is up.
 2. Record last-green develop exe to `ffxi-captures/ndjson/<stamp>.ndjson` with `--checkpoint-ms 120000 --idle-ms 180000`. Attach if a recorder is already writing. Exactly one kparser2 recorder.
-3. Start `kparser.cli capture` to a sibling `ffxi-captures/<stamp>.chatlines.txt` with `--checkpoint-ms 120000`. Prove attach (process running, no access-denied, file exists) before the first heat classify.
+3. Start `kparser.cli capture` elevated to a sibling `ffxi-captures/<stamp>.chatlines.txt` with `--checkpoint-ms 120000`. It exits 2 unless it is Administrator. Prove attach (elevated process, file exists) before the first heat classify.
 4. I play. No in-game script. `kparser2.cli echo` only if one sample is blocking a family already in progress.
 
 ## Checkpoint
@@ -118,7 +118,7 @@ Two oracles from the same play session. Both must be recording before you classi
 
 kparser RAM capture is required. Do not mark v1 “unobserved” and proceed.
 
-Start: probe; record last-green develop exe to ffxi-captures/ndjson with --checkpoint-ms 120000 --idle-ms 180000 (attach if already writing); kparser.cli capture to a sibling chatlines file. Notify only on record checkpoint: / recording stopped: and the capture’s checkpoint/stop. No Start-Sleep, AGENT_LOOP_WAKE, or Cursor /loop timer. Prove RAM attach before the first heat classify. Ask once for Administrator elevation if attach fails; retry; block product work until it works. Town idle with a live attach is OK. NDJSON combat/chat with a dead chatlines file is capture broken.
+Start: probe; record last-green develop exe to ffxi-captures/ndjson with --checkpoint-ms 120000 --idle-ms 180000 (attach if already writing); kparser.cli capture elevated (`Start-Process -Verb RunAs`) to a sibling chatlines file. It exits 2 if it is not Administrator. Notify only on record checkpoint: / recording stopped: and the capture’s checkpoint/stop. No Start-Sleep, AGENT_LOOP_WAKE, or Cursor /loop timer. Prove the elevated attach before the first heat classify. Town idle with a live attach is OK. NDJSON combat/chat with a dead chatlines file is capture broken.
 
 First checkpoint and stop: always freeze, normalize, align, and compare both sides. Other checkpoints: opcode-heat.ps1 (exit 0 → skip and say so); heat change → the same paired preflight. Prove usable parsing and source anchors before classifying ingest | report | kparser-only | extra | fork. Search open PRs. Draft PR into develop, never main. Do not close #4/#6/#9. Do not reopen #10–#13. Do not touch #6. Do not ask me to cast. echo only if one sample is blocking a family already in progress. Zone change keep both files; real logout/DC ends the pair. Stop if I say stop.
 ```
