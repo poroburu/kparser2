@@ -59,10 +59,15 @@ module InteractionClassification =
     let isAdditionalDamageProc (i: Interaction) =
         i.IsProc && i.ProcValue > 0 && not (MsgBasicCatalog.isNonDamageProc i.ProcMessageId)
 
+    /// Melee finish using chatline code 0xBB. Wire skill HP drain is command 11 message 187.
+    let private isChatlineTpDrain (i: Interaction) =
+        i.CommandNo = 1 && i.MessageId = MsgBasicCatalog.SkillDrainHp
+
     let isHpDamage (i: Interaction) =
         i.InteractionType = InteractionType.Harm
         && i.HarmType <> Some HarmType.Enfeeble
         && not (MsgBasicCatalog.isNonHpResourceTransfer i.MessageId)
+        && not (isChatlineTpDrain i)
 
     /// HP restored to a combatant. Skill MP recovery (224) stays a recovery row and is not curing.
     let isHpRecovery (i: Interaction) =

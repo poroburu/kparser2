@@ -1277,7 +1277,12 @@ module FixtureReplayParityTests =
     let ``combat_tp_drain classifies additional effect harm`` () =
         EntityRegistry.reset()
         let snap = ReplayHelpers.ingestFixture (FixturePaths.combatTpDrain())
-        Assert.True(snap.Interactions |> List.exists (fun i -> i.MessageId = 0xBB && i.InteractionType = InteractionType.Harm))
+        let drains = snap.Interactions |> List.filter (fun i -> i.MessageId = 0xBB)
+        Assert.NotEmpty drains
+        Assert.All(drains, fun i ->
+            Assert.Equal(InteractionType.Harm, i.InteractionType)
+            Assert.Equal(1, i.CommandNo)
+            Assert.False(InteractionClassification.isHpDamage i))
 
     [<Fact>]
     let ``combat_enfeeble classifies enfeeble category`` () =
@@ -1533,6 +1538,35 @@ module FixtureReplayParityTests =
         Assert.All(tpDamage, fun i -> Assert.False i.IsHpDamage)
         let hit = dto.Interactions |> Seq.find (fun (i: InteractionDto) -> i.MessageId = 1 && i.Value = 40)
         Assert.True hit.IsHpDamage
+
+    [<Fact>]
+    let ``chatline command 1 message 187 stays off HP offense and defense`` () =
+        InteractionTestHelpers.resetEntities ()
+        InteractionTestHelpers.registerLocalPlayer 1u "Caster"
+        InteractionTestHelpers.registerMob 2u "Crab"
+        let store = SessionStore.create ()
+        let ingest actor target command value message =
+            let data = Fixtures.combatActionPacketEx actor target command 0u value message 0
+            let evt = InteractionTestHelpers.packetEvent 0x0028us data
+            SessionStore.ingest store evt (DecoderRegistry.decode evt)
+        ingest 1u 2u 1 3 MsgBasicCatalog.SkillDrainHp
+        ingest 2u 1u 1 7 MsgBasicCatalog.SkillDrainHp
+        ingest 1u 2u 1 40 1
+        let snap = SessionStore.snapshot store
+        let tpRows = snap.Interactions |> List.filter (fun i -> i.MessageId = MsgBasicCatalog.SkillDrainHp)
+        Assert.Equal(2, tpRows.Length)
+        Assert.All(tpRows, fun i ->
+            Assert.Equal(1, i.CommandNo)
+            Assert.Equal(InteractionType.Harm, i.InteractionType)
+            Assert.Equal(Some HarmType.Other, i.HarmType)
+            Assert.False(InteractionClassification.isHpDamage i))
+        Assert.Empty(snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery))
+        let filter = MobFilter.defaultFilter
+        Assert.Equal(40, AnalyticsQueries.offenseSummary snap filter |> List.sumBy (fun r -> r.Total))
+        Assert.Empty(AnalyticsQueries.defenseSummary snap filter)
+        let dto = AnalyticsDtoMapping.toSnapshotDto snap
+        let tpDamage = dto.Interactions |> Seq.filter (fun (i: InteractionDto) -> i.MessageId = MsgBasicCatalog.SkillDrainHp)
+        Assert.All(tpDamage, fun i -> Assert.False i.IsHpDamage)
 
     [<Fact>]
     let ``remote player remains a report participant after a mob attacks their shadows`` () =
@@ -1791,6 +1825,15 @@ module SlimeCampTests =
         Assert.Equal(11, harm.Value)
         Assert.Equal(0x268Bu, harm.TargetId)
         Assert.True(InteractionClassification.isHpDamage harm)
+        let chatline =
+            snap.Interactions
+            |> List.find (fun i -> i.CommandNo = 1 && i.MessageId = MsgBasicCatalog.SkillDrainHp)
+        Assert.Equal(3, chatline.Value)
+        Assert.Equal(Some HarmType.Other, chatline.HarmType)
+        Assert.False(InteractionClassification.isHpDamage chatline)
+        let filter = MobFilter.defaultFilter
+        Assert.Equal(0, AnalyticsQueries.offenseSummary snap filter |> List.sumBy (fun r -> r.Total))
+        Assert.Equal(11, AnalyticsQueries.defenseSummary snap filter |> List.sumBy (fun r -> r.Total))
         let recover =
             Assert.Single(snap.Interactions |> List.filter (fun i -> i.AidType = Some AidType.Recovery))
         Assert.Equal(0x2C8Bu, recover.ActorId)
