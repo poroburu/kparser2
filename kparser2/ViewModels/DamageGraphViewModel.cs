@@ -33,10 +33,21 @@ public sealed partial class DamageGraphViewModel : ObservableObject, IDisposable
         SKColors.SteelBlue,
         SKColors.Chocolate
     ];
+    public sealed record GraphCategoryOption(string Value, string Label);
+
     public ObservableCollection<ISeries> Series { get; } = [];
     public ObservableCollection<string> Players { get; } = ["All"];
     public ObservableCollection<string> Enemies { get; } = ["All"];
-    public string[] Categories { get; } = ["All", "Melee", "Ranged", "Weaponskill", "Spell", "Ability", "Skillchain"];
+    public GraphCategoryOption[] Categories { get; } =
+    [
+        new("All", "All"),
+        new("Melee", "Melee"),
+        new("Ranged", "Ranged"),
+        new("Weaponskill", "Weaponskills"),
+        new("Spell", "Spells"),
+        new("Ability", "Abilities"),
+        new("Skillchain", "Skillchains")
+    ];
     public int[] Intervals { get; } = [1, 5, 10, 30, 60];
     public Axis[] XAxes { get; } = [new() { Name = "Elapsed seconds", MinStep = 1 }];
     public Axis[] YAxes { get; } = [new() { Name = "Damage", MinLimit = 0 }];
@@ -51,7 +62,7 @@ public sealed partial class DamageGraphViewModel : ObservableObject, IDisposable
     {
         _session = session;
         _selectedPlayer = _preferences.Player ?? "All"; _selectedEnemy = _preferences.Mob ?? "All";
-        _selectedCategory = Categories.Contains(_preferences.Category) ? _preferences.Category : "All";
+        _selectedCategory = Categories.Any(c => c.Value == _preferences.Category) ? _preferences.Category : "All";
         _cumulative = _preferences.Cumulative; _bucketSeconds = Intervals.Contains(_preferences.BucketSeconds) ? _preferences.BucketSeconds : 10;
         _excludeZeroXp = _preferences.ExcludeZeroXp;
         Refresh(session.GetSnapshot());

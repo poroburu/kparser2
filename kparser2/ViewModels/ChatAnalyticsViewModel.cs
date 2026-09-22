@@ -19,7 +19,7 @@ public sealed partial class ChatAnalyticsViewModel : ObservableObject, IDisposab
 
     public ObservableCollection<string> ModeOptions { get; } =
     [
-        "All", "Say", "Shout", "Tell", "Party", "Linkshell", "Emote", "System", "Yell", "Standard"
+        "All", "Say", "Shout", "Party", "Linkshell", "Tell", "Emote", "NPC", "Arena"
     ];
 
     public ObservableCollection<string> SpeakerOptions { get; } = ["All"];
@@ -75,13 +75,26 @@ public sealed partial class ChatAnalyticsViewModel : ObservableObject, IDisposab
 
     private static string? ToFilter(string? value) => IsAll(value) ? null : value;
 
+    /// <summary>Yell is selected through Shout. Standard is not a channel filter.</summary>
+    private static string CanonicalMode(string? mode)
+    {
+        if (IsAll(mode)) return "All";
+        if (mode!.Equals("Yell", StringComparison.OrdinalIgnoreCase)) return "Shout";
+        return mode;
+    }
+
+    private static bool IsChannelMode(string? mode) =>
+        !string.IsNullOrWhiteSpace(mode)
+        && !mode.Equals("Standard", StringComparison.OrdinalIgnoreCase)
+        && !mode.Equals("Yell", StringComparison.OrdinalIgnoreCase);
+
     private void Refresh(AnalyticsSnapshotDto snapshot)
     {
         if (_disposed) return;
         _isRefreshing = true;
         try
         {
-            var previousMode = SelectedMode;
+            var previousMode = CanonicalMode(SelectedMode);
             var previousSpeaker = SelectedSpeaker;
 
             var speakers = snapshot.ChatMessages
@@ -91,14 +104,12 @@ public sealed partial class ChatAnalyticsViewModel : ObservableObject, IDisposab
                 .OrderBy(s => s)
                 .ToList();
 
-            foreach (var mode in snapshot.ChatMessages.Select(c => c.Mode).Distinct())
+            foreach (var mode in snapshot.ChatMessages.Select(c => c.Mode).Where(IsChannelMode).Distinct())
                 if (!ModeOptions.Contains(mode)) ModeOptions.Add(mode);
             foreach (var speaker in speakers)
                 if (!SpeakerOptions.Contains(speaker)) SpeakerOptions.Add(speaker);
 
-            SelectedMode = IsAll(previousMode) || ModeOptions.Contains(previousMode)
-                ? (IsAll(previousMode) ? "All" : previousMode)
-                : "All";
+            SelectedMode = ModeOptions.Contains(previousMode) ? previousMode : "All";
 
             SelectedSpeaker = IsAll(previousSpeaker)
                 ? "All"

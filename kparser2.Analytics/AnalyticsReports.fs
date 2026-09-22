@@ -54,27 +54,33 @@ module PlayersReport =
                     |> ReportBuilder.blankLine)
                 ReportBuilder.empty
 
-module ChatSummaryReport =
-    let private normalizeFilter (value: string option) =
+module private ChatFilters =
+    let normalize (value: string option) =
         match value with
         | Some value when String.IsNullOrWhiteSpace(value) || value.Trim().Equals("All", StringComparison.OrdinalIgnoreCase) -> None
         | Some value -> Some(value.Trim())
         | None -> None
 
-    let format (snap: AnalyticsSnapshot) modeFilter speakerFilter =
-        let modeOpt = normalizeFilter modeFilter
-        let speakerOpt = normalizeFilter speakerFilter
+    /// Shout is the kparser channel that also shows Yell. Standard stays under All.
+    let matchesMode modeFilter (mode: string) =
+        match normalize modeFilter with
+        | None -> true
+        | Some m when m.Equals("Shout", StringComparison.OrdinalIgnoreCase) ->
+            mode.Equals("Shout", StringComparison.OrdinalIgnoreCase)
+            || mode.Equals("Yell", StringComparison.OrdinalIgnoreCase)
+        | Some m -> mode.Equals(m, StringComparison.OrdinalIgnoreCase)
 
+    let matchesSpeaker speakerFilter (speaker: string) =
+        match normalize speakerFilter with
+        | None -> true
+        | Some s -> speaker.Equals(s, StringComparison.OrdinalIgnoreCase)
+
+module ChatSummaryReport =
+    let format (snap: AnalyticsSnapshot) modeFilter speakerFilter =
         let rows =
             snap.ChatMessages
-            |> List.filter (fun c ->
-                match modeOpt with
-                | Some m -> c.Mode.Equals(m, StringComparison.OrdinalIgnoreCase)
-                | None -> true)
-            |> List.filter (fun c ->
-                match speakerOpt with
-                | Some s -> c.Speaker.Equals(s, StringComparison.OrdinalIgnoreCase)
-                | None -> true)
+            |> List.filter (fun c -> ChatFilters.matchesMode modeFilter c.Mode)
+            |> List.filter (fun c -> ChatFilters.matchesSpeaker speakerFilter c.Speaker)
             |> List.groupBy (fun c -> c.Mode, c.Speaker)
             |> List.map (fun ((mode, speaker), msgs) -> mode, speaker, msgs.Length)
             |> List.sortBy (fun (m, s, _) -> m, s)
@@ -102,24 +108,9 @@ module ChatReport =
         | _ -> ReportColors.black
 
     let format (snap: AnalyticsSnapshot) modeFilter speakerFilter =
-        let normalizeFilter (value: string option) =
-            match value with
-            | Some value when String.IsNullOrWhiteSpace(value) || value.Trim().Equals("All", StringComparison.OrdinalIgnoreCase) -> None
-            | Some value -> Some(value.Trim())
-            | None -> None
-
-        let modeOpt = normalizeFilter modeFilter
-        let speakerOpt = normalizeFilter speakerFilter
-
         snap.ChatMessages
-        |> List.filter (fun c ->
-            match modeOpt with
-            | Some m -> c.Mode.Equals(m, StringComparison.OrdinalIgnoreCase)
-            | None -> true)
-        |> List.filter (fun c ->
-            match speakerOpt with
-            | Some s -> c.Speaker.Equals(s, StringComparison.OrdinalIgnoreCase)
-            | None -> true)
+        |> List.filter (fun c -> ChatFilters.matchesMode modeFilter c.Mode)
+        |> List.filter (fun c -> ChatFilters.matchesSpeaker speakerFilter c.Speaker)
         |> List.sortBy (fun c -> c.TimestampMs)
         |> List.fold
             (fun report msg ->

@@ -222,6 +222,28 @@ module ReportFormatTests =
         Assert.DoesNotContain("Tell", text)
 
     [<Fact>]
+    let ``chat shout filter includes yell`` () =
+        let snap = ReportTestHelpers.replaySnapshot (FixturePaths.chatYell())
+        let textOf (report: AnalyticsReportDto) =
+            report.Spans |> Seq.map (fun s -> s.Text) |> String.Concat
+
+        let shout = AnalyticsReportService.formatChat snap (Some "Shout") None |> textOf
+        let allText = AnalyticsReportService.formatChat snap None None |> textOf
+        let say = AnalyticsReportService.formatChat snap (Some "Say") None |> textOf
+        let summary = AnalyticsReportService.formatChatSummary snap (Some "Shout") None |> textOf
+
+        Assert.Contains("Hello from yell", shout)
+        Assert.Contains("[Yell]", shout)
+        Assert.Contains("Hello from yell", allText)
+        Assert.DoesNotContain("Hello from yell", say)
+        Assert.Contains("Yell", summary)
+        Assert.Contains("Alice", summary)
+
+        for mode in snap.ChatMessages |> Seq.map (fun c -> c.Mode) |> Seq.distinct do
+            if not (mode.Equals("Shout", StringComparison.OrdinalIgnoreCase) || mode.Equals("Yell", StringComparison.OrdinalIgnoreCase)) then
+                Assert.DoesNotContain($"[{mode}]", shout)
+
+    [<Fact>]
     let ``offense detail report includes frequency histogram`` () =
         let snap = ReportTestHelpers.replaySnapshot (FixturePaths.combatAction())
         let text = ReportTestHelpers.reportText "offense-detail" snap

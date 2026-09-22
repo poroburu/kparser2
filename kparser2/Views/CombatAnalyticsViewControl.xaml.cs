@@ -151,13 +151,24 @@ public sealed class CombatAnalyticsViewControl : UserControl
     private sealed record ModeOption(ReportMode Value, string Label);
     private static string ModeLabel(ReportMode mode) => mode switch
     {
-        ReportMode.DamageTaken => "Damage taken",
-        ReportMode.AbilityUsage => "Ability usage",
-        ReportMode.AverageCuring => "Average curing",
-        ReportMode.StatusCuring => "Status curing",
-        ReportMode.StatusCured => "Statuses cured",
-        ReportMode.DropRates => "Drop rates",
-        ReportMode.CriticalRate => "Critical rate",
+        ReportMode.Weaponskill => "Weaponskills",
+        ReportMode.Ability => "Abilities",
+        ReportMode.Spell => "Spells",
+        ReportMode.Skillchain => "Skillchains",
+        ReportMode.DamageTaken => "Damage Taken",
+        ReportMode.AbilityUsage => "Ability Usage",
+        ReportMode.AverageCuring => "Average Curing",
+        ReportMode.StatusCuring => "Status Curing",
+        ReportMode.StatusCured => "Statuses Cured",
+        ReportMode.Used => "Buffs Used",
+        ReportMode.Received => "Buffs Received",
+        ReportMode.Mobs => "Debuff Mobs",
+        ReportMode.Players => "Debuff Players",
+        ReportMode.Durations => "Enfeeble Durations",
+        ReportMode.TpMoves => "TP Moves",
+        ReportMode.CriticalRate => "Crit Rate",
+        ReportMode.DropRates => "Drop Rates",
+        ReportMode.Helm => "HELM/Chocobo",
         _ => mode.ToString()
     };
     public static ReportMode[] Modes(string id) => id switch

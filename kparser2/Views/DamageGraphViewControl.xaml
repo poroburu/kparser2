@@ -8,7 +8,7 @@
             <ComboBox AutomationProperties.AutomationId="graph-player" ItemsSource="{Binding Players}" SelectedItem="{Binding SelectedPlayer}" MinWidth="120" Margin="4"/>
             <TextBlock Text="Enemy" VerticalAlignment="Center" Margin="4"/>
             <ComboBox AutomationProperties.AutomationId="graph-enemy" ItemsSource="{Binding Enemies}" SelectedItem="{Binding SelectedEnemy}" MinWidth="140" Margin="4"/>
-            <ComboBox AutomationProperties.AutomationId="graph-category" ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" MinWidth="100" Margin="4"/>
+            <ComboBox AutomationProperties.AutomationId="graph-category" ItemsSource="{Binding Categories}" DisplayMemberPath="Label" SelectedValuePath="Value" SelectedValue="{Binding SelectedCategory}" MinWidth="100" Margin="4"/>
             <TextBlock Text="Seconds" VerticalAlignment="Center" Margin="4"/>
             <ComboBox AutomationProperties.AutomationId="graph-interval" ItemsSource="{Binding Intervals}" SelectedItem="{Binding BucketSeconds}" Width="60" Margin="4"/>
             <CheckBox AutomationProperties.AutomationId="graph-cumulative" Content="Cumulative" IsChecked="{Binding Cumulative}" Margin="8"/>
